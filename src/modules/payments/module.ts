@@ -22,19 +22,11 @@ export default defineFeature({
     },
   ],
   widgets: [
-    {
-      id: 'payments-today',
-      component: () => import('./widgets/TodayPaymentsWidget.vue'),
-      width: 12,
-      order: 10,
-      capability: 'cash_desk',
-    },
-    {
-      id: 'payments-recent',
-      component: () => import('./widgets/RecentPaymentsWidget.vue'),
-      width: 6,
-      order: 20,
-      capability: 'cash_desk',
-    },
+    { id: 'payments-highlight', component: () => import('./widgets/HighlightWidget.vue'), width: 4, order: 10, capability: 'cash_desk' },
+    { id: 'payments-overview', component: () => import('./widgets/OverviewWidget.vue'), width: 8, order: 20, capability: 'cash_desk' },
+    { id: 'payments-weekly', component: () => import('./widgets/WeeklyChartWidget.vue'), width: 8, order: 30, capability: 'cash_desk' },
+    { id: 'payments-statuses', component: () => import('./widgets/StatusDonutWidget.vue'), width: 4, order: 40, capability: 'cash_desk' },
+    { id: 'payments-recent', component: () => import('./widgets/RecentPaymentsWidget.vue'), width: 6, order: 50, capability: 'cash_desk' },
+    { id: 'payments-watchlist', component: () => import('./widgets/WatchlistWidget.vue'), width: 6, order: 60, capability: 'cash_desk' },
   ],
 })

@@ -51,8 +51,8 @@ async function onSubmit() {
 
 <template>
   <AuthShell
-    title="Connexion"
-    subtitle="Accédez à votre restaurant."
+    title="Bienvenue sur Marinade ! 👋"
+    subtitle="Connectez-vous pour retrouver votre restaurant."
   >
     <VAlert
       v-if="justRegistered"

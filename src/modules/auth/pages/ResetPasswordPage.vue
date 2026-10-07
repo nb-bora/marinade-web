@@ -25,7 +25,7 @@ async function onSubmit() {
 
 <template>
   <AuthShell
-    title="Nouveau mot de passe"
+    title="Nouveau mot de passe 🔑"
     subtitle="Collez le code reçu par e-mail, puis choisissez votre nouveau mot de passe."
   >
     <VForm

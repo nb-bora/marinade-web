@@ -34,7 +34,7 @@ onMounted(() => {
 
 <template>
   <AuthShell
-    title="Vérifier mon e-mail"
+    title="Vérifier mon e-mail ✉️"
     subtitle="Confirmez que cette adresse est bien la vôtre."
   >
     <template v-if="verified">

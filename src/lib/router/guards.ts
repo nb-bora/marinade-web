@@ -44,8 +44,13 @@ export function createAccessGuard(context: GuardContext): AccessGuard {
     if (to.meta.platformAdmin && !context.isPlatformAdmin())
       return { path: PATHS.forbidden }
 
-    if (to.meta.withoutRestaurant)
+    // Page utilisable sans restaurant : on charge quand même la liste (menu, sélecteur),
+    // mais un serveur injoignable ne doit pas empêcher de l'ouvrir.
+    if (to.meta.withoutRestaurant) {
+      await context.loadRestaurants().catch(() => undefined)
+
       return true
+    }
 
     try {
       await context.loadRestaurants()

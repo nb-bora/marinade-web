@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PaymentSummaryCards from '../components/PaymentSummaryCards.vue'
+import PaymentAvatar from '../components/PaymentAvatar.vue'
 import PaymentStatusChip from '../components/PaymentStatusChip.vue'
 import TransactionDetailDrawer from '../components/TransactionDetailDrawer.vue'
 import { RANGES, rangeFor } from '../ranges'
@@ -77,6 +78,11 @@ function afterChange() {
       subtitle="Les paiements Mobile Money reçus par votre restaurant, mis à jour en continu."
     >
       <template #actions>
+        <AppSegmented
+          v-model="rangeId"
+          :options="RANGES.map(option => ({ value: option.id, title: option.title }))"
+          label="Période"
+        />
         <VChip
           :color="isLive ? 'success' : 'secondary'"
           variant="tonal"
@@ -100,25 +106,20 @@ function afterChange() {
       </template>
     </AppPageHeader>
 
-    <AppSegmented
-      v-model="rangeId"
-      :options="RANGES.map(option => ({ value: option.id, title: option.title }))"
-      label="Période"
-      class="mb-4"
-    />
-
     <PaymentSummaryCards
       ref="summary"
-      class="mb-2"
       :range="range"
     />
 
-    <VCard class="mt-4">
+    <VCard class="mt-6">
+      <VCardItem class="pb-2">
+        <VCardTitle>Filtres</VCardTitle>
+      </VCardItem>
       <VCardText>
         <VRow>
           <VCol
             cols="12"
-            md="5"
+            md="6"
           >
             <VSelect
               v-model="statuses"
@@ -133,7 +134,7 @@ function afterChange() {
           </VCol>
           <VCol
             cols="12"
-            md="5"
+            md="6"
           >
             <VTextField
               v-model="reference"
@@ -144,25 +145,28 @@ function afterChange() {
               autocomplete="off"
             />
           </VCol>
-          <VCol
-            cols="12"
-            md="2"
-            class="d-flex align-center"
-          >
-            <VBtn
-              v-if="hasFilters"
-              variant="text"
-              color="secondary"
-              block
-              @click="clearFilters"
-            >
-              Effacer
-            </VBtn>
-          </VCol>
         </VRow>
       </VCardText>
 
       <VDivider />
+
+      <div class="d-flex flex-wrap align-center gap-3 px-5 py-4">
+        <span class="text-body-1 text-medium-emphasis">
+          <template v-if="list.loadedOnce.value">
+            {{ list.items.value.length }} transaction{{ list.items.value.length > 1 ? 's' : '' }} affichée{{ list.items.value.length > 1 ? 's' : '' }}{{ list.hasMore.value ? ' (et plus)' : '' }}
+          </template>
+        </span>
+        <VSpacer />
+        <VBtn
+          v-if="hasFilters"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-filter-off-line"
+          @click="clearFilters"
+        >
+          Effacer les filtres
+        </VBtn>
+      </div>
 
       <AppErrorState
         v-if="list.error.value && !list.loadedOnce.value"
@@ -200,8 +204,7 @@ function afterChange() {
         >
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Référence</th>
+              <th>Transaction</th>
               <th class="text-end">
                 Montant
               </th>
@@ -224,13 +227,23 @@ function afterChange() {
               @click="selectedId = item.id"
               @keydown.enter="selectedId = item.id"
             >
-              <td class="text-no-wrap">
-                {{ formatDateTime(item.created_at) }}
+              <td>
+                <div class="d-flex align-center gap-3 py-2">
+                  <PaymentAvatar
+                    :status="item.status"
+                    :size="38"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-body-1 font-weight-medium text-high-emphasis text-no-wrap">
+                      {{ formatDateTime(item.created_at) }}
+                    </div>
+                    <div class="reference-cell text-medium-emphasis">
+                      {{ item.reference }}
+                    </div>
+                  </div>
+                </div>
               </td>
-              <td class="reference-cell">
-                {{ item.reference }}
-              </td>
-              <td class="text-end font-weight-medium">
+              <td class="text-end font-weight-semibold text-high-emphasis">
                 <AppMoney
                   :amount="item.amount_fcfa"
                   :currency="item.currency"

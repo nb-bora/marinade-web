@@ -22,7 +22,7 @@ async function onSubmit() {
 
 <template>
   <AuthShell
-    title="Mot de passe oublié"
+    title="Mot de passe oublié ? 🔒"
     subtitle="Nous vous envoyons de quoi choisir un nouveau mot de passe."
   >
     <template v-if="sent">

@@ -72,7 +72,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
 <template>
   <AuthShell
     v-if="canCreate"
-    title="Ouvrez votre restaurant"
+    title="Ouvrez votre restaurant 🍽️"
     subtitle="Ces informations s'affichent sur vos tickets et vos factures. Vous pourrez les modifier plus tard."
   >
     <VForm

@@ -32,11 +32,6 @@ const today = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric'
 
 <template>
   <div>
-    <AppPageHeader
-      :title="`Bonjour ${session.user?.first_name ?? ''}`"
-      :subtitle="`${tenant.current?.name ?? ''} · ${today}`"
-    />
-
     <VRow v-if="widgets.length">
       <VCol
         v-for="widget in widgets"
@@ -48,12 +43,18 @@ const today = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric'
       </VCol>
     </VRow>
 
-    <VCard v-else>
-      <AppEmptyState
-        icon="ri-restaurant-line"
-        title="Bienvenue"
-        text="Utilisez le menu pour accéder aux écrans de votre rôle."
+    <template v-else>
+      <AppPageHeader
+        :title="`Bonjour ${session.user?.first_name ?? ''} 👋`"
+        :subtitle="`${tenant.current?.name ?? ''} · ${today}`"
       />
-    </VCard>
+      <VCard>
+        <AppEmptyState
+          icon="ri-restaurant-line"
+          title="Bienvenue"
+          text="Utilisez le menu pour accéder aux écrans de votre rôle."
+        />
+      </VCard>
+    </template>
   </div>
 </template>

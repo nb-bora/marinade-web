@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import PaymentStatusChip from '../components/PaymentStatusChip.vue'
+import PaymentAvatar from '../components/PaymentAvatar.vue'
+import { presentStatus } from '../statuses'
 import { container } from '@/container'
 import { useLive } from '@/composables/useLive'
 import type { PaymentTransaction } from '@/lib/api/types'
-import { formatRelative } from '@/lib/format'
+import { formatMoney, formatRelative } from '@/lib/format'
 
 const items = ref<PaymentTransaction[]>([])
 const loading = ref(true)
@@ -24,6 +25,16 @@ async function load() {
 }
 
 useLive(load)
+
+// Montant en vert s'il est encaissé, barré s'il n'a pas abouti.
+function amountClass(status: string) {
+  const tone = presentStatus(status).tone
+
+  if (tone === 'success')
+    return 'text-success'
+
+  return tone === 'error' ? 'text-disabled text-decoration-line-through' : 'text-high-emphasis'
+}
 </script>
 
 <template>
@@ -42,46 +53,61 @@ useLive(load)
       </template>
     </VCardItem>
 
-    <AppErrorState
-      v-if="error"
-      class="mx-4 mb-4"
-      :error="error"
-      @retry="load"
-    />
+    <VCardText>
+      <AppErrorState
+        v-if="error"
+        :error="error"
+        @retry="load"
+      />
 
-    <VSkeletonLoader
-      v-else-if="loading"
-      type="list-item-two-line, list-item-two-line, list-item-two-line"
-    />
+      <VSkeletonLoader
+        v-else-if="loading"
+        type="list-item-avatar-two-line@4"
+      />
 
-    <AppEmptyState
-      v-else-if="items.length === 0"
-      icon="ri-bank-card-line"
-      title="Pas encore de paiement"
-      text="Les paiements Mobile Money apparaîtront ici dès leur réception."
-    />
+      <AppEmptyState
+        v-else-if="items.length === 0"
+        icon="ri-bank-card-line"
+        title="Pas encore de paiement"
+        text="Les paiements Mobile Money apparaîtront ici dès leur réception."
+      />
 
-    <VList
-      v-else
-      lines="two"
-      class="py-0"
-    >
-      <VListItem
-        v-for="item in items"
-        :key="item.id"
-        to="/payments"
+      <ul
+        v-else
+        class="payments"
       >
-        <VListItemTitle class="font-weight-medium">
-          <AppMoney
-            :amount="item.amount_fcfa"
-            :currency="item.currency"
-          />
-        </VListItemTitle>
-        <VListItemSubtitle>{{ formatRelative(item.created_at) }}</VListItemSubtitle>
-        <template #append>
-          <PaymentStatusChip :status="item.status" />
-        </template>
-      </VListItem>
-    </VList>
+        <li
+          v-for="item in items"
+          :key="item.id"
+          class="d-flex align-center gap-3"
+        >
+          <PaymentAvatar :status="item.status" />
+          <div class="min-w-0">
+            <div class="text-body-1 font-weight-medium">
+              {{ presentStatus(item.status).label }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis text-truncate">
+              {{ formatRelative(item.created_at) }}
+            </div>
+          </div>
+          <VSpacer />
+          <span
+            class="text-body-1 font-weight-medium tabular-nums text-no-wrap"
+            :class="amountClass(item.status)"
+          >
+            {{ presentStatus(item.status).tone === 'success' ? '+' : '' }}{{ formatMoney(item.amount_fcfa, item.currency) }}
+          </span>
+        </li>
+      </ul>
+    </VCardText>
   </VCard>
 </template>
+
+<style scoped>
+.payments {
+  display: grid;
+  gap: 1.125rem;
+  padding: 0;
+  list-style: none;
+}
+</style>

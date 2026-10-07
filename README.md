@@ -8,6 +8,7 @@ compte et sécurité. Vue 3, Vuetify 3, Pinia, TypeScript strict, typée de bout
 - [Démarrer](#démarrer)
 - [Comptes de démonstration](#comptes-de-démonstration)
 - [Architecture](#architecture)
+- [Écrans et design](#écrans-et-design)
 - [Ajouter une fonctionnalité](#ajouter-une-fonctionnalité)
 - [Droits et multi-restaurant](#droits-et-multi-restaurant)
 - [Contrat avec l'API](#contrat-avec-lapi)
@@ -91,6 +92,23 @@ Détails qui comptent :
   de 1,5 Mo). Une icône s'écrit toujours en toutes lettres (`'ri-home-line'`).
 - **Police auto-hébergée** (`@fontsource/inter`) : aucune requête vers un tiers.
 
+## Écrans et design
+
+Design inspiré de Materio (cartes à ombre douce, tuiles d'indicateurs colorées, graphiques ApexCharts), aux couleurs
+de Marinade. Thème clair et sombre, choix retenu par l'utilisateur.
+
+| Écran | Contenu |
+|---|---|
+| Connexion, mot de passe oublié | Deux panneaux : illustration Marinade animée, formulaire ; 2FA en seconde étape |
+| Inscription | Assistant en 3 étapes (compte, restaurant, confirmation) : compte et restaurant créés d'un geste |
+| Tableau de bord | Widgets fournis par les modules : « Bravo » du jour, encaissements de la semaine, graphique par jour, répartition des statuts, derniers paiements, paiements à surveiller (avec relance) |
+| Transactions | Bandeau d'indicateurs, filtres, historique en direct, détail et historique d'un paiement |
+| Mon compte | Onglets Compte et Sécurité (2FA avec code QR et codes de secours) |
+
+Les widgets de paiement partagent une seule source de données (`usePaymentInsights`) : un jeu de requêtes, rafraîchi
+toutes les 30 secondes tant que l'onglet est visible. Les couleurs des graphiques suivent le thème
+(`useChartTheme`).
+
 ## Ajouter une fonctionnalité
 
 Créer `src/modules/<nom>/module.ts` :
@@ -157,11 +175,12 @@ du serveur.
 
 - `yarn typecheck` : zéro erreur, TypeScript strict.
 - `yarn lint` : zéro erreur, configuration du projet.
-- `yarn test` : 51 tests unitaires (erreurs, client HTTP et rafraîchissement concurrent, gardes, menu par droits,
+- `yarn test` : 53 tests unitaires (erreurs, client HTTP et rafraîchissement concurrent, gardes, menu par droits,
   pagination en direct, protection contre la redirection ouverte).
 - Parcours de bout en bout vérifié dans Edge contre l'API réelle : connexion et message d'erreur, tableau de bord,
   historique, filtre, recherche par préfixe, détail, session après rechargement, accès refusé au serveur, isolation
-  entre deux restaurants, changement de restaurant par l'administrateur, affichage mobile sans défilement horizontal.
+  entre deux restaurants, changement de restaurant par l'administrateur, inscription complète par l'assistant (compte
+  et restaurant créés), affichage mobile sans défilement horizontal.
 
 ## Production
 

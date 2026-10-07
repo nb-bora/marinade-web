@@ -58,6 +58,21 @@ describe('garde d\'accès', () => {
     await expect(run(context({ hasRestaurant: () => false }), route({ withoutRestaurant: true }))).resolves.toBe(true)
   })
 
+  it('charge les restaurants même sur une page qui n\'en exige pas (menu complet après rechargement)', async () => {
+    const loadRestaurants = vi.fn(async () => {})
+
+    await expect(run(context({ loadRestaurants }), route({ withoutRestaurant: true }))).resolves.toBe(true)
+    expect(loadRestaurants).toHaveBeenCalledTimes(1)
+  })
+
+  it('ouvre une page sans restaurant même si le serveur est injoignable', async () => {
+    const loadRestaurants = async () => {
+      throw new Error('network')
+    }
+
+    await expect(run(context({ loadRestaurants }), route({ withoutRestaurant: true }))).resolves.toBe(true)
+  })
+
   it('refuse une page dont le droit manque', async () => {
     const can = (capability: Capability) => capability !== 'cash_desk'
 

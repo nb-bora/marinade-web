@@ -12,14 +12,6 @@
   min-inline-size: 0;
 }
 
-// Les cartes sont séparées par une bordure fine plutôt que par une ombre :
-// plus lisible dans les tableaux denses et dans le thème sombre.
-.v-card.v-theme--light,
-.v-card.v-theme--dark {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  box-shadow: none;
-}
-
 // Zone cliquable minimale de 44 px pour les actions tactiles (caisse sur tablette).
 @media (pointer: coarse) {
   .v-btn.v-btn--size-default {
@@ -31,4 +23,21 @@
 .v-btn {
   letter-spacing: normal;
   text-transform: none;
+}
+
+// Bouton principal : légère ombre teintée, comme le reste du thème.
+.v-btn--variant-elevated.bg-primary,
+.v-btn--variant-flat.bg-primary {
+  box-shadow: 0 4px 14px -4px rgba(var(--v-theme-primary), 0.55);
+}
+
+// Titre de carte un peu plus affirmé.
+.v-card-title {
+  font-weight: 500;
+}
+
+// Lignes de tableau cliquables.
+.v-table tbody tr.cursor-pointer:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
 }

@@ -16,6 +16,15 @@ const { submit: resend, pending: resending } = useSubmit(async () => {
 })
 
 const emailVerified = computed(() => Boolean(session.user?.email_verified_at))
+
+const route = useRoute()
+const router = useRouter()
+
+// L'onglet vit dans l'URL : « /account?tab=security » s'ouvre directement sur la sécurité.
+const tab = computed({
+  get: () => (route.query.tab === 'security' ? 'security' : 'profile'),
+  set: value => router.replace({ query: { ...route.query, tab: value === 'profile' ? undefined : value } }),
+})
 </script>
 
 <template>
@@ -25,12 +34,30 @@ const emailVerified = computed(() => Boolean(session.user?.email_verified_at))
       subtitle="Vos informations et la sécurité de votre connexion."
     />
 
-    <VRow>
-      <VCol
-        cols="12"
-        md="6"
+    <VTabs
+      v-model="tab"
+      class="mb-6"
+    >
+      <VTab
+        value="profile"
+        prepend-icon="ri-user-3-line"
       >
-        <VCard class="h-100">
+        Compte
+      </VTab>
+      <VTab
+        value="security"
+        prepend-icon="ri-lock-password-line"
+      >
+        Sécurité
+      </VTab>
+    </VTabs>
+
+    <VWindow
+      v-model="tab"
+      :touch="false"
+    >
+      <VWindowItem value="profile">
+        <VCard>
           <VCardItem>
             <VCardTitle>Identité</VCardTitle>
           </VCardItem>
@@ -100,14 +127,11 @@ const emailVerified = computed(() => Boolean(session.user?.email_verified_at))
             </VAlert>
           </VCardText>
         </VCard>
-      </VCol>
+      </VWindowItem>
 
-      <VCol
-        cols="12"
-        md="6"
-      >
+      <VWindowItem value="security">
         <TwoFactorCard />
-      </VCol>
-    </VRow>
+      </VWindowItem>
+    </VWindow>
   </div>
 </template>

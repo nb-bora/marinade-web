@@ -16,11 +16,17 @@ declare module 'vue' {
     AppPageHeader: typeof import('./src/ui/AppPageHeader.vue')['default']
     AppPasswordField: typeof import('./src/ui/AppPasswordField.vue')['default']
     AppSegmented: typeof import('./src/ui/AppSegmented.vue')['default']
+    AppStatStrip: typeof import('./src/ui/AppStatStrip.vue')['default']
+    AppStatTile: typeof import('./src/ui/AppStatTile.vue')['default']
     AppStatusChip: typeof import('./src/ui/AppStatusChip.vue')['default']
+    AppStepper: typeof import('./src/ui/AppStepper.vue')['default']
     AppToaster: typeof import('./src/ui/AppToaster.vue')['default']
     AuthShell: typeof import('./src/ui/AuthShell.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ServiceIllustration: typeof import('./src/ui/illustrations/ServiceIllustration.vue')['default']
     ThemeSwitcher: typeof import('./src/@core/components/ThemeSwitcher.vue')['default']
+    TrophyIllustration: typeof import('./src/ui/illustrations/TrophyIllustration.vue')['default']
+    VueApexCharts: typeof import('vue3-apexcharts')['default']
   }
 }
