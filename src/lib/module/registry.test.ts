@@ -22,7 +22,7 @@ const features: FeatureModule[] = [
     id: 'b',
     routes: [{ path: '/login', component: {}, meta: { layout: 'blank' } }],
     nav: [
-      { id: 'b-admin', title: 'Plateforme', icon: 'ri-settings-line', to: '/admin', section: 'administration', platformAdmin: true },
+      { id: 'b-admin', title: 'Plateforme', icon: 'ri-settings-line', to: '/admin', section: 'platform', platformAdmin: true },
       { id: 'b-stock', title: 'Stock', icon: 'ri-stock-line', to: '/stock', section: 'catalog', capability: 'stock', order: 2 },
       { id: 'b-menu', title: 'Carte', icon: 'ri-book-line', to: '/menu', section: 'catalog', capability: 'management', order: 1 },
     ],
@@ -56,8 +56,8 @@ describe('buildNavigation', () => {
   })
 
   it('réserve les entrées « plateforme » aux administrateurs', () => {
-    expect(buildNavigation(features, audience([])).some(section => section.id === 'administration')).toBe(false)
-    expect(buildNavigation(features, audience([], true)).some(section => section.id === 'administration')).toBe(true)
+    expect(buildNavigation(features, audience([])).some(section => section.id === 'platform')).toBe(false)
+    expect(buildNavigation(features, audience([], true)).some(section => section.id === 'platform')).toBe(true)
   })
 
   it('omet les sections vides', () => {

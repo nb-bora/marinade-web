@@ -8,10 +8,11 @@ import type { Capability } from '@/lib/api/types'
  */
 export const NAV_SECTIONS = [
   { id: 'overview', title: null },
-  { id: 'operations', title: 'Exploitation' },
+  { id: 'service', title: 'Salle et service' },
   { id: 'catalog', title: 'Carte et stock' },
   { id: 'finance', title: 'Finances' },
-  { id: 'administration', title: 'Administration' },
+  { id: 'management', title: 'Gestion' },
+  { id: 'platform', title: 'Plateforme' },
 ] as const
 
 export type NavSectionId = typeof NAV_SECTIONS[number]['id']

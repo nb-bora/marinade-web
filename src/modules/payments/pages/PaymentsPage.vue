@@ -7,12 +7,10 @@ import { RANGES, rangeFor } from '../ranges'
 import type { RangeId } from '../ranges'
 import { STATUS_OPTIONS } from '../statuses'
 import { formatDateTime } from '@/lib/format'
-import type { PaymentStatus, PaymentTransaction } from '@/lib/api/types'
+import type { PaymentStatus, PaymentSummary, PaymentTransaction } from '@/lib/api/types'
 import { useLive } from '@/composables/useLive'
-import { useCursorList } from '@/composables/useCursorList'
+import { usePagedCursor } from '@/composables/usePagedCursor'
 import { container } from '@/container'
-
-const PAGE_SIZE = 50
 
 const rangeId = ref<RangeId>('7d')
 const statuses = ref<PaymentStatus[]>([])
@@ -23,23 +21,34 @@ const selectedId = ref<string | null>(null)
 const range = computed(() => rangeFor(rangeId.value))
 const hasFilters = computed(() => statuses.value.length > 0 || reference.value.trim() !== '')
 
-const list = useCursorList<PaymentTransaction>(
-  (cursor, signal) => container.payments.transactions({
+const list = usePagedCursor<PaymentTransaction>(
+  (cursor, limit, signal) => container.payments.transactions({
     status: statuses.value,
     from: range.value.from,
     to: range.value.to,
     reference: referenceDebounced.value.trim() || undefined,
     cursor,
-    limit: PAGE_SIZE,
+    limit,
   }, signal),
-  { keyOf: item => item.id },
+  10,
 )
 
 // Tout changement de filtre repart de la première page.
-watch([rangeId, statuses, referenceDebounced], () => list.reload(), { immediate: true })
+watch([rangeId, statuses, referenceDebounced], () => list.reset(), { immediate: true })
 
-// « En direct » : la tête de liste se met à jour seule, sans faire sauter la liste déroulée.
-const { isLive } = useLive(() => list.refreshHead())
+// « En direct » : la page 1 se met à jour seule ; les pages plus anciennes ne bougent pas.
+const { isLive } = useLive(() => {
+  if (list.page.value === 1)
+    list.refresh()
+})
+
+// Total exact quand aucun filtre ne le fausse : le résumé compte toute la période.
+const periodTotal = ref<number | null>(null)
+const total = computed(() => (hasFilters.value ? null : periodTotal.value))
+
+function onSummary(value: PaymentSummary) {
+  periodTotal.value = value.transactions
+}
 
 // Les lignes arrivées APRÈS l'affichage initial se signalent un instant.
 const known = new Set<string>()
@@ -66,7 +75,7 @@ function clearFilters() {
 const summary = ref<InstanceType<typeof PaymentSummaryCards>>()
 
 function afterChange() {
-  list.refreshHead()
+  list.refresh()
   summary.value?.reload()
 }
 </script>
@@ -99,7 +108,7 @@ function afterChange() {
           variant="tonal"
           prepend-icon="ri-refresh-line"
           :loading="list.loading.value"
-          @click="list.reload()"
+          @click="list.reset()"
         >
           Actualiser
         </VBtn>
@@ -109,6 +118,7 @@ function afterChange() {
     <PaymentSummaryCards
       ref="summary"
       :range="range"
+      @loaded="onSummary"
     />
 
     <VCard class="mt-6">
@@ -152,8 +162,8 @@ function afterChange() {
 
       <div class="d-flex flex-wrap align-center gap-3 px-5 py-4">
         <span class="text-body-1 text-medium-emphasis">
-          <template v-if="list.loadedOnce.value">
-            {{ list.items.value.length }} transaction{{ list.items.value.length > 1 ? 's' : '' }} affichée{{ list.items.value.length > 1 ? 's' : '' }}{{ list.hasMore.value ? ' (et plus)' : '' }}
+          <template v-if="list.loadedOnce.value && total !== null">
+            {{ total }} transaction{{ total > 1 ? 's' : '' }} sur la période
           </template>
         </span>
         <VSpacer />
@@ -172,7 +182,7 @@ function afterChange() {
         v-if="list.error.value && !list.loadedOnce.value"
         class="ma-4"
         :error="list.error.value"
-        @retry="list.reload()"
+        @retry="list.reset()"
       />
 
       <VSkeletonLoader
@@ -270,19 +280,17 @@ function afterChange() {
 
         <VDivider />
 
-        <div class="d-flex align-center justify-center pa-4 gap-3 text-body-2 text-medium-emphasis">
-          <VBtn
-            v-if="list.hasMore.value"
-            variant="tonal"
-            :loading="list.loadingMore.value"
-            @click="list.loadMore()"
-          >
-            Charger plus
-          </VBtn>
-          <span v-else>
-            {{ list.items.value.length }} transaction{{ list.items.value.length > 1 ? 's' : '' }} — fin de la liste
-          </span>
-        </div>
+        <AppTablePagination
+          :page="list.page.value"
+          :page-size="list.pageSize.value"
+          :count="list.items.value.length"
+          :total="total"
+          :pages="list.knownPages.value"
+          :has-next="list.hasNext.value"
+          :loading="list.loading.value"
+          @update:page="list.goTo"
+          @update:page-size="list.pageSize.value = $event"
+        />
       </template>
     </VCard>
 

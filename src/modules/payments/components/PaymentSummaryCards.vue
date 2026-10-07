@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   live?: boolean
 }>(), { live: true })
 
+const emit = defineEmits<{ loaded: [summary: PaymentSummary] }>()
+
 const summary = ref<PaymentSummary | null>(null)
 const loading = ref(true)
 const error = ref<unknown>(null)
@@ -31,6 +33,7 @@ async function load(silent = false) {
 
     if (!current.signal.aborted) {
       summary.value = result
+      emit('loaded', result)
       error.value = null
     }
   }
