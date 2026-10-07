@@ -11,11 +11,10 @@ defineProps<{
     class="nav-link"
     :class="{ disabled: item.disable }"
   >
+    <!-- Un `href` indéfini écraserait celui que RouterLink calcule : on ne lie que ce qui sert. -->
     <Component
       :is="item.to ? 'RouterLink' : 'a'"
-      :to="item.to"
-      :href="item.href"
-      :target="item.target"
+      v-bind="item.to ? { to: item.to } : { href: item.href, target: item.target }"
     >
       <VIcon
         :icon="item.icon || 'ri-checkbox-blank-circle-line'"

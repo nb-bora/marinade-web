@@ -7,15 +7,20 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    CardStatisticsHorizontal: typeof import('./src/@core/components/cards/CardStatisticsHorizontal.vue')['default']
-    CardStatisticsVertical: typeof import('./src/@core/components/cards/CardStatisticsVertical.vue')['default']
-    CardStatisticsWithImages: typeof import('./src/@core/components/cards/CardStatisticsWithImages.vue')['default']
-    ErrorHeader: typeof import('./src/components/ErrorHeader.vue')['default']
-    MoreBtn: typeof import('./src/@core/components/MoreBtn.vue')['default']
+    AppConfirmDialog: typeof import('./src/ui/AppConfirmDialog.vue')['default']
+    AppEmptyState: typeof import('./src/ui/AppEmptyState.vue')['default']
+    AppErrorState: typeof import('./src/ui/AppErrorState.vue')['default']
+    AppFullPageMessage: typeof import('./src/ui/AppFullPageMessage.vue')['default']
+    AppKpiCard: typeof import('./src/ui/AppKpiCard.vue')['default']
+    AppMoney: typeof import('./src/ui/AppMoney.vue')['default']
+    AppPageHeader: typeof import('./src/ui/AppPageHeader.vue')['default']
+    AppPasswordField: typeof import('./src/ui/AppPasswordField.vue')['default']
+    AppSegmented: typeof import('./src/ui/AppSegmented.vue')['default']
+    AppStatusChip: typeof import('./src/ui/AppStatusChip.vue')['default']
+    AppToaster: typeof import('./src/ui/AppToaster.vue')['default']
+    AuthShell: typeof import('./src/ui/AuthShell.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ThemeSwitcher: typeof import('./src/@core/components/ThemeSwitcher.vue')['default']
-    UpgradeToPro: typeof import('./src/components/UpgradeToPro.vue')['default']
-    VueApexCharts: typeof import('vue3-apexcharts')['default']
   }
 }

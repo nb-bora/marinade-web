@@ -1,1 +1,34 @@
-// Write your overrides
+// Styles propres à Marinade, par-dessus ceux du template.
+
+.font-weight-semibold {
+  font-weight: 600 !important;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.min-w-0 {
+  min-inline-size: 0;
+}
+
+// Les cartes sont séparées par une bordure fine plutôt que par une ombre :
+// plus lisible dans les tableaux denses et dans le thème sombre.
+.v-card.v-theme--light,
+.v-card.v-theme--dark {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  box-shadow: none;
+}
+
+// Zone cliquable minimale de 44 px pour les actions tactiles (caisse sur tablette).
+@media (pointer: coarse) {
+  .v-btn.v-btn--size-default {
+    min-block-size: 44px;
+  }
+}
+
+// Libellés de boutons en casse naturelle : « Tout voir », pas « Tout Voir ».
+.v-btn {
+  letter-spacing: normal;
+  text-transform: none;
+}

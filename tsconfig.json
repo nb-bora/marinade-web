@@ -32,7 +32,7 @@
         "./src/assets/images/*"
       ],
       "@styles/*": [
-        "./src/styles/*"
+        "./src/assets/styles/*"
       ]
     },
     "lib": [
@@ -43,18 +43,15 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "vite/client",
-      "vite-plugin-vue-layouts/client"
+      "vite/client"
     ]
   },
   "include": [
-    "./typed-router.d.ts",
     "./vite.config.*",
     "./env.d.ts",
     "./shims.d.ts",
     "./src/**/*",
     "./src/**/*.vue",
-    "./themeConfig.ts",
     "./auto-imports.d.ts",
     "./components.d.ts"
   ],

@@ -41,3 +41,6 @@ public/mockServiceWorker.js
 # Env files
 .env*
 !.env.example
+
+# Généré par src/plugins/iconify/build-icons.ts (predev / prebuild / postinstall)
+src/plugins/iconify/icons.css
