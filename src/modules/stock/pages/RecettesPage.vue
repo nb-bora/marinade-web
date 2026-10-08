@@ -67,7 +67,7 @@ const remove = useSubmit(async (line: PlatComposant) => {
   if (!await confirm({
     title: 'Retirer ce composant ?',
     text: `« ${name} » ne sera plus consommé par ce plat.`,
-    confirmLabel: 'Retirer',
+    confirmLabel: 'Supprimer',
     danger: true,
   }))
     return

@@ -71,7 +71,6 @@ watch(open, isOpen => {
     icon="ri-restaurant-2-line"
     :loading="save.pending.value"
     :error="save.message.value"
-    :max-width="640"
     @submit="save.submit()"
   >
     <VRow>
@@ -82,6 +81,7 @@ watch(open, isOpen => {
         <VTextField
           v-model="nom"
           label="Nom de l'offre"
+          prepend-inner-icon="ri-restaurant-2-line"
           autocomplete="off"
           autofocus
           :rules="[required('Indiquez le nom de la combinaison.')]"
@@ -95,6 +95,7 @@ watch(open, isOpen => {
         <VTextField
           v-model="prix"
           label="Prix (FCFA)"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           inputmode="decimal"
           autocomplete="off"
           :rules="[positiveQty]"
@@ -106,6 +107,7 @@ watch(open, isOpen => {
           v-model="selected"
           :items="options"
           label="Composants de l'offre"
+          prepend-inner-icon="ri-flask-line"
           multiple
           chips
           closable-chips
@@ -118,6 +120,7 @@ watch(open, isOpen => {
         <VTextarea
           v-model="description"
           label="Description (facultatif)"
+          prepend-inner-icon="ri-file-text-line"
           rows="2"
           auto-grow
         />

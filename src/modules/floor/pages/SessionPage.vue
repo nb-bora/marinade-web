@@ -168,6 +168,17 @@ const { submit: sendOrder, pending: sending, message: sendError, reset: resetSen
   await refresh()
 })
 
+async function askSend() {
+  const accepted = await confirm({
+    title: 'Envoyer cette commande ?',
+    text: `${cartCount.value} article(s) seront envoyés en préparation.`,
+    confirmLabel: 'Créer',
+  })
+
+  if (accepted)
+    await sendOrder()
+}
+
 // Clôture ------------------------------------------------------------------------------
 
 const closeBlocked = computed(() => amountDue.value > 0)
@@ -344,7 +355,7 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
                 v-model="cart"
                 :submitting="sending"
                 :error="sendError"
-                @submit="sendOrder"
+                @submit="askSend"
               />
             </div>
             <SessionBill

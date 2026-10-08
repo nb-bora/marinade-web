@@ -9,5 +9,10 @@ export default defineFeature({
       component: () => import('./pages/AccountPage.vue'),
       meta: { title: 'Mon compte', withoutRestaurant: true },
     },
+    {
+      path: '/2fa/setup',
+      component: () => import('./pages/TwoFactorSetupPage.vue'),
+      meta: { title: 'Activer la double authentification', withoutRestaurant: true },
+    },
   ],
 })

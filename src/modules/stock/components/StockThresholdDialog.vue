@@ -48,6 +48,7 @@ watch(open, isOpen => {
     <VTextField
       v-model="threshold"
       :label="`Seuil d'alerte (${row?.composant.stock_unite ?? ''})`"
+      prepend-inner-icon="ri-alarm-warning-line"
       inputmode="decimal"
       autocomplete="off"
       autofocus

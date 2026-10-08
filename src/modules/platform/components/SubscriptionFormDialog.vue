@@ -114,6 +114,7 @@ const errorText = computed(() => apiError.value?.status === 400
           item-value="restaurant_id"
           :loading="searching"
           label="Restaurant"
+          prepend-inner-icon="ri-store-2-line"
           placeholder="Rechercher par nom"
           no-data-text="Aucun restaurant trouvé."
           no-filter
@@ -128,6 +129,7 @@ const errorText = computed(() => apiError.value?.status === 400
           item-title="name"
           item-value="id"
           label="Offre"
+          prepend-inner-icon="ri-vip-crown-line"
           :rules="tierRules"
           :error-messages="apiError?.fieldMessage('tier_id')"
         >
@@ -147,6 +149,7 @@ const errorText = computed(() => apiError.value?.status === 400
           v-model="startDate"
           type="date"
           label="Début"
+          prepend-inner-icon="ri-calendar-line"
           :rules="startRules"
           :error-messages="apiError?.fieldMessage('start_date')"
         />
@@ -159,6 +162,7 @@ const errorText = computed(() => apiError.value?.status === 400
           v-model="endDate"
           type="date"
           label="Fin (facultative)"
+          prepend-inner-icon="ri-calendar-line"
           :rules="endRules"
           :error-messages="apiError?.fieldMessage('end_date')"
         />
@@ -168,6 +172,7 @@ const errorText = computed(() => apiError.value?.status === 400
           v-model="status"
           :items="SUBSCRIPTION_STATUS_OPTIONS"
           label="Statut initial"
+          prepend-inner-icon="ri-list-check"
         />
       </VCol>
     </VRow>

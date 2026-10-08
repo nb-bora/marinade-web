@@ -106,6 +106,7 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
       v-else
       v-model.number="partialAmount"
       label="Montant à rembourser"
+      prepend-inner-icon="ri-money-dollar-circle-line"
       type="number"
       min="0"
       suffix="FCFA"
@@ -116,6 +117,7 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
     <VTextarea
       v-model="reason"
       label="Motif"
+      prepend-inner-icon="ri-file-text-line"
       placeholder="Plat renvoyé, erreur de commande…"
       rows="2"
       auto-grow
@@ -130,6 +132,7 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
       v-model="itemIds"
       :items="itemOptions"
       label="Articles concernés (facultatif)"
+      prepend-inner-icon="ri-list-check"
       multiple
       chips
       closable-chips

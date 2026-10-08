@@ -75,7 +75,6 @@ watch(composantId, id => {
     icon="ri-list-check-2"
     :loading="save.pending.value"
     :error="save.message.value"
-    :max-width="480"
     @submit="save.submit()"
   >
     <VAutocomplete
@@ -83,6 +82,7 @@ watch(composantId, id => {
       v-model="composantId"
       :items="options"
       label="Composant"
+      prepend-inner-icon="ri-flask-line"
       no-data-text="Tous les composants sont déjà dans la fiche."
       :rules="[required('Choisissez un composant.')]"
       :error-messages="save.apiError.value?.fieldMessage('composant_id')"
@@ -96,6 +96,7 @@ watch(composantId, id => {
         <VTextField
           v-model="quantity"
           label="Quantité par plat"
+          prepend-inner-icon="ri-hashtag"
           inputmode="decimal"
           autocomplete="off"
           :rules="[positiveQty]"
@@ -110,6 +111,7 @@ watch(composantId, id => {
           v-model="unit"
           :items="UNITS"
           label="Unité"
+          prepend-inner-icon="ri-scales-line"
           :rules="[required('Indiquez l\'unité.')]"
           :error-messages="save.apiError.value?.fieldMessage('unite')"
         />

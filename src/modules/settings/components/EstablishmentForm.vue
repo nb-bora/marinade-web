@@ -82,6 +82,13 @@ async function submit() {
     if (!accepted)
       return
   }
+  else if (!await confirm({
+    title: 'Enregistrer les informations ?',
+    text: 'Les informations de l\'établissement seront mises à jour.',
+    confirmLabel: 'Enregistrer',
+  })) {
+    return
+  }
 
   await save({
     name: draft.value.name.trim(),
@@ -126,6 +133,7 @@ function cancel() {
                 <VTextField
                   v-model="draft.name"
                   label="Nom du restaurant"
+                  prepend-inner-icon="ri-building-line"
                   maxlength="255"
                   :rules="[required]"
                   :readonly="!canEdit"
@@ -135,6 +143,7 @@ function cancel() {
                 <VTextarea
                   v-model="draft.description"
                   label="Description"
+                  prepend-inner-icon="ri-file-text-line"
                   rows="3"
                   auto-grow
                   :readonly="!canEdit"
@@ -180,6 +189,7 @@ function cancel() {
                   :model-value="draft.city"
                   :items="CAMEROON_CITIES"
                   label="Ville"
+                  prepend-inner-icon="ri-map-2-line"
                   maxlength="100"
                   :readonly="!canEdit"
                   @update:model-value="(value: string | null) => draft.city = value ?? ''"
@@ -189,6 +199,7 @@ function cancel() {
                 <VTextField
                   v-model="draft.address"
                   label="Adresse"
+                  prepend-inner-icon="ri-map-pin-line"
                   placeholder="Rue, quartier, repère"
                   :readonly="!canEdit"
                 />
@@ -200,6 +211,7 @@ function cancel() {
                 <VTextField
                   v-model="draft.country"
                   label="Pays"
+                  prepend-inner-icon="ri-global-line"
                   maxlength="100"
                   :readonly="!canEdit"
                 />
@@ -253,6 +265,7 @@ function cancel() {
             <VTextField
               v-model="draft.logo_url"
               label="Adresse du logo"
+              prepend-inner-icon="ri-link"
               placeholder="https://…/logo.png"
               type="url"
               :rules="[httpsUrl]"

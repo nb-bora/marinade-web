@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { reservationsApi } from '../api'
 import type { WaitlistEntry } from '../types'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -20,6 +21,15 @@ const phoneKey = ref(0)
 
 const { submit, pending, message, apiError, reset } = useSubmit(async () => {
   if (!tenant.currentId)
+    return
+
+  const accepted = await useConfirm()({
+    title: 'Ajouter à la liste d\'attente ?',
+    text: `${name.value.trim()} (${Number(partySize.value)} couvert${Number(partySize.value) > 1 ? 's' : ''}) rejoindra la liste d'attente.`,
+    confirmLabel: 'Créer',
+  })
+
+  if (!accepted)
     return
 
   const entry = await reservationsApi.addToWaitlist(tenant.currentId, {
@@ -75,6 +85,7 @@ const rules = {
             <VTextField
               v-model="name"
               label="Nom"
+              prepend-inner-icon="ri-user-line"
               placeholder="Famille Ngono"
               :rules="rules.name"
               :error-messages="apiError?.fieldMessage('customer_name')"
@@ -89,6 +100,7 @@ const rules = {
             <VTextField
               v-model="partySize"
               label="Couverts"
+              prepend-inner-icon="ri-group-line"
               type="number"
               min="1"
               :rules="rules.party"
@@ -103,6 +115,7 @@ const rules = {
             <VTextField
               v-model="estimate"
               label="Attente (min)"
+              prepend-inner-icon="ri-time-line"
               type="number"
               min="0"
               placeholder="15"

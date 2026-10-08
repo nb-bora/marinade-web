@@ -57,7 +57,6 @@ const orderRules = [(value: number | string) => (Number.isInteger(Number(value))
     icon="ri-price-tag-3-line"
     :loading="pending"
     :error="message"
-    :max-width="480"
     @submit="submit"
   >
     <VRow>
@@ -65,6 +64,7 @@ const orderRules = [(value: number | string) => (Number.isInteger(Number(value))
         <VTextField
           v-model="name"
           label="Nom de la catégorie"
+          prepend-inner-icon="ri-price-tag-3-line"
           placeholder="Entrées"
           :rules="nameRules"
           maxlength="100"
@@ -75,6 +75,7 @@ const orderRules = [(value: number | string) => (Number.isInteger(Number(value))
         <VTextField
           v-model="ordre"
           label="Position dans le menu"
+          prepend-inner-icon="ri-hashtag"
           type="number"
           min="0"
           step="1"

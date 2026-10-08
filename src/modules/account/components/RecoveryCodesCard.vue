@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import RecoveryCodesGrid from './RecoveryCodesGrid.vue'
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { useSessionStore } from '@/stores/session.store'
 import { useToast } from '@/stores/toast.store'
 
 const session = useSessionStore()
 const toast = useToast()
+const askConfirm = useConfirm()
 
 const enabled = computed(() => session.user?.two_factor_enabled === true)
 
@@ -16,6 +18,14 @@ const codes = ref<string[]>([])
 const savedCodes = ref(false)
 
 const { submit: regenerate, pending, apiError, message, reset } = useSubmit(async () => {
+  if (!(await askConfirm({
+    title: 'Générer de nouveaux codes de secours ?',
+    text: 'Les anciens codes cesseront de fonctionner immédiatement.',
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })))
+    return
+
   const result = await container.auth.regenerateRecoveryCodes(password.value)
 
   codes.value = result.recovery_codes

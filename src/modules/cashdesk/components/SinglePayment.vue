@@ -232,6 +232,7 @@ defineExpose({ reset })
           v-if="!isCash"
           v-model="reference"
           label="Référence (facultatif)"
+          prepend-inner-icon="ri-code-line"
           maxlength="120"
           autocomplete="off"
         />

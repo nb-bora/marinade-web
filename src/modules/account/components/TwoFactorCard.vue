@@ -1,44 +1,29 @@
 <script setup lang="ts">
-import QRCode from 'qrcode'
-import RecoveryCodesGrid from './RecoveryCodesGrid.vue'
+import { useReauth } from '../composables/useReauth'
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
-import type { TwoFactorSetup } from '@/lib/api/types'
-import { required } from '@/lib/validation'
 import { useSessionStore } from '@/stores/session.store'
 import { useToast } from '@/stores/toast.store'
 
 const session = useSessionStore()
 const toast = useToast()
+const askConfirm = useConfirm()
 
 const enabled = computed(() => session.user?.two_factor_enabled === true)
 
 // --- Activation -------------------------------------------------------------
-const setup = ref<TwoFactorSetup | null>(null)
-const qrDataUrl = ref('')
-const code = ref('')
-const savedCodes = ref(false)
-
-const showSetup = computed({
-  get: () => setup.value !== null,
-  set: open => {
-    if (!open)
-      setup.value = null
-  },
-})
+// Le mot de passe est redemandé, puis l'assistant en 4 étapes prend le relais (/2fa/setup).
+const router = useRouter()
+const reauth = useReauth()
+const showStart = ref(false)
+const startPassword = ref('')
 
 const { submit: start, pending: starting, message: startError } = useSubmit(async () => {
-  setup.value = await container.auth.setupTwoFactor()
-  qrDataUrl.value = await QRCode.toDataURL(setup.value.qr_code_url, { margin: 1, width: 220 })
-  code.value = ''
-  savedCodes.value = false
-})
-
-const { submit: confirm, pending: confirming, message: confirmError } = useSubmit(async () => {
-  await container.auth.confirmTwoFactor(code.value.replace(/\s/g, ''))
-  session.setUser(await container.account.me())
-  setup.value = null
-  toast.success('Authentification à deux facteurs activée.')
+  await reauth.verify(startPassword.value)
+  startPassword.value = ''
+  showStart.value = false
+  await router.push('/2fa/setup')
 })
 
 // --- Désactivation ----------------------------------------------------------
@@ -46,6 +31,14 @@ const showDisable = ref(false)
 const password = ref('')
 
 const { submit: disable, pending: disabling, message: disableError } = useSubmit(async () => {
+  if (!(await askConfirm({
+    title: 'Désactiver l\'authentification à deux facteurs ?',
+    text: 'Votre compte ne sera plus protégé que par votre mot de passe.',
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })))
+    return
+
   await container.auth.disableTwoFactor(password.value)
   session.setUser(await container.account.me())
   showDisable.value = false
@@ -81,77 +74,40 @@ const { submit: disable, pending: disabling, message: disableError } = useSubmit
         </VBtn>
         <VBtn
           v-else
-          :loading="starting"
-          @click="start"
+          @click="showStart = true"
         >
-          Activer
+          Activer la 2FA
         </VBtn>
       </div>
-
-      <VAlert
-        v-if="startError"
-        type="error"
-        variant="tonal"
-        class="mt-4"
-      >
-        {{ startError }}
-      </VAlert>
     </VCardText>
 
-    <!-- Activation -->
+    <!-- Activation : confirmation par mot de passe -->
     <VDialog
-      v-model="showSetup"
-      max-width="520"
-      persistent
+      v-model="showStart"
+      max-width="440"
     >
-      <VCard v-if="setup">
+      <VCard>
         <VCardTitle class="pt-5 px-6">
           Activer la double authentification
         </VCardTitle>
         <VCardText class="px-6">
-          <ol class="text-body-2 ps-4 mb-4">
-            <li>Scannez ce code avec une application d'authentification (Google Authenticator, Authy...).</li>
-            <li>Conservez les codes de secours ci-dessous, en lieu sûr : chacun ne sert qu'une fois.</li>
-            <li>Saisissez le code à 6 chiffres affiché par l'application.</li>
-          </ol>
-
-          <div class="d-flex flex-column align-center gap-2 mb-4">
-            <img
-              :src="qrDataUrl"
-              alt="Code QR de configuration"
-              width="220"
-              height="220"
-            >
-            <code class="text-caption text-wrap text-break">{{ setup.secret }}</code>
-          </div>
-
-          <RecoveryCodesGrid
-            :codes="setup.recovery_codes"
-            class="mb-4"
+          <p class="text-body-2 mb-4">
+            Confirmez votre identité avec votre mot de passe pour continuer.
+          </p>
+          <AppPasswordField
+            v-model="startPassword"
+            label="Mot de passe"
+            autocomplete="current-password"
+            autofocus
+            @keydown.enter.prevent="start"
           />
-
-          <VCheckbox
-            v-model="savedCodes"
-            label="J'ai conservé mes codes de secours"
-          />
-
-          <VTextField
-            v-model="code"
-            label="Code à 6 chiffres"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            :disabled="!savedCodes"
-            :rules="[required]"
-            @keydown.enter.prevent="savedCodes && confirm()"
-          />
-
           <VAlert
-            v-if="confirmError"
+            v-if="startError"
             type="error"
             variant="tonal"
             class="mt-3"
           >
-            {{ confirmError }}
+            {{ startError }}
           </VAlert>
         </VCardText>
         <VCardActions class="px-6 pb-5">
@@ -159,17 +115,17 @@ const { submit: disable, pending: disabling, message: disableError } = useSubmit
           <VBtn
             variant="text"
             color="secondary"
-            @click="showSetup = false"
+            @click="showStart = false"
           >
             Annuler
           </VBtn>
           <VBtn
             variant="flat"
-            :disabled="!savedCodes || code.trim().length < 6"
-            :loading="confirming"
-            @click="confirm"
+            :disabled="!startPassword"
+            :loading="starting"
+            @click="start"
           >
-            Activer
+            Continuer
           </VBtn>
         </VCardActions>
       </VCard>

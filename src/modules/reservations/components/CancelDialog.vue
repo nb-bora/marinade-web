@@ -40,7 +40,6 @@ const rules = [(value: string) => value.trim().length > 0 || 'Indiquez le motif 
     submit-label="Annuler la réservation"
     icon="ri-calendar-close-line"
     danger
-    :max-width="480"
     :loading="pending"
     :error="message"
     @submit="submit"
@@ -48,6 +47,7 @@ const rules = [(value: string) => value.trim().length > 0 || 'Indiquez le motif 
     <VTextField
       v-model="reason"
       label="Motif"
+      prepend-inner-icon="ri-file-text-line"
       placeholder="Le client a prévenu, changement de programme..."
       :rules="rules"
       maxlength="500"

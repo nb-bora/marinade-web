@@ -115,6 +115,7 @@ const STATE_OPTIONS = [...TABLE_STATUS_OPTIONS, { value: 'settled', title: TABLE
               v-model="status"
               :items="STATE_OPTIONS"
               label="État"
+              prepend-inner-icon="ri-filter-3-line"
               clearable
               placeholder="Tous les états"
             />

@@ -38,6 +38,7 @@ async function onSubmit() {
           <VTextField
             v-model="token"
             label="Code reçu par e-mail"
+            prepend-inner-icon="ri-shield-keyhole-line"
             autocomplete="off"
             :autofocus="!token"
             :rules="[required]"
@@ -49,9 +50,11 @@ async function onSubmit() {
             v-model="password"
             label="Nouveau mot de passe"
             autocomplete="new-password"
-            hint="12 caractères au minimum."
-            persistent-hint
             :rules="[required, minLength(12)]"
+          />
+          <AppPasswordStrength
+            :password="password"
+            class="mt-2"
           />
         </VCol>
 

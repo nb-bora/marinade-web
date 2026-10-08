@@ -13,7 +13,9 @@ import { SESSION_STATUS, present } from '../labels'
 import { toNumber } from '../money'
 import type { Invoice, Payment, ReceiptPayment, ServiceSession, Table } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
+import { formatMoney } from '@/lib/format'
 import { useLive } from '@/composables/useLive'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -135,6 +137,15 @@ const { submit: paySingle, pending: payingSingle, message: singleMessage } = use
   if (!restaurantId || !current)
     return
 
+  const accepted = await useConfirm()({
+    title: 'Enregistrer le paiement ?',
+    text: `Un paiement de ${formatMoney(payload.amount)} sera enregistré sur cette addition.`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
+    return
+
   const key = idempotency.keyFor(`single|${current.id}|${payload.method}|${payload.amount}|${payload.reference ?? ''}`)
 
   const payment = await cashDeskApi.pay(restaurantId, {
@@ -153,6 +164,17 @@ const { submit: paySplit, pending: payingSplit, message: splitMessage } = useSub
   const current = invoice.value
 
   if (!restaurantId || !current)
+    return
+
+  const total = payload.items.reduce((sum, item) => sum + Number(item.amount), 0)
+
+  const accepted = await useConfirm()({
+    title: 'Enregistrer les paiements ?',
+    text: `${payload.items.length} paiements, pour un total de ${formatMoney(total)}, seront enregistrés sur cette addition.`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
     return
 
   const signature = payload.items.map(item => `${item.method}:${item.amount}:${item.reference ?? ''}`).join('|')

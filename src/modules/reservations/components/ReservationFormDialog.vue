@@ -116,7 +116,6 @@ const rules = {
     subtitle="Le client, le jour, l'heure et le nombre de couverts suffisent ; la table peut être choisie plus tard."
     submit-label="Enregistrer"
     icon="ri-calendar-event-line"
-    :max-width="1000"
     :loading="pending"
     :error="message"
     @submit="submit"
@@ -129,6 +128,7 @@ const rules = {
         <VTextField
           v-model="name"
           label="Nom du client"
+          prepend-inner-icon="ri-user-line"
           placeholder="Aïcha Mbarga"
           :rules="rules.name"
           :error-messages="apiError?.fieldMessage('customer_name')"
@@ -154,6 +154,7 @@ const rules = {
         <VTextField
           v-model="date"
           label="Jour"
+          prepend-inner-icon="ri-calendar-line"
           type="date"
           :rules="rules.date"
           :error-messages="apiError?.fieldMessage('reservation_date')"
@@ -166,6 +167,7 @@ const rules = {
         <VTextField
           v-model="time"
           label="Heure"
+          prepend-inner-icon="ri-time-line"
           type="time"
           :rules="rules.time"
         />
@@ -177,6 +179,7 @@ const rules = {
         <VTextField
           v-model="partySize"
           label="Couverts"
+          prepend-inner-icon="ri-group-line"
           type="number"
           min="1"
           max="200"
@@ -192,6 +195,7 @@ const rules = {
           v-model="duration"
           :items="DURATION_OPTIONS"
           label="Durée prévue"
+          prepend-inner-icon="ri-timer-line"
         />
       </VCol>
       <VCol
@@ -202,6 +206,7 @@ const rules = {
           v-model="tableId"
           :items="tableItems"
           label="Table (facultative)"
+          prepend-inner-icon="ri-layout-grid-line"
           placeholder="Choisie à l'arrivée"
           clearable
           :hint="tableHint"
@@ -216,6 +221,7 @@ const rules = {
         <VTextField
           v-model="email"
           label="E-mail (facultatif)"
+          prepend-inner-icon="ri-mail-line"
           type="email"
           maxlength="254"
           :error-messages="apiError?.fieldMessage('customer_email')"
@@ -229,12 +235,14 @@ const rules = {
           v-model="source"
           :items="SOURCE_OPTIONS"
           label="Réservé"
+          prepend-inner-icon="ri-store-2-line"
         />
       </VCol>
       <VCol cols="12">
         <VTextarea
           v-model="notes"
           label="Notes (facultatives)"
+          prepend-inner-icon="ri-file-text-line"
           placeholder="Anniversaire, allergies, table près de la fenêtre..."
           rows="2"
           auto-grow

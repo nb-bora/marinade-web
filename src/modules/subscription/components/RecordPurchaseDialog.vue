@@ -75,6 +75,7 @@ const amountRule = (value: number | null) => {
     <VTextField
       v-model.number="amount"
       label="Montant"
+      prepend-inner-icon="ri-money-dollar-circle-line"
       type="number"
       min="1"
       suffix="FCFA"
@@ -84,6 +85,7 @@ const amountRule = (value: number | null) => {
     <VTextField
       v-model="description"
       label="Description (facultatif)"
+      prepend-inner-icon="ri-file-text-line"
       placeholder="Approvisionnement du marché…"
       maxlength="500"
       class="mb-3"
@@ -91,6 +93,7 @@ const amountRule = (value: number | null) => {
     <VTextField
       v-model="posId"
       label="Identifiant du terminal de paiement (facultatif)"
+      prepend-inner-icon="ri-code-line"
       maxlength="100"
       hint="Permet de retrouver l'achat plus tard depuis la recherche."
       persistent-hint

@@ -82,14 +82,19 @@ const statusChange = useSubmit(async (value: SubscriptionStatus) => {
   if (!subscription.value || value === subscription.value.status)
     return
 
-  const needsConfirm = value === 'cancelled' || value === 'suspended' || value === 'expired'
+  const risky = value === 'cancelled' || value === 'suspended' || value === 'expired'
+  const title = `Passer l'abonnement en « ${presentSubscriptionStatus(value).label.toLowerCase()} » ?`
 
-  if (needsConfirm && !await confirm({
-    title: `Passer l'abonnement en « ${presentSubscriptionStatus(value).label.toLowerCase()} » ?`,
-    text: 'Le restaurant peut perdre l\'accès à ses encaissements. Vous pourrez rétablir le statut ensuite.',
-    confirmLabel: 'Confirmer',
-    danger: true,
-  })) {
+  const accepted = await confirm({
+    title,
+    text: risky
+      ? 'Le restaurant peut perdre l\'accès à ses encaissements. Vous pourrez rétablir le statut ensuite.'
+      : 'Le nouveau statut s\'applique immédiatement.',
+    confirmLabel: risky ? 'Supprimer' : 'Enregistrer',
+    danger: risky,
+  })
+
+  if (!accepted) {
     newStatus.value = subscription.value.status as SubscriptionStatus
 
     return
@@ -116,7 +121,7 @@ const reset = useSubmit(async () => {
   const accepted = await confirm({
     title: 'Réinitialiser le solde du jour ?',
     text: `Le solde d'aujourd'hui repart au plafond de l'offre (${formatMoney(tier.value?.daily_limit_fcfa)}), sans rien consommé.`,
-    confirmLabel: 'Réinitialiser',
+    confirmLabel: 'Supprimer',
     danger: true,
   })
 
@@ -228,6 +233,7 @@ async function copyId() {
         v-model="newStatus"
         :items="SUBSCRIPTION_STATUS_OPTIONS"
         label="Statut de l'abonnement"
+        prepend-inner-icon="ri-list-check"
         class="mt-4"
         :loading="statusChange.pending.value"
         :disabled="statusChange.pending.value"

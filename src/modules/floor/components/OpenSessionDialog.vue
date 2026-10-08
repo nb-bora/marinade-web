@@ -102,7 +102,6 @@ watch(open, isOpen => {
     submit-label="Ouvrir la session"
     :loading="pending"
     :error="message"
-    :max-width="520"
     @submit="submit"
   >
     <div class="text-subtitle-2 mb-2">
@@ -167,6 +166,7 @@ watch(open, isOpen => {
       <VTextField
         v-model="name"
         :label="nameRequired ? 'Nom du client' : 'Nom du client (facultatif)'"
+        prepend-inner-icon="ri-user-line"
         :rules="nameRequired ? [required] : []"
         autocomplete="off"
         class="mb-2"
@@ -188,6 +188,7 @@ watch(open, isOpen => {
           <VTextField
             v-model="email"
             label="E-mail (facultatif)"
+            prepend-inner-icon="ri-mail-line"
             type="email"
             :rules="[emailRule]"
             autocomplete="off"

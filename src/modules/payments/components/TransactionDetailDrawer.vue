@@ -3,6 +3,7 @@ import { onKeyStroke } from '@vueuse/core'
 import { isInFlight, presentStatus } from '../statuses'
 import PaymentStatusChip from './PaymentStatusChip.vue'
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import type { PaymentTransactionDetail } from '@/lib/api/types'
 import { formatDateTime } from '@/lib/format'
@@ -14,6 +15,7 @@ const emit = defineEmits<{ changed: [] }>()
 const transactionId = defineModel<string | null>({ required: true })
 
 const toast = useToast()
+const confirm = useConfirm()
 const detail = ref<PaymentTransactionDetail | null>(null)
 const loading = ref(false)
 const error = ref<unknown>(null)
@@ -70,6 +72,13 @@ onScopeDispose(() => controller?.abort())
 
 const { submit: refreshStatus, pending: refreshing } = useSubmit(async () => {
   if (!transactionId.value)
+    return
+
+  if (!(await confirm({
+    title: 'Actualiser le statut du paiement ?',
+    text: 'Le statut sera redemandé à la passerelle de paiement et enregistré.',
+    confirmLabel: 'Enregistrer',
+  })))
     return
 
   await container.payments.refresh(transactionId.value)

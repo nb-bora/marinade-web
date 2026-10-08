@@ -135,6 +135,7 @@ function afterChange() {
               v-model="statuses"
               :items="STATUS_OPTIONS"
               label="Statut"
+              prepend-inner-icon="ri-list-check"
               multiple
               chips
               closable-chips

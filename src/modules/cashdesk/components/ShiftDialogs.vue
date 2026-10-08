@@ -51,12 +51,12 @@ const variance = (shift: Shift) => toNumber(shift.variance)
     submit-label="Ouvrir la caisse"
     :loading="loading"
     :error="error"
-    max-width="460"
     @submit="emit('open', parseAmount(opening))"
   >
     <VTextField
       v-model="opening"
       label="Fond de caisse (FCFA)"
+      prepend-inner-icon="ri-money-dollar-circle-line"
       inputmode="numeric"
       autocomplete="off"
       autofocus
@@ -84,12 +84,12 @@ const variance = (shift: Shift) => toNumber(shift.variance)
     submit-label="Fermer la caisse"
     :loading="loading"
     :error="error"
-    max-width="460"
     @submit="emit('close', parseAmount(counted))"
   >
     <VTextField
       v-model="counted"
       label="Montant compté dans le tiroir (FCFA)"
+      prepend-inner-icon="ri-money-dollar-circle-line"
       inputmode="numeric"
       autocomplete="off"
       autofocus

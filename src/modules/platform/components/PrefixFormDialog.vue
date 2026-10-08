@@ -79,6 +79,7 @@ const nameRules = [(value: string) => value.trim().length >= 2 || 'Le nom compte
         <VTextField
           v-model="countryCode"
           label="Indicatif pays"
+          prepend-inner-icon="ri-global-line"
           :disabled="isEdit"
           :rules="countryRules"
           :error-messages="apiError?.fieldMessage('country_code')"
@@ -91,6 +92,7 @@ const nameRules = [(value: string) => value.trim().length >= 2 || 'Le nom compte
         <VTextField
           v-model="nationalPrefix"
           label="Préfixe du numéro"
+          prepend-inner-icon="ri-hashtag"
           placeholder="65"
           inputmode="numeric"
           :disabled="isEdit"
@@ -106,6 +108,7 @@ const nameRules = [(value: string) => value.trim().length >= 2 || 'Le nom compte
         <VTextField
           v-model="operatorCode"
           label="Code"
+          prepend-inner-icon="ri-code-line"
           placeholder="MTN"
           :disabled="isEdit"
           :rules="codeRules"
@@ -119,6 +122,7 @@ const nameRules = [(value: string) => value.trim().length >= 2 || 'Le nom compte
         <VTextField
           v-model="operatorName"
           label="Nom de l'opérateur"
+          prepend-inner-icon="ri-router-line"
           placeholder="MTN Cameroun"
           :rules="nameRules"
           :error-messages="apiError?.fieldMessage('operator_name')"

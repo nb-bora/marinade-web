@@ -351,7 +351,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lire la configuration Easy Transact d'un restaurant (lecture seule)
+         * @description Retourne la configuration du restaurant désigné par `restaurant_id`. Ne contient aucun
+         *         secret : `credential_env_key` et `webhook_secret_env_key` sont seulement les NOMS des
+         *         variables d'environnement qui les portent. Réservé au management du restaurant.
+         */
+        get: operations["get_configuration_v1_payments_easytransact_configuration_get"];
         /** Upsert Configuration */
         put: operations["upsert_configuration_v1_payments_easytransact_configuration_put"];
         post?: never;
@@ -1225,6 +1231,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détails d’une commande, avec ses lignes et remboursements */
+        get: operations["get_restaurant_commande_v1_restaurants__restaurant_id__commandes__commande_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lignes d’une commande */
+        get: operations["get_restaurant_commande_items_v1_restaurants__restaurant_id__commandes__commande_id__items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Remboursements d’une commande */
+        get: operations["get_restaurant_commande_refunds_v1_restaurants__restaurant_id__commandes__commande_id__refunds_get"];
+        put?: never;
+        /** Demander un remboursement (route imbriquée) */
+        post: operations["request_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds/{refund_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approuver un remboursement (route imbriquée) */
+        post: operations["approve_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds/{refund_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rejeter un remboursement (motif en `?reason=` ou dans le corps) */
+        post: operations["reject_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/restaurants/{restaurant_id}/composants": {
         parameters: {
             query?: never;
@@ -1243,6 +1335,112 @@ export interface paths {
          * @description Enregistre un composant comme le riz, une sauce ou une protéine. Le composant peut être rendu indisponible lorsqu’il est épuisé.
          */
         post: operations["create_composant_v1_restaurants__restaurant_id__composants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Configuration d’un restaurant (horaires, taux de service, Easy Transact)
+         * @description Rassemble en une lecture la configuration JSON du restaurant : horaires d'ouverture,
+         *         taux de service, `config_jsonb` (toute clé ressemblant à un secret est retirée) et les
+         *         réglages Easy Transact. Ces derniers ne contiennent jamais de secret : seuls les NOMS des
+         *         variables d'environnement (`credential_env_key`, `webhook_secret_env_key`) sont exposés.
+         *
+         *         Réservé au management du restaurant.
+         */
+        get: operations["get_restaurant_config_v1_restaurants__restaurant_id__config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporter plats, boissons, composants et recettes en XLSX
+         * @description Télécharge un classeur `.xlsx` (feuilles « Plats », « Boissons », « Composants »,
+         *         « Recettes ») ré-importable tel quel par `/import-excel`.
+         */
+        get: operations["export_restaurant_catalog_v1_restaurants__restaurant_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/import-csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importer plats, boissons, composants ou recettes depuis un CSV
+         * @description Fichier CSV : séparateur `;`, UTF-8 (BOM accepté), première ligne d'en-tête.
+         *
+         *         Le paramètre `type` choisit le contenu :
+         *
+         *         | type | en-tête |
+         *         |---|---|
+         *         | `catalogue` (défaut) | `type;nom;prix;description;code;disponible;stock_min;stock_max;composition` — `type` vaut `plat` ou `boisson` et aiguille chaque ligne |
+         *         | `plats`, `boissons` | idem (`type` facultatif) |
+         *         | `composants` | `nom;prix;stock;composition;valeur_calorique` |
+         *         | `recettes` | `plat;composant;quantite;unite` |
+         *
+         *         L'import est idempotent (clé : nom, sans la casse) et partiel : les lignes valides sont
+         *         enregistrées, les autres reviennent dans `errors` avec leur numéro de ligne.
+         *         `composition` d'un plat : `Riz|Poulet:2` (noms de composants existants, quantité facultative).
+         *         Une erreur de fichier (colonne manquante, encodage, taille) répond 400 sans rien enregistrer.
+         *         Limite : 1 import par minute et par restaurant (429 + `Retry-After`).
+         */
+        post: operations["import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/import-excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importer plats, boissons, composants et recettes depuis un XLSX
+         * @description Classeur Excel (.xlsx) avec une feuille par type : « Plats », « Boissons », « Composants »,
+         *         « Recettes » (feuilles absentes ignorées), mêmes colonnes que le CSV. Les composants sont
+         *         importés avant les plats, puis les recettes : un même fichier peut tout créer.
+         *
+         *         Mêmes règles que `/import-csv` (idempotence, import partiel, limite d'une fois par minute).
+         *         Les erreurs portent en plus le nom de la `sheet`.
+         */
+        post: operations["import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1629,6 +1827,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ros/shifts/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mon shift de caisse ouvert dans le restaurant courant
+         * @description Retourne le shift OUVERT de l'utilisateur dans le restaurant courant (en-tête
+         *         `X-Tenant-ID`, ou son restaurant par défaut). 404 s'il n'a pas de shift ouvert.
+         */
+        get: operations["get_current_shift_v1_ros_shifts_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ros/shifts/{shift_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bilan d'un shift : encaissements par moyen de paiement et caisse attendue
+         * @description Totaux des encaissements réussis de l'opérateur pendant le shift (jusqu'à maintenant s'il
+         *         est ouvert), par moyen de paiement, et caisse attendue (`fond de caisse + espèces`).
+         *         Visible de l'opérateur du shift et du management.
+         */
+        get: operations["get_shift_summary_v1_ros_shifts__shift_id__summary_get"];
+        put?: never;
+        /**
+         * Clôturer un shift par son identifiant et obtenir son bilan
+         * @description Ferme le shift `shift_id` avec le montant compté dans le tiroir, puis renvoie le bilan
+         *         final. L'opérateur ferme le sien ; le management peut fermer celui d'un caissier.
+         *         409 si le shift est déjà clôturé.
+         */
+        post: operations["close_shift_with_summary_v1_ros_shifts__shift_id__summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/subscriptions": {
         parameters: {
             query?: never;
@@ -1636,7 +1883,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lister tous les abonnements (admin)
+         * @description Liste paginée (`skip`, `limit`) de tous les abonnements de la plateforme, du plus récent au plus ancien.
+         *
+         *         `total` est le nombre d'abonnements correspondant au filtre, indépendamment de la page.
+         *         Filtre optionnel : `status`.
+         */
+        get: operations["list_subscriptions_v1_subscriptions_get"];
         put?: never;
         /**
          * Créer un abonnement
@@ -1789,7 +2043,8 @@ export interface paths {
         };
         /**
          * Solde quotidien courant
-         * @description Retourne le solde du jour en cours pour un abonnement donné.
+         * @description Retourne le solde du jour en cours pour un abonnement donné, ou `null` (200) si aucun
+         *         solde n'a encore été créé aujourd'hui : l'absence de solde n'est pas une erreur.
          *
          *         Cette information est essentielle pour connaître la consommation restante et décider d’une autorisation de transaction.
          */
@@ -1969,6 +2224,9 @@ export interface paths {
          * @description Retourne la liste paginée des comptes utilisateurs du système.
          *
          *         Cette route est réservée aux administrateurs. Elle permet de filtrer les résultats via `skip` et `limit`.
+         *
+         *         Le corps reste un tableau (les clients existants ne changent pas) ; le nombre total de comptes
+         *         non supprimés est dans l'en-tête `X-Total-Count`.
          */
         get: operations["get_users_v1_users_get"];
         put?: never;
@@ -2057,9 +2315,9 @@ export interface paths {
         post?: never;
         /**
          * Supprimer un utilisateur
-         * @description Supprime définitivement un utilisateur du système.
+         * @description Supprime logiquement un utilisateur (`is_deleted`, compte désactivé, masqué des listes).
          *
-         *         Cette action est irréversible et ne doit être utilisée que dans le cadre d’une gestion administrative stricte.
+         *         Les données liées sont conservées pour l'historique et l'audit.
          */
         delete: operations["delete_user_v1_users__user_id__delete"];
         options?: never;
@@ -2071,6 +2329,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post */
+        Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
+        /** Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post */
+        Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** BoissonCreate */
         BoissonCreate: {
             /**
@@ -2195,6 +2469,40 @@ export interface components {
          * @enum {string}
          */
         CashShiftStatus: "OPEN" | "COUNTING" | "CLOSED";
+        /** CatalogImportError */
+        CatalogImportError: {
+            /**
+             * Field
+             * @description Colonne en cause (vide si la ligne entière est refusée)
+             */
+            field: string;
+            /** Message */
+            message: string;
+            /**
+             * Row
+             * @description Numéro de ligne dans le fichier (l'en-tête est la ligne 1)
+             */
+            row: number;
+            /**
+             * Sheet
+             * @description Feuille concernée (import XLSX)
+             */
+            sheet?: string | null;
+        };
+        /** CatalogImportResponse */
+        CatalogImportResponse: {
+            /** Created */
+            created: number;
+            /** Errors */
+            errors: components["schemas"]["CatalogImportError"][];
+            /**
+             * Imported
+             * @description Lignes créées ou mises à jour
+             */
+            imported: number;
+            /** Updated */
+            updated: number;
+        };
         /** CombinaisonCreate */
         CombinaisonCreate: {
             /** Composant Ids */
@@ -2767,6 +3075,29 @@ export interface components {
             /** Vendor Reference */
             vendor_reference: string;
         };
+        /**
+         * EasyTransactSettings
+         * @description Réglages Easy Transact d'un restaurant : jamais de secret, seulement le NOM des
+         *     variables d'environnement qui les portent.
+         */
+        EasyTransactSettings: {
+            /** Credential Env Key */
+            credential_env_key: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Failure Url */
+            failure_url?: string | null;
+            /** Provider Account Ref */
+            provider_account_ref?: string | null;
+            /** Service Code */
+            service_code: string;
+            /** Success Url */
+            success_url?: string | null;
+            /** Webhook Secret Env Key */
+            webhook_secret_env_key: string;
+            /** Webhook Url */
+            webhook_url?: string | null;
+        };
         /** EasyTransactWebhookResponse */
         EasyTransactWebhookResponse: {
             /** Accepted */
@@ -3321,6 +3652,13 @@ export interface components {
             /** Vendor Reference */
             vendor_reference: string;
         };
+        /** PaymentMethodTotal */
+        PaymentMethodTotal: {
+            /** Count */
+            count: number;
+            /** Total */
+            total: string;
+        };
         /** PaymentResponse */
         PaymentResponse: {
             /** Amount */
@@ -3749,6 +4087,19 @@ export interface components {
          * @enum {string}
          */
         ProductionStation: "KITCHEN" | "BAR" | "DESSERT" | "PACKAGING";
+        /**
+         * RefundRejectBody
+         * @description Corps optionnel du rejet ; le motif peut aussi venir de `?reason=`.
+         */
+        RefundRejectBody: {
+            /**
+             * Raison
+             * @description Alias français de `reason`
+             */
+            raison?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
         /** ReservationCancelRequest */
         ReservationCancelRequest: {
             /** Reason */
@@ -3994,6 +4345,30 @@ export interface components {
             /** Roles */
             roles: string[];
         };
+        /** RestaurantConfigResponse */
+        RestaurantConfigResponse: {
+            /**
+             * Config
+             * @description config_jsonb, secrets retirés
+             */
+            config?: {
+                [key: string]: unknown;
+            };
+            /** Currency */
+            currency: string;
+            easytransact?: components["schemas"]["EasyTransactSettings"] | null;
+            /** Horaires Ouverture */
+            horaires_ouverture?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Restaurant Id
+             * Format: uuid
+             */
+            restaurant_id: string;
+            /** Taux Service */
+            taux_service?: string | null;
+        };
         /** RestaurantCreate */
         RestaurantCreate: {
             /** Address */
@@ -4226,6 +4601,28 @@ export interface components {
             /** Variance */
             variance?: string | null;
         };
+        /** ShiftSummaryResponse */
+        ShiftSummaryResponse: {
+            /**
+             * Cash Sales
+             * @description Espèces encaissées pendant le shift
+             */
+            cash_sales: string;
+            /**
+             * Expected Closing Balance
+             * @description Fond de caisse + espèces encaissées : ce que le tiroir devrait contenir
+             */
+            expected_closing_balance: string;
+            /** Payments By Method */
+            payments_by_method: {
+                [key: string]: components["schemas"]["PaymentMethodTotal"];
+            };
+            /** Payments Count */
+            payments_count: number;
+            /** Payments Total */
+            payments_total: string;
+            shift: components["schemas"]["ShiftResponse"];
+        };
         /** SplitPaymentItem */
         SplitPaymentItem: {
             /** Amount */
@@ -4304,6 +4701,17 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /** SubscriptionListResponse */
+        SubscriptionListResponse: {
+            /** Items */
+            items: components["schemas"]["SubscriptionResponse"][];
+            /** Limit */
+            limit: number;
+            /** Skip */
+            skip: number;
+            /** Total */
+            total: number;
         };
         /** SubscriptionResponse */
         SubscriptionResponse: {
@@ -5357,6 +5765,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaymentIntentResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_configuration_v1_payments_easytransact_configuration_get: {
+        parameters: {
+            query: {
+                restaurant_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentConfigurationResponse"];
+                };
+            };
+            /** @description Aucune configuration pour ce restaurant. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -6654,7 +7100,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RefundRejectBody"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -7980,6 +8430,210 @@ export interface operations {
             };
         };
     };
+    get_restaurant_commande_v1_restaurants__restaurant_id__commandes__commande_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_restaurant_commande_items_v1_restaurants__restaurant_id__commandes__commande_id__items_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_restaurant_commande_refunds_v1_restaurants__restaurant_id__commandes__commande_id__refunds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeRefundResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommandeRefundCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeRefundResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeRefundResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__reject_post: {
+        parameters: {
+            query?: {
+                reason?: string;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+                commande_id: string;
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RefundRejectBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandeRefundResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_restaurant_composants_v1_restaurants__restaurant_id__composants_get: {
         parameters: {
             query?: {
@@ -8076,6 +8730,189 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_restaurant_config_v1_restaurants__restaurant_id__config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestaurantConfigResponse"];
+                };
+            };
+            /** @description Restaurant introuvable ou hors de portée. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_restaurant_catalog_v1_restaurants__restaurant_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Classeur Excel. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post: {
+        parameters: {
+            query?: {
+                type?: string;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogImportResponse"];
+                };
+            };
+            /** @description Fichier inutilisable (en-tête, encodage, séparateur). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Fichier de plus de 5 Mo. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Un import a déjà eu lieu dans la dernière minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogImportResponse"];
+                };
+            };
+            /** @description Fichier inutilisable. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Fichier de plus de 5 Mo. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Un import a déjà eu lieu dans la dernière minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -8976,6 +9813,155 @@ export interface operations {
             };
         };
     };
+    get_current_shift_v1_ros_shifts_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftResponse"];
+                };
+            };
+            /** @description Aucun shift ouvert. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_shift_summary_v1_ros_shifts__shift_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_shift_with_summary_v1_ros_shifts__shift_id__summary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShiftCloseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftSummaryResponse"];
+                };
+            };
+            /** @description Shift déjà clôturé. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_subscriptions_v1_subscriptions_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SubscriptionStatus"] | null;
+                /** @description Nombre de lignes à sauter */
+                skip?: number;
+                /** @description Nombre de lignes à renvoyer (maximum 500) */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionListResponse"];
+                };
+            };
+            /** @description Token absent ou invalide. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Réservé aux administrateurs. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_subscription_v1_subscriptions_post: {
         parameters: {
             query?: never;
@@ -9403,13 +10389,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Solde courant récupéré. */
+            /** @description Solde courant récupéré, ou null s'il n'existe pas encore. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DailyBalanceResponse"];
+                    "application/json": components["schemas"]["DailyBalanceResponse"] | null;
                 };
             };
             /** @description Token absent ou invalide. */
@@ -9419,7 +10405,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Aucun solde courant trouvé. */
+            /** @description Abonnement introuvable. */
             404: {
                 headers: {
                     [name: string]: unknown;

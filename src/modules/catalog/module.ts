@@ -9,6 +9,11 @@ export default defineFeature({
   id: 'catalog',
   routes: [
     {
+      path: '/catalog/import',
+      component: () => import('./pages/ImportPage.vue'),
+      meta: { title: 'Importer la carte', capability: 'management' },
+    },
+    {
       path: '/catalog/menus',
       component: () => import('./pages/MenusPage.vue'),
       meta: { title: 'Menus et catégories' },
@@ -25,6 +30,7 @@ export default defineFeature({
     },
   ],
   nav: [
+    { id: 'catalog-import', title: 'Importer', icon: 'ri-file-excel-2-line', to: '/catalog/import', section: 'catalog', order: 5, capability: 'management' },
     { id: 'catalog-menus', title: 'Menus', icon: 'ri-book-open-line', to: '/catalog/menus', section: 'catalog', order: 10 },
     { id: 'catalog-plats', title: 'Plats', icon: 'ri-restaurant-2-line', to: '/catalog/plats', section: 'catalog', order: 20 },
     { id: 'catalog-boissons', title: 'Boissons', icon: 'ri-goblet-line', to: '/catalog/boissons', section: 'catalog', order: 30 },

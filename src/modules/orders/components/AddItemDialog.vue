@@ -85,6 +85,7 @@ const positive = (value: number) => (Number.isInteger(Number(value)) && Number(v
       v-model="articleId"
       :items="options"
       :label="kind === 'plat' ? 'Plat' : 'Boisson'"
+      prepend-inner-icon="ri-restaurant-line"
       :loading="loading"
       :rules="[required]"
       :no-data-text="loading ? 'Chargement…' : 'Aucun article disponible.'"
@@ -93,6 +94,7 @@ const positive = (value: number) => (Number.isInteger(Number(value)) && Number(v
     <VTextField
       v-model.number="quantity"
       label="Quantité"
+      prepend-inner-icon="ri-hashtag"
       type="number"
       min="1"
       :rules="[positive]"
@@ -101,6 +103,7 @@ const positive = (value: number) => (Number.isInteger(Number(value)) && Number(v
     <VTextField
       v-model="notes"
       label="Note pour la cuisine (facultatif)"
+      prepend-inner-icon="ri-file-text-line"
       placeholder="Sans piment, bien cuit…"
       maxlength="200"
     />

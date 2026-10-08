@@ -64,6 +64,15 @@ const { submit: confirmReservation, pending: confirming } = useSubmit(async () =
   if (!props.reservation)
     return
 
+  const accepted = await confirm({
+    title: 'Confirmer cette réservation ?',
+    text: `La réservation de ${props.reservation.customer_name} sera marquée comme confirmée.`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
+    return
+
   await reservationsApi.confirm(props.reservation.id)
   toast.success('Réservation confirmée.')
   emit('changed')
@@ -71,6 +80,15 @@ const { submit: confirmReservation, pending: confirming } = useSubmit(async () =
 
 const { submit: checkIn, pending: checkingIn } = useSubmit(async () => {
   if (!props.reservation)
+    return
+
+  const accepted = await confirm({
+    title: 'Enregistrer l\'arrivée ?',
+    text: `${props.reservation.customer_name} sera marqué comme arrivé.`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
     return
 
   await reservationsApi.checkIn(props.reservation.id)

@@ -72,6 +72,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="name"
           label="Nom de l'offre"
+          prepend-inner-icon="ri-vip-crown-line"
           placeholder="Essentiel"
           :rules="nameRules"
           :error-messages="apiError?.fieldMessage('name')"
@@ -83,6 +84,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="dailyLimit"
           label="Plafond journalier"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           suffix="FCFA"
           inputmode="numeric"
           hint="Montant maximal encaissable par jour avec cette offre."
@@ -97,6 +99,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="monthly"
           label="Prix mensuel"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           suffix="FCFA"
           inputmode="numeric"
           :rules="amountRules('Saisissez le prix mensuel.')"
@@ -110,6 +113,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="annual"
           label="Prix annuel"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           suffix="FCFA"
           inputmode="numeric"
           :rules="amountRules('Saisissez le prix annuel.')"

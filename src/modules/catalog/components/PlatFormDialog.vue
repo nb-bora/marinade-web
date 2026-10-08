@@ -85,7 +85,6 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
     icon="ri-restaurant-2-line"
     :loading="pending"
     :error="message"
-    :max-width="1000"
     @submit="submit"
   >
     <VRow>
@@ -93,6 +92,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
         <VTextField
           v-model="nom"
           label="Nom du plat"
+          prepend-inner-icon="ri-restaurant-line"
           placeholder="Poulet DG"
           :rules="nomRules"
           :error-messages="apiError?.fieldMessage('nom')"
@@ -107,6 +107,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
         <VTextField
           v-model="prix"
           label="Prix (FCFA)"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           type="number"
           min="0"
           step="any"
@@ -121,6 +122,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
         <VTextField
           v-model="temps"
           label="Temps de préparation (minutes)"
+          prepend-inner-icon="ri-time-line"
           type="number"
           min="0"
           step="1"
@@ -133,6 +135,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
           v-model="categoryId"
           :items="categoryItems"
           label="Catégorie"
+          prepend-inner-icon="ri-price-tag-3-line"
           placeholder="Sans catégorie"
           clearable
           :hint="categories.length ? undefined : 'Créez d\'abord un menu et ses catégories pour classer vos plats.'"
@@ -151,6 +154,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
         <VTextarea
           v-model="description"
           label="Description (facultative)"
+          prepend-inner-icon="ri-file-text-line"
           rows="2"
           auto-grow
         />

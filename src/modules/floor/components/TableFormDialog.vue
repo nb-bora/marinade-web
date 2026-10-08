@@ -86,7 +86,6 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
     icon="ri-layout-grid-line"
     :loading="pending"
     :error="errorText"
-    :max-width="1000"
     @submit="submit"
   >
     <VRow>
@@ -97,6 +96,7 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
         <VTextField
           v-model="numero"
           label="Numéro ou nom"
+          prepend-inner-icon="ri-layout-grid-line"
           placeholder="T12"
           :rules="[required]"
           :disabled="isEdit && !canEditLayout"
@@ -111,6 +111,7 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
         <VTextField
           v-model="capacite"
           label="Nombre de places"
+          prepend-inner-icon="ri-hashtag"
           type="number"
           inputmode="numeric"
           min="1"
@@ -123,6 +124,7 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
           v-model="emplacement"
           :items="locations"
           label="Emplacement"
+          prepend-inner-icon="ri-map-pin-line"
           placeholder="Salle, terrasse, bar…"
           clearable
           :disabled="isEdit && !canEditLayout"
@@ -136,6 +138,7 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
           v-model="statut"
           :items="TABLE_STATUS_OPTIONS"
           label="Statut"
+          prepend-inner-icon="ri-filter-3-line"
         />
       </VCol>
     </VRow>

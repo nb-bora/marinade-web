@@ -60,6 +60,7 @@ const required = [(value: string) => value.trim().length > 0 || 'Donnez un nom a
         <VTextField
           v-model="name"
           label="Nom du menu"
+          prepend-inner-icon="ri-book-open-line"
           placeholder="Carte du midi"
           :rules="required"
           maxlength="255"
@@ -70,6 +71,7 @@ const required = [(value: string) => value.trim().length > 0 || 'Donnez un nom a
         <VTextarea
           v-model="description"
           label="Description (facultative)"
+          prepend-inner-icon="ri-file-text-line"
           rows="3"
           auto-grow
         />

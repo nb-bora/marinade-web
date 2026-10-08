@@ -93,6 +93,7 @@ const passwordRules = [
         <VTextField
           v-model="firstName"
           label="Prénom"
+          prepend-inner-icon="ri-user-line"
           :rules="required('Saisissez le prénom.')"
           :error-messages="apiError?.fieldMessage('first_name')"
           maxlength="100"
@@ -106,6 +107,7 @@ const passwordRules = [
         <VTextField
           v-model="lastName"
           label="Nom"
+          prepend-inner-icon="ri-user-line"
           :rules="required('Saisissez le nom.')"
           :error-messages="apiError?.fieldMessage('last_name')"
           maxlength="100"
@@ -115,6 +117,7 @@ const passwordRules = [
         <VTextField
           v-model="email"
           label="Adresse e-mail"
+          prepend-inner-icon="ri-mail-line"
           type="email"
           autocomplete="off"
           :rules="emailRules"
@@ -139,7 +142,10 @@ const passwordRules = [
           autocomplete="new-password"
           :rules="passwordRules"
           :error-messages="apiError?.fieldMessage('password')"
-          hint="Au moins 12 caractères."
+        />
+        <AppPasswordStrength
+          :password="password"
+          class="mt-2"
         />
       </VCol>
       <VCol cols="12">
@@ -147,6 +153,7 @@ const passwordRules = [
           v-model="role"
           :items="ROLE_OPTIONS"
           label="Rôle"
+          prepend-inner-icon="ri-shield-user-line"
           :error-messages="apiError?.fieldMessage('role')"
         />
       </VCol>

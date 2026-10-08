@@ -65,6 +65,7 @@ const amountRules = (text: string) => [
           v-model="day"
           type="date"
           label="Date"
+          prepend-inner-icon="ri-calendar-line"
           :rules="dayRules"
           :error-messages="apiError?.fieldMessage('balance_date')"
         />
@@ -76,6 +77,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="initial"
           label="Solde de départ"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           suffix="FCFA"
           inputmode="numeric"
           :rules="amountRules('Saisissez le solde de départ.')"
@@ -89,6 +91,7 @@ const amountRules = (text: string) => [
         <VTextField
           v-model="used"
           label="Déjà consommé"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           suffix="FCFA"
           inputmode="numeric"
           :rules="amountRules('Saisissez le montant consommé.')"

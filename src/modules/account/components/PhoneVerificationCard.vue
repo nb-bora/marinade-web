@@ -107,6 +107,7 @@ const verifyError = computed(() =>
           <VTextField
             v-model="code"
             label="Code reçu par SMS"
+            prepend-inner-icon="ri-shield-keyhole-line"
             inputmode="numeric"
             autocomplete="one-time-code"
             maxlength="10"

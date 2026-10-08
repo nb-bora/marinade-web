@@ -55,6 +55,7 @@ async function onSubmit() {
             v-model="email"
             label="Adresse e-mail"
             type="email"
+            prepend-inner-icon="ri-mail-line"
             autocomplete="email"
             autofocus
             :rules="[required, emailRule]"

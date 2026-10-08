@@ -85,12 +85,16 @@ function edit(user: PlatformUser) {
 const isSelf = (user: PlatformUser) => user.id === session.user?.id
 
 async function toggleActive(user: PlatformUser) {
-  if (!user.is_active || await confirm({
-    title: `Désactiver ${user.first_name} ${user.last_name} ?`,
-    text: 'Cette personne ne pourra plus se connecter. Vous pourrez réactiver le compte à tout moment.',
-    confirmLabel: 'Désactiver',
-    danger: true,
-  })) {
+  const accepted = await confirm({
+    title: `${user.is_active ? 'Désactiver' : 'Réactiver'} ${user.first_name} ${user.last_name} ?`,
+    text: user.is_active
+      ? 'Cette personne ne pourra plus se connecter. Vous pourrez réactiver le compte à tout moment.'
+      : 'Cette personne pourra de nouveau se connecter.',
+    confirmLabel: user.is_active ? 'Supprimer' : 'Enregistrer',
+    danger: user.is_active,
+  })
+
+  if (accepted) {
     busyId.value = user.id
     try {
       await platformApi.updateUser(user.id, { is_active: !user.is_active })
@@ -176,6 +180,7 @@ async function remove(user: PlatformUser) {
               v-model="role"
               :items="roleItems"
               label="Rôle"
+              prepend-inner-icon="ri-shield-user-line"
               placeholder="Tous les rôles"
               clearable
             />
@@ -188,6 +193,7 @@ async function remove(user: PlatformUser) {
               v-model="status"
               :items="statusItems"
               label="Statut"
+              prepend-inner-icon="ri-list-check"
               placeholder="Tous les statuts"
               clearable
             />

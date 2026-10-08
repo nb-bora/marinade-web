@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { PATHS } from '@/lib/router/paths'
-import { internationalPhone, required } from '@/lib/validation'
+import { required } from '@/lib/validation'
 import { useSessionStore } from '@/stores/session.store'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -11,22 +12,30 @@ const session = useSessionStore()
 const tenant = useTenantStore()
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 const form = ref()
 
 const name = ref('')
 const city = ref('')
-const phone = ref('+237 ')
+const phone = ref('')
 const address = ref('')
 
 // Seul un compte « restaurateur » peut ouvrir un restaurant ; un employé attend d'être ajouté.
 const canCreate = computed(() => session.user?.role === 'restaurant')
 
 const { submit: create, pending, message, apiError } = useSubmit(async () => {
+  if (!(await confirm({
+    title: 'Créer votre restaurant ?',
+    text: 'Votre restaurant sera créé avec ces informations. Vous pourrez les modifier plus tard.',
+    confirmLabel: 'Créer',
+  })))
+    return
+
   await container.account.createRestaurant({
     name: name.value.trim(),
     city: city.value.trim() || undefined,
     country: 'Cameroun',
-    phone: phone.value.trim().length > 4 ? phone.value : undefined,
+    phone: phone.value || undefined,
     address: address.value.trim() || undefined,
   })
   await tenant.reload()
@@ -85,6 +94,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
           <VTextField
             v-model="name"
             label="Nom du restaurant"
+            prepend-inner-icon="ri-store-2-line"
             autofocus
             :rules="[required]"
             :error-messages="fieldError('name')"
@@ -97,6 +107,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
           <VTextField
             v-model="city"
             label="Ville"
+            prepend-inner-icon="ri-map-2-line"
             :error-messages="fieldError('city')"
           />
         </VCol>
@@ -104,11 +115,10 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
           cols="12"
           sm="6"
         >
-          <VTextField
+          <AppPhoneField
             v-model="phone"
             label="Téléphone"
-            type="tel"
-            :rules="[internationalPhone]"
+            prepend-inner-icon="ri-phone-line"
             :error-messages="fieldError('phone')"
           />
         </VCol>
@@ -116,6 +126,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
           <VTextField
             v-model="address"
             label="Adresse"
+            prepend-inner-icon="ri-map-pin-line"
             :error-messages="fieldError('address')"
           />
         </VCol>

@@ -3,6 +3,8 @@
   Le parent fournit les champs en slot et reçoit `submit` seulement si le formulaire est valide.
 -->
 <script setup lang="ts">
+import { useConfirm } from '@/composables/useConfirm'
+
 const props = withDefaults(defineProps<{
   title: string
   subtitle?: string
@@ -14,23 +16,52 @@ const props = withDefaults(defineProps<{
   maxWidth?: number | string
   icon?: string
   danger?: boolean
+
+  /** Demande une confirmation après validation du formulaire (désactivable). */
+  confirm?: boolean
+  confirmTitle?: string
+  confirmText?: string
 }>(), {
+  confirm: true,
   submitLabel: 'Enregistrer',
   loading: false,
-  maxWidth: 560,
+  maxWidth: 900,
 })
 
 const emit = defineEmits<{ submit: [] }>()
 
 const open = defineModel<boolean>({ required: true })
 const form = ref()
+const askConfirm = useConfirm()
+
+// Boutons de confirmation : « Supprimer » pour le dangereux, « Créer » ou « Enregistrer » sinon.
+const confirmLabel = computed(() => {
+  if (props.danger)
+    return 'Supprimer'
+
+  return /^(créer|ajouter)/i.test(props.submitLabel) ? 'Créer' : 'Enregistrer'
+})
 
 async function onSubmit() {
   if (props.loading)
     return
 
-  if ((await form.value?.validate())?.valid)
-    emit('submit')
+  if (!(await form.value?.validate())?.valid)
+    return
+
+  if (props.confirm) {
+    const accepted = await askConfirm({
+      title: props.confirmTitle ?? (props.danger ? 'Confirmer la suppression ?' : 'Confirmer l’enregistrement ?'),
+      text: props.confirmText ?? (props.danger ? 'Cette action ne peut pas être annulée.' : 'Les informations saisies seront enregistrées.'),
+      confirmLabel: confirmLabel.value,
+      danger: props.danger,
+    })
+
+    if (!accepted)
+      return
+  }
+
+  emit('submit')
 }
 
 // À la réouverture, le formulaire repart sans erreurs de validation affichées.

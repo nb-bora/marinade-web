@@ -117,6 +117,7 @@ const toggle = (line: CartLine) => {
             <VTextField
               v-model="line.notes"
               label="Note pour la cuisine"
+              prepend-inner-icon="ri-file-text-line"
               placeholder="Sans piment, bien cuit…"
               density="compact"
               maxlength="200"
@@ -128,6 +129,7 @@ const toggle = (line: CartLine) => {
               v-model="line.station"
               :items="STATION_OPTIONS"
               label="À préparer à"
+              prepend-inner-icon="ri-restaurant-2-line"
               density="compact"
               hide-details
             />

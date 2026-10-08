@@ -4,7 +4,9 @@ import VerticalNavLayout from '@layouts/components/VerticalNavLayout.vue'
 import AppNavigation from '@/layouts/components/AppNavigation.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import RestaurantSwitcher from '@/layouts/components/RestaurantSwitcher.vue'
+import TourButton from '@/layouts/components/TourButton.vue'
 import UserMenu from '@/layouts/components/UserMenu.vue'
+import AppTourOverlay from '@/ui/AppTourOverlay.vue'
 </script>
 
 <template>
@@ -24,6 +26,8 @@ import UserMenu from '@/layouts/components/UserMenu.vue'
         <RestaurantSwitcher />
 
         <VSpacer />
+
+        <TourButton />
 
         <NavbarThemeSwitcher class="me-2" />
 
@@ -64,6 +68,9 @@ import UserMenu from '@/layouts/components/UserMenu.vue'
 
     <!-- 👉 Pages -->
     <slot />
+
+    <!-- 👉 Visite guidée (une seule instance pour toutes les pages) -->
+    <AppTourOverlay />
 
     <!-- 👉 Footer -->
     <template #footer>

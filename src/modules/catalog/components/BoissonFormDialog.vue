@@ -77,7 +77,6 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
     icon="ri-goblet-line"
     :loading="pending"
     :error="message"
-    :max-width="600"
     @submit="submit"
   >
     <VRow>
@@ -85,6 +84,7 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
         <VTextField
           v-model="nom"
           label="Nom de la boisson"
+          prepend-inner-icon="ri-cup-line"
           placeholder="Jus de gingembre"
           :rules="nomRules"
           :error-messages="apiError?.fieldMessage('nom')"
@@ -99,6 +99,7 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
         <VTextField
           v-model="prix"
           label="Prix (FCFA)"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           type="number"
           min="0"
           step="any"
@@ -114,6 +115,7 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
           v-model="category"
           :items="suggestions"
           label="Catégorie (facultative)"
+          prepend-inner-icon="ri-price-tag-3-line"
           placeholder="Jus, bières, sodas..."
           clearable
           :rules="categoryRules"
@@ -124,6 +126,7 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
         <VTextarea
           v-model="description"
           label="Description (facultative)"
+          prepend-inner-icon="ri-file-text-line"
           rows="2"
           auto-grow
         />

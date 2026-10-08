@@ -10,6 +10,7 @@ const visible = ref(false)
   <VTextField
     v-bind="$attrs"
     v-model="model"
+    prepend-inner-icon="ri-lock-line"
     :type="visible ? 'text' : 'password'"
   >
     <template #append-inner>

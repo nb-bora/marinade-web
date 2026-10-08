@@ -45,6 +45,10 @@ const rules = [
     :error-messages="errorMessages"
   >
     <template #prepend-inner>
+      <VIcon
+        icon="ri-phone-line"
+        class="me-2"
+      />
       <span class="phone-prefix text-body-1 text-high-emphasis me-1">🇨🇲 +237</span>
     </template>
     <template #append-inner>

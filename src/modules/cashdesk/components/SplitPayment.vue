@@ -165,6 +165,7 @@ defineExpose({ reset })
             <VTextField
               v-model="part.amount"
               label="Montant (FCFA)"
+              prepend-inner-icon="ri-money-dollar-circle-line"
               inputmode="numeric"
               autocomplete="off"
               hide-details
@@ -200,6 +201,7 @@ defineExpose({ reset })
             <VTextField
               v-model="part.reference"
               label="Référence (facultatif)"
+              prepend-inner-icon="ri-code-line"
               maxlength="120"
               autocomplete="off"
               hide-details

@@ -81,6 +81,7 @@ watch(open, isOpen => {
     <VTextField
       v-model="quantity"
       :label="`${option.quantityLabel} (${unit})`"
+      prepend-inner-icon="ri-hashtag"
       inputmode="decimal"
       autocomplete="off"
       autofocus
@@ -90,6 +91,7 @@ watch(open, isOpen => {
     <VTextarea
       v-model="notes"
       label="Note (facultatif)"
+      prepend-inner-icon="ri-file-text-line"
       placeholder="Ex. livraison du marché, casse en cuisine…"
       rows="2"
       auto-grow

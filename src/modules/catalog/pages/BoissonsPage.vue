@@ -7,6 +7,7 @@ import type { Boisson } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
 import { useSubmit } from '@/composables/useSubmit'
+import { useConfirm } from '@/composables/useConfirm'
 import { formatMoney } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -151,6 +152,15 @@ function afterSave() {
 const toggling = ref<string | null>(null)
 
 const { submit: toggle, error: toggleError } = useSubmit(async (boisson: Boisson) => {
+  const accepted = await useConfirm()({
+    title: boisson.disponible ? 'Marquer cette boisson indisponible ?' : 'Remettre cette boisson en vente ?',
+    text: `« ${boisson.nom} » ${boisson.disponible ? 'ne pourra plus être commandée.' : 'pourra de nouveau être commandée.'}`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
+    return
+
   toggling.value = boisson.id
   try {
     await catalogApi.updateBoisson(boisson.id, { disponible: !boisson.disponible })
@@ -230,6 +240,7 @@ const openRow = (boisson: Boisson) => {
               v-model="category"
               :items="categoryItems"
               label="Catégorie"
+              prepend-inner-icon="ri-price-tag-3-line"
               placeholder="Toutes les catégories"
               clearable
             />
@@ -243,6 +254,7 @@ const openRow = (boisson: Boisson) => {
               v-model="alcohol"
               :items="alcoholItems"
               label="Alcool"
+              prepend-inner-icon="ri-goblet-line"
             />
           </VCol>
           <VCol
@@ -254,6 +266,7 @@ const openRow = (boisson: Boisson) => {
               v-model="availability"
               :items="availabilityItems"
               label="Disponibilité"
+              prepend-inner-icon="ri-filter-3-line"
             />
           </VCol>
         </VRow>

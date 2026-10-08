@@ -2,6 +2,7 @@
 import { useRestaurantUpdate } from '../composables/useRestaurantUpdate'
 import { CURRENCIES, DEFAULT_VAT_RATE, SERVICE_RATE_PRESETS, parseDecimal } from '../labels'
 import type { Restaurant } from '../types'
+import { useConfirm } from '@/composables/useConfirm'
 import { formatMoney } from '@/lib/format'
 
 const props = defineProps<{
@@ -49,6 +50,8 @@ const currencies = computed(() =>
     : [...CURRENCIES, { value: draft.value.currency, title: draft.value.currency }],
 )
 
+const confirm = useConfirm()
+
 const { save, pending, errorMessage, reset } = useRestaurantUpdate(
   () => props.restaurant.id,
   restaurant => emit('saved', restaurant),
@@ -62,6 +65,13 @@ const serviceAmount = computed(() => Math.round(SAMPLE * serviceRate.value) / 10
 
 async function submit() {
   if (!(await form.value?.validate())?.valid)
+    return
+
+  if (!await confirm({
+    title: 'Enregistrer le service et les taxes ?',
+    text: 'Le taux de service, la TVA et la devise seront appliqués aux prochaines additions.',
+    confirmLabel: 'Enregistrer',
+  }))
     return
 
   const existing = props.restaurant.config_jsonb ?? {}
@@ -110,6 +120,7 @@ function cancel() {
                 <VTextField
                   v-model="draft.service"
                   label="Taux de service"
+                  prepend-inner-icon="ri-percent-line"
                   suffix="%"
                   inputmode="decimal"
                   hide-details="auto"
@@ -139,6 +150,7 @@ function cancel() {
                 <VTextField
                   v-model="draft.vat"
                   label="TVA sur le catalogue"
+                  prepend-inner-icon="ri-percent-line"
                   suffix="%"
                   inputmode="decimal"
                   :hint="`Par défaut ${DEFAULT_VAT_RATE.toLocaleString('fr-FR')} % (Cameroun).`"
@@ -155,6 +167,7 @@ function cancel() {
                   v-model="draft.currency"
                   :items="currencies"
                   label="Devise"
+                  prepend-inner-icon="ri-money-dollar-circle-line"
                   :readonly="!canEdit"
                 />
               </VCol>

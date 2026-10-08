@@ -56,7 +56,7 @@ const save = useSubmit(async () => {
   if (drafts.value.length === 0 && !await confirm({
     title: 'Vider la fiche technique ?',
     text: 'Le plat ne consommera plus aucun composant du stock.',
-    confirmLabel: 'Vider la fiche',
+    confirmLabel: 'Supprimer',
     danger: true,
   }))
     return
@@ -94,7 +94,6 @@ watch(open, isOpen => {
     submit-label="Remplacer la fiche"
     :loading="save.pending.value"
     :error="save.message.value"
-    :max-width="720"
     @submit="save.submit()"
   >
     <p class="text-body-2 text-medium-emphasis mb-4">
@@ -110,12 +109,14 @@ watch(open, isOpen => {
         :model-value="draft.composantId"
         :items="options"
         label="Composant"
+        prepend-inner-icon="ri-flask-line"
         :rules="[required('Choisissez un composant.'), () => duplicate(draft)]"
         @update:model-value="pick(draft, $event)"
       />
       <VTextField
         v-model="draft.quantity"
         label="Quantité"
+        prepend-inner-icon="ri-hashtag"
         inputmode="decimal"
         autocomplete="off"
         :rules="[positiveQty]"
@@ -124,6 +125,7 @@ watch(open, isOpen => {
         v-model="draft.unit"
         :items="UNITS"
         label="Unité"
+        prepend-inner-icon="ri-scales-line"
         :rules="[required('Unité ?')]"
       />
       <IconBtn

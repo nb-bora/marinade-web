@@ -3,6 +3,7 @@ import { useRestaurantUpdate } from '../composables/useRestaurantUpdate'
 import { DAYS, DEFAULT_RANGE, dayError, parseWeek, serializeWeek, summarizeDay } from '../hours'
 import type { DayKey, WeekSchedule } from '../hours'
 import type { Restaurant } from '../types'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps<{
   restaurant: Restaurant
@@ -23,6 +24,8 @@ const dirty = computed(() => serialized(week.value) !== serialized(parseWeek(pro
 const errors = computed(() => Object.fromEntries(DAYS.map(({ key }) => [key, dayError(week.value[key])])) as Record<DayKey, string>)
 const hasErrors = computed(() => Object.values(errors.value).some(Boolean))
 const openDays = computed(() => DAYS.filter(({ key }) => week.value[key].actif).length)
+
+const confirm = useConfirm()
 
 const { save, pending, errorMessage, reset } = useRestaurantUpdate(
   () => props.restaurant.id,
@@ -69,8 +72,15 @@ function copyMonday() {
 
 const copyDisabled = computed(() => !week.value.lundi.actif || Boolean(errors.value.lundi))
 
-function submit() {
+async function submit() {
   if (hasErrors.value)
+    return
+
+  if (!await confirm({
+    title: 'Enregistrer les horaires ?',
+    text: 'Les horaires d\'ouverture seront mis à jour.',
+    confirmLabel: 'Enregistrer',
+  }))
     return
 
   return save(
@@ -155,6 +165,7 @@ function cancel() {
               v-model="range.ouverture"
               type="time"
               label="De"
+              prepend-inner-icon="ri-time-line"
               density="compact"
               hide-details
               :readonly="!canEdit"
@@ -164,6 +175,7 @@ function cancel() {
               v-model="range.fermeture"
               type="time"
               label="À"
+              prepend-inner-icon="ri-time-line"
               density="compact"
               hide-details
               :readonly="!canEdit"

@@ -65,6 +65,7 @@ onMounted(() => {
           <VTextField
             v-model="token"
             label="Code de vérification"
+            prepend-inner-icon="ri-shield-keyhole-line"
             autocomplete="off"
             :autofocus="!token"
             :rules="[required]"

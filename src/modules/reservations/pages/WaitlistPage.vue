@@ -88,7 +88,7 @@ const { submit: remove, pending: removing, message: removeError } = useSubmit(as
   const accepted = await confirm({
     title: 'Retirer de la liste d\'attente ?',
     text: `${entry.customer_name} (${coversLabel(entry.party_size)}) quittera la file. Les autres gardent leur rang.`,
-    confirmLabel: 'Retirer',
+    confirmLabel: 'Supprimer',
     danger: true,
   })
 

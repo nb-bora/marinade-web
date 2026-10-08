@@ -8,6 +8,7 @@ import type { Plat } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
 import { useSubmit } from '@/composables/useSubmit'
+import { useConfirm } from '@/composables/useConfirm'
 import { formatMoney } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -141,6 +142,15 @@ function afterSave() {
 const toggling = ref<string | null>(null)
 
 const { submit: toggle, error: toggleError } = useSubmit(async (plat: Plat) => {
+  const accepted = await useConfirm()({
+    title: plat.disponible ? 'Marquer ce plat indisponible ?' : 'Remettre ce plat en vente ?',
+    text: `« ${plat.nom} » ${plat.disponible ? 'ne pourra plus être commandé.' : 'pourra de nouveau être commandé.'}`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
+    return
+
   toggling.value = plat.id
   try {
     await catalogApi.updatePlat(plat.id, { disponible: !plat.disponible })
@@ -220,6 +230,7 @@ const openRow = (plat: Plat) => {
               v-model="category"
               :items="categoryItems"
               label="Catégorie"
+              prepend-inner-icon="ri-price-tag-3-line"
               placeholder="Toutes les catégories"
               clearable
             />
@@ -233,6 +244,7 @@ const openRow = (plat: Plat) => {
               v-model="availability"
               :items="availabilityItems"
               label="Disponibilité"
+              prepend-inner-icon="ri-filter-3-line"
             />
           </VCol>
         </VRow>

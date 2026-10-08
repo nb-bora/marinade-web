@@ -2,12 +2,14 @@
 import PaymentAvatar from '../components/PaymentAvatar.vue'
 import { IN_FLIGHT, presentStatus } from '../statuses'
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useLive } from '@/composables/useLive'
 import type { PaymentTransaction } from '@/lib/api/types'
 import { formatMoney, formatRelative } from '@/lib/format'
 import { useToast } from '@/stores/toast.store'
 
 const toast = useToast()
+const confirm = useConfirm()
 const items = ref<PaymentTransaction[]>([])
 const loading = ref(true)
 const error = ref<unknown>(null)
@@ -31,6 +33,13 @@ useLive(load)
 
 /** Redemande le statut à la passerelle : utile quand la confirmation tarde. */
 async function refresh(item: PaymentTransaction) {
+  if (!(await confirm({
+    title: 'Actualiser le statut du paiement ?',
+    text: 'Le statut sera redemandé à la passerelle de paiement et enregistré.',
+    confirmLabel: 'Enregistrer',
+  })))
+    return
+
   refreshing.value = item.id
   try {
     const updated = await container.payments.refresh(item.id)

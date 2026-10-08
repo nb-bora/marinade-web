@@ -1,6 +1,34 @@
 {
   "components": {
     "schemas": {
+      "Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post",
+        "type": "object"
+      },
+      "Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post",
+        "type": "object"
+      },
       "BoissonCreate": {
         "properties": {
           "alcool": {
@@ -361,6 +389,75 @@
         ],
         "title": "CashShiftStatus",
         "type": "string"
+      },
+      "CatalogImportError": {
+        "properties": {
+          "field": {
+            "description": "Colonne en cause (vide si la ligne entière est refusée)",
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row": {
+            "description": "Numéro de ligne dans le fichier (l'en-tête est la ligne 1)",
+            "title": "Row",
+            "type": "integer"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Feuille concernée (import XLSX)",
+            "title": "Sheet"
+          }
+        },
+        "required": [
+          "row",
+          "field",
+          "message"
+        ],
+        "title": "CatalogImportError",
+        "type": "object"
+      },
+      "CatalogImportResponse": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogImportError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "imported": {
+            "description": "Lignes créées ou mises à jour",
+            "title": "Imported",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "created",
+          "updated",
+          "errors"
+        ],
+        "title": "CatalogImportResponse",
+        "type": "object"
       },
       "CombinaisonCreate": {
         "properties": {
@@ -1997,6 +2094,79 @@
         "title": "EasyTransactInitiateRequest",
         "type": "object"
       },
+      "EasyTransactSettings": {
+        "description": "Réglages Easy Transact d'un restaurant : jamais de secret, seulement le NOM des\nvariables d'environnement qui les portent.",
+        "properties": {
+          "credential_env_key": {
+            "title": "Credential Env Key",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "failure_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Url"
+          },
+          "provider_account_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Account Ref"
+          },
+          "service_code": {
+            "title": "Service Code",
+            "type": "string"
+          },
+          "success_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Url"
+          },
+          "webhook_secret_env_key": {
+            "title": "Webhook Secret Env Key",
+            "type": "string"
+          },
+          "webhook_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          }
+        },
+        "required": [
+          "enabled",
+          "service_code",
+          "credential_env_key",
+          "webhook_secret_env_key"
+        ],
+        "title": "EasyTransactSettings",
+        "type": "object"
+      },
       "EasyTransactWebhookResponse": {
         "properties": {
           "accepted": {
@@ -3436,6 +3606,25 @@
         "title": "PaymentIntentResponse",
         "type": "object"
       },
+      "PaymentMethodTotal": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "total"
+        ],
+        "title": "PaymentMethodTotal",
+        "type": "object"
+      },
       "PaymentResponse": {
         "properties": {
           "amount": {
@@ -4541,6 +4730,38 @@
         "title": "ProductionStation",
         "type": "string"
       },
+      "RefundRejectBody": {
+        "description": "Corps optionnel du rejet ; le motif peut aussi venir de `?reason=`.",
+        "properties": {
+          "raison": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alias français de `reason`",
+            "title": "Raison"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RefundRejectBody",
+        "type": "object"
+      },
       "ReservationCancelRequest": {
         "properties": {
           "reason": {
@@ -5347,6 +5568,65 @@
         "title": "RestaurantAccess",
         "type": "object"
       },
+      "RestaurantConfigResponse": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "description": "config_jsonb, secrets retirés",
+            "title": "Config",
+            "type": "object"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "easytransact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EasyTransactSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "horaires_ouverture": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horaires Ouverture"
+          },
+          "restaurant_id": {
+            "format": "uuid",
+            "title": "Restaurant Id",
+            "type": "string"
+          },
+          "taux_service": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taux Service"
+          }
+        },
+        "required": [
+          "restaurant_id",
+          "currency"
+        ],
+        "title": "RestaurantConfigResponse",
+        "type": "object"
+      },
       "RestaurantCreate": {
         "properties": {
           "address": {
@@ -6075,6 +6355,51 @@
         "title": "ShiftResponse",
         "type": "object"
       },
+      "ShiftSummaryResponse": {
+        "properties": {
+          "cash_sales": {
+            "description": "Espèces encaissées pendant le shift",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash Sales",
+            "type": "string"
+          },
+          "expected_closing_balance": {
+            "description": "Fond de caisse + espèces encaissées : ce que le tiroir devrait contenir",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expected Closing Balance",
+            "type": "string"
+          },
+          "payments_by_method": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PaymentMethodTotal"
+            },
+            "title": "Payments By Method",
+            "type": "object"
+          },
+          "payments_count": {
+            "title": "Payments Count",
+            "type": "integer"
+          },
+          "payments_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Payments Total",
+            "type": "string"
+          },
+          "shift": {
+            "$ref": "#/components/schemas/ShiftResponse"
+          }
+        },
+        "required": [
+          "shift",
+          "payments_by_method",
+          "payments_count",
+          "payments_total",
+          "cash_sales",
+          "expected_closing_balance"
+        ],
+        "title": "ShiftSummaryResponse",
+        "type": "object"
+      },
       "SplitPaymentItem": {
         "properties": {
           "amount": {
@@ -6297,6 +6622,37 @@
           "restaurant_id"
         ],
         "title": "SubscriptionCreate",
+        "type": "object"
+      },
+      "SubscriptionListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "skip": {
+            "title": "Skip",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "skip",
+          "limit"
+        ],
+        "title": "SubscriptionListResponse",
         "type": "object"
       },
       "SubscriptionResponse": {
@@ -8402,6 +8758,56 @@
       }
     },
     "/v1/payments/easytransact/configuration": {
+      "get": {
+        "description": "Retourne la configuration du restaurant désigné par `restaurant_id`. Ne contient aucun\n    secret : `credential_env_key` et `webhook_secret_env_key` sont seulement les NOMS des\n    variables d'environnement qui les portent. Réservé au management du restaurant.",
+        "operationId": "get_configuration_v1_payments_easytransact_configuration_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentConfigurationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Aucune configuration pour ce restaurant."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lire la configuration Easy Transact d'un restaurant (lecture seule)",
+        "tags": [
+          "payments"
+        ]
+      },
       "put": {
         "operationId": "upsert_configuration_v1_payments_easytransact_configuration_put",
         "requestBody": {
@@ -10532,6 +10938,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefundRejectBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -12371,6 +12794,417 @@
         ]
       }
     },
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}": {
+      "get": {
+        "operationId": "get_restaurant_commande_v1_restaurants__restaurant_id__commandes__commande_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Détails d’une commande, avec ses lignes et remboursements",
+        "tags": [
+          "restaurant-orders"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/items": {
+      "get": {
+        "operationId": "get_restaurant_commande_items_v1_restaurants__restaurant_id__commandes__commande_id__items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CommandeItemResponse"
+                  },
+                  "title": "Response Get Restaurant Commande Items V1 Restaurants  Restaurant Id  Commandes  Commande Id  Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lignes d’une commande",
+        "tags": [
+          "restaurant-orders"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds": {
+      "get": {
+        "operationId": "get_restaurant_commande_refunds_v1_restaurants__restaurant_id__commandes__commande_id__refunds_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CommandeRefundResponse"
+                  },
+                  "title": "Response Get Restaurant Commande Refunds V1 Restaurants  Restaurant Id  Commandes  Commande Id  Refunds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remboursements d’une commande",
+        "tags": [
+          "restaurant-orders-refunds"
+        ]
+      },
+      "post": {
+        "operationId": "request_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandeRefundCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandeRefundResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Demander un remboursement (route imbriquée)",
+        "tags": [
+          "restaurant-orders-refunds"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds/{refund_id}/approve": {
+      "post": {
+        "operationId": "approve_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandeRefundResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approuver un remboursement (route imbriquée)",
+        "tags": [
+          "restaurant-orders-refunds"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/commandes/{commande_id}/refunds/{refund_id}/reject": {
+      "post": {
+        "operationId": "reject_restaurant_refund_v1_restaurants__restaurant_id__commandes__commande_id__refunds__refund_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commande_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Commande Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Reason",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefundRejectBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandeRefundResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rejeter un remboursement (motif en `?reason=` ou dans le corps)",
+        "tags": [
+          "restaurant-orders-refunds"
+        ]
+      }
+    },
     "/v1/restaurants/{restaurant_id}/composants": {
       "get": {
         "description": "Retourne les bases, sauces et protéines administrées pour construire les combinaisons de plats, avec leur disponibilité et leur prix de supplément.",
@@ -12518,6 +13352,249 @@
         "summary": "Créer un composant de plat",
         "tags": [
           "restaurant-combinations"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/config": {
+      "get": {
+        "description": "Rassemble en une lecture la configuration JSON du restaurant : horaires d'ouverture,\n    taux de service, `config_jsonb` (toute clé ressemblant à un secret est retirée) et les\n    réglages Easy Transact. Ces derniers ne contiennent jamais de secret : seuls les NOMS des\n    variables d'environnement (`credential_env_key`, `webhook_secret_env_key`) sont exposés.\n\n    Réservé au management du restaurant.",
+        "operationId": "get_restaurant_config_v1_restaurants__restaurant_id__config_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestaurantConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Restaurant introuvable ou hors de portée."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Configuration d’un restaurant (horaires, taux de service, Easy Transact)",
+        "tags": [
+          "restaurants"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/export": {
+      "get": {
+        "description": "Télécharge un classeur `.xlsx` (feuilles « Plats », « Boissons », « Composants »,\n    « Recettes ») ré-importable tel quel par `/import-excel`.",
+        "operationId": "export_restaurant_catalog_v1_restaurants__restaurant_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}
+            },
+            "description": "Classeur Excel."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Exporter plats, boissons, composants et recettes en XLSX",
+        "tags": [
+          "restaurant-catalog-io"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/import-csv": {
+      "post": {
+        "description": "Fichier CSV : séparateur `;`, UTF-8 (BOM accepté), première ligne d'en-tête.\n\n    Le paramètre `type` choisit le contenu :\n\n    | type | en-tête |\n    |---|---|\n    | `catalogue` (défaut) | `type;nom;prix;description;code;disponible;stock_min;stock_max;composition` — `type` vaut `plat` ou `boisson` et aiguille chaque ligne |\n    | `plats`, `boissons` | idem (`type` facultatif) |\n    | `composants` | `nom;prix;stock;composition;valeur_calorique` |\n    | `recettes` | `plat;composant;quantite;unite` |\n\n    L'import est idempotent (clé : nom, sans la casse) et partiel : les lignes valides sont\n    enregistrées, les autres reviennent dans `errors` avec leur numéro de ligne.\n    `composition` d'un plat : `Riz|Poulet:2` (noms de composants existants, quantité facultative).\n    Une erreur de fichier (colonne manquante, encodage, taille) répond 400 sans rien enregistrer.\n    Limite : 1 import par minute et par restaurant (429 + `Retry-After`).",
+        "operationId": "import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "catalogue",
+              "title": "Type",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Fichier inutilisable (en-tête, encodage, séparateur)."
+          },
+          "413": {
+            "description": "Fichier de plus de 5 Mo."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Un import a déjà eu lieu dans la dernière minute."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Importer plats, boissons, composants ou recettes depuis un CSV",
+        "tags": [
+          "restaurant-catalog-io"
+        ]
+      }
+    },
+    "/v1/restaurants/{restaurant_id}/import-excel": {
+      "post": {
+        "description": "Classeur Excel (.xlsx) avec une feuille par type : « Plats », « Boissons », « Composants »,\n    « Recettes » (feuilles absentes ignorées), mêmes colonnes que le CSV. Les composants sont\n    importés avant les plats, puis les recettes : un même fichier peut tout créer.\n\n    Mêmes règles que `/import-csv` (idempotence, import partiel, limite d'une fois par minute).\n    Les erreurs portent en plus le nom de la `sheet`.",
+        "operationId": "import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_restaurant_excel_v1_restaurants__restaurant_id__import_excel_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Fichier inutilisable."
+          },
+          "413": {
+            "description": "Fichier de plus de 5 Mo."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Un import a déjà eu lieu dans la dernière minute."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Importer plats, boissons, composants et recettes depuis un XLSX",
+        "tags": [
+          "restaurant-catalog-io"
         ]
       }
     },
@@ -14128,7 +15205,233 @@
         ]
       }
     },
+    "/v1/ros/shifts/current": {
+      "get": {
+        "description": "Retourne le shift OUVERT de l'utilisateur dans le restaurant courant (en-tête\n    `X-Tenant-ID`, ou son restaurant par défaut). 404 s'il n'a pas de shift ouvert.",
+        "operationId": "get_current_shift_v1_ros_shifts_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Aucun shift ouvert."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mon shift de caisse ouvert dans le restaurant courant",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
+    "/v1/ros/shifts/{shift_id}/summary": {
+      "get": {
+        "description": "Totaux des encaissements réussis de l'opérateur pendant le shift (jusqu'à maintenant s'il\n    est ouvert), par moyen de paiement, et caisse attendue (`fond de caisse + espèces`).\n    Visible de l'opérateur du shift et du management.",
+        "operationId": "get_shift_summary_v1_ros_shifts__shift_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Shift Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bilan d'un shift : encaissements par moyen de paiement et caisse attendue",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      },
+      "post": {
+        "description": "Ferme le shift `shift_id` avec le montant compté dans le tiroir, puis renvoie le bilan\n    final. L'opérateur ferme le sien ; le management peut fermer celui d'un caissier.\n    409 si le shift est déjà clôturé.",
+        "operationId": "close_shift_with_summary_v1_ros_shifts__shift_id__summary_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Shift Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShiftCloseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Shift déjà clôturé."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clôturer un shift par son identifiant et obtenir son bilan",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
     "/v1/subscriptions": {
+      "get": {
+        "description": "Liste paginée (`skip`, `limit`) de tous les abonnements de la plateforme, du plus récent au plus ancien.\n\n    `total` est le nombre d'abonnements correspondant au filtre, indépendamment de la page.\n    Filtre optionnel : `status`.",
+        "operationId": "list_subscriptions_v1_subscriptions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SubscriptionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Nombre de lignes à sauter",
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Nombre de lignes à sauter",
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Nombre de lignes à renvoyer (maximum 500)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Nombre de lignes à renvoyer (maximum 500)",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Token absent ou invalide."
+          },
+          "403": {
+            "description": "Réservé aux administrateurs."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lister tous les abonnements (admin)",
+        "tags": [
+          "subscriptions"
+        ]
+      },
       "post": {
         "description": "Crée une souscription pour un utilisateur sur un tier donné.\n\n    Cette opération initialise le cycle de vie d’un abonnement, le statut et les soldes associés.",
         "operationId": "create_subscription_v1_subscriptions_post",
@@ -14596,7 +15899,7 @@
     },
     "/v1/subscriptions/{subscription_id}/balances/current": {
       "get": {
-        "description": "Retourne le solde du jour en cours pour un abonnement donné.\n\n    Cette information est essentielle pour connaître la consommation restante et décider d’une autorisation de transaction.",
+        "description": "Retourne le solde du jour en cours pour un abonnement donné, ou `null` (200) si aucun\n    solde n'a encore été créé aujourd'hui : l'absence de solde n'est pas une erreur.\n\n    Cette information est essentielle pour connaître la consommation restante et décider d’une autorisation de transaction.",
         "operationId": "get_current_balance_v1_subscriptions__subscription_id__balances_current_get",
         "parameters": [
           {
@@ -14615,17 +15918,25 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DailyBalanceResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DailyBalanceResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Current Balance V1 Subscriptions  Subscription Id  Balances Current Get"
                 }
               }
             },
-            "description": "Solde courant récupéré."
+            "description": "Solde courant récupéré, ou null s'il n'existe pas encore."
           },
           "401": {
             "description": "Token absent ou invalide."
           },
           "404": {
-            "description": "Aucun solde courant trouvé."
+            "description": "Abonnement introuvable."
           },
           "422": {
             "content": {
@@ -15088,7 +16399,7 @@
     },
     "/v1/users": {
       "get": {
-        "description": "Retourne la liste paginée des comptes utilisateurs du système.\n\n    Cette route est réservée aux administrateurs. Elle permet de filtrer les résultats via `skip` et `limit`.",
+        "description": "Retourne la liste paginée des comptes utilisateurs du système.\n\n    Cette route est réservée aux administrateurs. Elle permet de filtrer les résultats via `skip` et `limit`.\n\n    Le corps reste un tableau (les clients existants ne changent pas) ; le nombre total de comptes\n    non supprimés est dans l'en-tête `X-Total-Count`.",
         "operationId": "get_users_v1_users_get",
         "parameters": [
           {
@@ -15097,6 +16408,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "minimum": 0,
               "title": "Skip",
               "type": "integer"
             }
@@ -15107,6 +16419,8 @@
             "required": false,
             "schema": {
               "default": 100,
+              "maximum": 500,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
@@ -15318,7 +16632,7 @@
     },
     "/v1/users/{user_id}": {
       "delete": {
-        "description": "Supprime définitivement un utilisateur du système.\n\n    Cette action est irréversible et ne doit être utilisée que dans le cadre d’une gestion administrative stricte.",
+        "description": "Supprime logiquement un utilisateur (`is_deleted`, compte désactivé, masqué des listes).\n\n    Les données liées sont conservées pour l'historique et l'audit.",
         "operationId": "delete_user_v1_users__user_id__delete",
         "parameters": [
           {

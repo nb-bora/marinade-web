@@ -134,6 +134,19 @@ const { submit: changeStatus, pending: changing } = useSubmit(async (statut: str
   await reload()
 })
 
+async function askStatus(statut: string) {
+  const served = statut === 'servie'
+
+  const accepted = await confirm({
+    title: served ? 'Marquer cette commande comme servie ?' : 'Remettre cette commande en cours ?',
+    text: served ? 'La commande sera considérée comme servie au client.' : 'La commande redevient modifiable.',
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (accepted)
+    await changeStatus(statut)
+}
+
 async function cancelOrder() {
   const accepted = await confirm({
     title: 'Annuler cette commande ?',
@@ -302,7 +315,7 @@ const lockedNote = computed(() => LOCKED_NOTES[order.value?.statut ?? ''] ?? '')
             variant="tonal"
             prepend-icon="ri-restaurant-2-line"
             :loading="changing"
-            @click="changeStatus('servie')"
+            @click="askStatus('servie')"
           >
             Marquer comme servie
           </VBtn>
@@ -312,7 +325,7 @@ const lockedNote = computed(() => LOCKED_NOTES[order.value?.statut ?? ''] ?? '')
             color="secondary"
             prepend-icon="ri-arrow-go-back-line"
             :loading="changing"
-            @click="changeStatus('en_cours')"
+            @click="askStatus('en_cours')"
           >
             Remettre en cours
           </VBtn>
@@ -508,6 +521,7 @@ const lockedNote = computed(() => LOCKED_NOTES[order.value?.statut ?? ''] ?? '')
       <VTextarea
         v-model="rejectReason"
         label="Motif du rejet (facultatif)"
+        prepend-inner-icon="ri-file-text-line"
         rows="2"
         auto-grow
         maxlength="500"

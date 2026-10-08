@@ -3,6 +3,7 @@ import { settingsApi } from '../api'
 import { emptyToNull } from '../labels'
 import type { PaymentConfiguration, Restaurant } from '../types'
 import { container } from '@/container'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { formatDateTime } from '@/lib/format'
 import { required } from '@/lib/validation'
@@ -15,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const session = useSessionStore()
+const confirm = useConfirm()
 const toast = useToast()
 
 const DEFAULT_CREDENTIAL_KEY = 'EASYTRANSACT_API_TOKEN'
@@ -91,6 +93,13 @@ async function submit() {
   if (!(await form.value?.validate())?.valid)
     return
 
+  if (!await confirm({
+    title: 'Enregistrer la configuration des paiements ?',
+    text: 'Les paiements du restaurant seront réglés avec ces paramètres.',
+    confirmLabel: 'Enregistrer',
+  }))
+    return
+
   reset()
   await send()
 }
@@ -163,6 +172,7 @@ async function copy(text: string, what: string) {
                 <VTextField
                   v-model="draft.service_code"
                   label="Code du service"
+                  prepend-inner-icon="ri-code-line"
                   maxlength="50"
                   hint="Fourni par Easy Transact."
                   persistent-hint
@@ -177,6 +187,7 @@ async function copy(text: string, what: string) {
                 <VTextField
                   v-model="draft.provider_account_ref"
                   label="Compte marchand"
+                  prepend-inner-icon="ri-bank-line"
                   maxlength="255"
                   hint="Votre référence chez Easy Transact."
                   persistent-hint
@@ -187,6 +198,7 @@ async function copy(text: string, what: string) {
                 <VTextField
                   v-model="draft.success_url"
                   label="Page après un paiement réussi"
+                  prepend-inner-icon="ri-link"
                   placeholder="https://…"
                   type="url"
                   maxlength="500"
@@ -198,6 +210,7 @@ async function copy(text: string, what: string) {
                 <VTextField
                   v-model="draft.failure_url"
                   label="Page après un paiement échoué"
+                  prepend-inner-icon="ri-link"
                   placeholder="https://…"
                   type="url"
                   maxlength="500"
@@ -209,6 +222,7 @@ async function copy(text: string, what: string) {
                 <VTextField
                   v-model="draft.webhook_url"
                   label="Adresse de notification (optionnelle)"
+                  prepend-inner-icon="ri-notification-3-line"
                   placeholder="https://…"
                   type="url"
                   maxlength="500"
@@ -244,6 +258,7 @@ async function copy(text: string, what: string) {
               <VTextField
                 v-model="draft.credential_env_key"
                 label="Variable du jeton d'API"
+                prepend-inner-icon="ri-key-2-line"
                 class="mb-2"
                 :rules="[credentialKey]"
                 :readonly="!canEdit"
@@ -251,6 +266,7 @@ async function copy(text: string, what: string) {
               <VTextField
                 v-model="draft.webhook_secret_env_key"
                 label="Variable du secret des notifications"
+                prepend-inner-icon="ri-key-2-line"
                 :rules="[webhookKey]"
                 :readonly="!canEdit"
               />

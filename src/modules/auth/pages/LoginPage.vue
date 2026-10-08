@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLoginThrottle } from '../composables/useLoginThrottle'
 import { useSubmit } from '@/composables/useSubmit'
 import { safeRedirect } from '@/lib/router/paths'
 import { email as emailRule, required } from '@/lib/validation'
@@ -13,6 +14,7 @@ const password = ref('')
 const twoFactorCode = ref('')
 const remember = ref(true)
 const form = ref()
+const throttle = useLoginThrottle()
 
 // La 2FA n'est demandée qu'après un premier essai : le serveur répond alors que le code
 // est requis, et on affiche le second champ sans perdre ce qui a été saisi.
@@ -35,15 +37,20 @@ const { submit, pending, message } = useSubmit(async () => {
       return false
     }
 
+    throttle.recordFailure(error)
     throw error
   }
 
+  throttle.reset()
   await router.replace(safeRedirect(route.query.redirect))
 
   return true
 })
 
 async function onSubmit() {
+  if (throttle.locked.value)
+    return
+
   if ((await form.value?.validate())?.valid)
     await submit()
 }
@@ -82,6 +89,7 @@ async function onSubmit() {
             v-model="email"
             label="Adresse e-mail"
             type="email"
+            prepend-inner-icon="ri-mail-line"
             autocomplete="username"
             autofocus
             :readonly="needsCode"
@@ -106,6 +114,7 @@ async function onSubmit() {
           <VTextField
             v-model="twoFactorCode"
             label="Code de vérification"
+            prepend-inner-icon="ri-shield-keyhole-line"
             hint="Code à 6 chiffres de votre application d'authentification, ou un code de secours."
             persistent-hint
             autocomplete="one-time-code"
@@ -131,7 +140,20 @@ async function onSubmit() {
         </VCol>
 
         <VCol
-          v-if="message"
+          v-if="throttle.locked.value"
+          cols="12"
+        >
+          <VAlert
+            type="warning"
+            variant="tonal"
+            role="alert"
+          >
+            Trop d'essais. Patientez {{ throttle.remaining.value }} seconde{{ throttle.remaining.value > 1 ? 's' : '' }} avant de réessayer.
+          </VAlert>
+        </VCol>
+
+        <VCol
+          v-else-if="message"
           cols="12"
         >
           <VAlert
@@ -147,6 +169,7 @@ async function onSubmit() {
             type="submit"
             block
             size="large"
+            :disabled="throttle.locked.value"
             :loading="pending"
           >
             {{ needsCode ? 'Valider le code' : 'Se connecter' }}

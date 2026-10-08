@@ -66,7 +66,6 @@ const rules = [(value: string | null) => Boolean(value) || 'Choisissez une table
     :subtitle="entry ? `${entry.customer_name} · ${coversLabel(entry.party_size)}` : undefined"
     submit-label="Installer"
     icon="ri-layout-grid-line"
-    :max-width="480"
     :loading="pending"
     :error="message"
     @submit="submit"
@@ -92,6 +91,7 @@ const rules = [(value: string | null) => Boolean(value) || 'Choisissez une table
       v-model="tableId"
       :items="items"
       label="Table libre"
+      prepend-inner-icon="ri-layout-grid-line"
       :rules="rules"
       no-data-text="Aucune table libre"
     />

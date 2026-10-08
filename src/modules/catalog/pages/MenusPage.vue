@@ -6,6 +6,7 @@ import { useMenus } from '../composables/useMenus'
 import type { Menu, MenuCategory } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useSubmit } from '@/composables/useSubmit'
+import { useConfirm } from '@/composables/useConfirm'
 import { formatDate } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -70,6 +71,15 @@ const nextOrder = computed(() => {
 const toggling = ref<string | null>(null)
 
 const { submit: toggleMenu, error: toggleError, message: toggleMessage } = useSubmit(async (menu: Menu) => {
+  const accepted = await useConfirm()({
+    title: menu.actif ? 'Désactiver ce menu ?' : 'Réactiver ce menu ?',
+    text: `« ${menu.name} » ${menu.actif ? 'ne sera plus proposé.' : 'sera de nouveau proposé.'}`,
+    confirmLabel: 'Enregistrer',
+  })
+
+  if (!accepted)
+    return
+
   toggling.value = menu.id
   try {
     await catalogApi.updateMenu(menu.id, { actif: !menu.actif })

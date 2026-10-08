@@ -73,6 +73,7 @@ watch(open, isOpen => {
         <VTextField
           v-model="nom"
           label="Nom"
+          prepend-inner-icon="ri-flask-line"
           autocomplete="off"
           autofocus
           :rules="[required('Indiquez le nom du composant.')]"
@@ -90,6 +91,7 @@ watch(open, isOpen => {
           item-value="value"
           :return-object="false"
           label="Catégorie"
+          prepend-inner-icon="ri-price-tag-3-line"
           hint="Choisissez dans la liste ou saisissez la vôtre."
           persistent-hint
           :rules="[required('Indiquez une catégorie.')]"
@@ -104,6 +106,7 @@ watch(open, isOpen => {
           v-model="unit"
           :items="UNITS"
           label="Unité de stock"
+          prepend-inner-icon="ri-scales-line"
           hint="Ex. kg, litre, portion."
           persistent-hint
           :rules="[required('Indiquez l\'unité.')]"
@@ -117,6 +120,7 @@ watch(open, isOpen => {
         <VTextField
           v-model="supplement"
           label="Supplément de prix (FCFA)"
+          prepend-inner-icon="ri-money-dollar-circle-line"
           inputmode="decimal"
           hint="Facturé en plus quand le client choisit ce composant."
           persistent-hint
@@ -140,6 +144,7 @@ watch(open, isOpen => {
         <VTextarea
           v-model="description"
           label="Description (facultatif)"
+          prepend-inner-icon="ri-file-text-line"
           rows="2"
           auto-grow
         />

@@ -4,11 +4,13 @@ import PrefixFormDialog from '../components/PrefixFormDialog.vue'
 import type { OperatorPrefix } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
+import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { formatDate } from '@/lib/format'
 import { useToast } from '@/stores/toast.store'
 
 const toast = useToast()
+const confirm = useConfirm()
 
 const { data, loading, error, reload, refresh } = useAsyncData(signal => platformApi.prefixes(signal))
 
@@ -40,6 +42,18 @@ function edit(prefix: OperatorPrefix) {
 const busyId = ref<string | null>(null)
 
 const toggle = useSubmit(async (prefix: OperatorPrefix) => {
+  const accepted = await confirm({
+    title: prefix.is_active ? `Désactiver le préfixe ${prefix.national_prefix} ?` : `Réactiver le préfixe ${prefix.national_prefix} ?`,
+    text: prefix.is_active
+      ? 'Les numéros commençant par ce préfixe ne seront plus reconnus comme appartenant à cet opérateur.'
+      : 'Les numéros commençant par ce préfixe seront de nouveau reconnus.',
+    confirmLabel: prefix.is_active ? 'Supprimer' : 'Enregistrer',
+    danger: prefix.is_active,
+  })
+
+  if (!accepted)
+    return
+
   busyId.value = prefix.id
   try {
     await platformApi.updatePrefix(prefix.id, { is_active: !prefix.is_active })
