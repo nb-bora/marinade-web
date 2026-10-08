@@ -103,8 +103,12 @@ const numbers = computed(() => {
   max-inline-size: 4.5rem;
 }
 
+/* Le thème impose une largeur minimale et un padding aux boutons : on force un carré. */
 .app-table-pagination__number {
-  min-inline-size: 2.25rem;
-  padding-inline: 0;
+  min-inline-size: 2.25rem !important;
+  inline-size: 2.25rem;
+  block-size: 2.25rem !important;
+  padding-inline: 0 !important;
+  font-variant-numeric: tabular-nums;
 }
 </style>
