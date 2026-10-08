@@ -242,7 +242,7 @@ const goTo = (sessionId: string) => router.push(`/caisse/sessions/${sessionId}`)
     <ShiftDialogs
       v-model:open="openDialog"
       v-model:close="closeDialog"
-      v-model:result="resultDialog"
+      v-model:summary="resultDialog"
       :loading="opening || closing"
       :error="openDialog ? openMessage : closeMessage"
       :result="closedShift"

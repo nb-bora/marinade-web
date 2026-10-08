@@ -138,7 +138,7 @@ const { submit: remove, pending: removing, message: removeError } = useSubmit(as
 
     <WaitlistQuickAdd
       class="mt-6"
-      @added="refresh()"
+      @added="refresh"
     />
 
     <VCard class="mt-6">
@@ -198,7 +198,7 @@ const { submit: remove, pending: removing, message: removeError } = useSubmit(as
             v-for="(entry, index) in waiting"
             :key="entry.id"
           >
-            <td>
+            <td class="fill-cell">
               <div class="d-flex align-center gap-3 py-2">
                 <VAvatar
                   color="primary"
@@ -237,7 +237,7 @@ const { submit: remove, pending: removing, message: removeError } = useSubmit(as
               </div>
             </td>
             <td class="text-end">
-              <div class="d-flex justify-end gap-2">
+              <div class="d-flex flex-column flex-sm-row justify-end gap-2">
                 <VBtn
                   size="small"
                   prepend-icon="ri-layout-grid-line"
@@ -266,12 +266,17 @@ const { submit: remove, pending: removing, message: removeError } = useSubmit(as
     <SeatDialog
       v-model="seatOpen"
       :entry="seating"
-      @seated="refresh()"
+      @seated="refresh"
     />
   </div>
 </template>
 
 <style scoped>
+.fill-cell {
+  inline-size: 100%;
+  max-inline-size: 0;
+}
+
 .live-dot {
   display: inline-block;
   inline-size: 8px;

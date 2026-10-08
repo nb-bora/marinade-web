@@ -24,6 +24,7 @@ const sessionId = computed(() => invoice.value?.session_id ?? '')
 const { lines } = useOrderedLines(sessionId)
 
 const due = computed(() => invoice.value ? toNumber(invoice.value.amount_due) : 0)
+
 const paidShare = computed(() => {
   const total = invoice.value ? toNumber(invoice.value.total_amount) : 0
 

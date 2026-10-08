@@ -1,7 +1,7 @@
 <!-- Paiement partagé : plusieurs moyens (et plusieurs payeurs) pour une même addition, tout ou rien. -->
 <script setup lang="ts">
 import { METHODS, METHOD_OPTIONS } from '../labels'
-import { parseAmount } from '../money'
+import { parseAmount, round2, wholeDue } from '../money'
 import type { PaymentMethod } from '../types'
 import { newUuid } from '../composables/useIdempotencyKey'
 import { formatMoney } from '@/lib/format'
@@ -39,21 +39,24 @@ const amountOf = (part: Part) => parseAmount(part.amount)
 const isMobile = (part: Part) => METHODS[part.method].kind === 'mobile'
 const phoneValid = (part: Part) => isValidCameroonMobile(nationalDigits(part.phone))
 
+/** Ce que le client doit en francs entiers : les lignes se saisissent en francs entiers (voir `wholeDue`). */
+const whole = computed(() => wholeDue(props.due))
+
 const total = computed(() => parts.value.reduce((sum, part) => sum + amountOf(part), 0))
-const left = computed(() => props.due - total.value)
+const left = computed(() => whole.value - total.value)
 
 const phoneError = (part: Part) => triedToSubmit.value && isMobile(part) && !phoneValid(part)
   ? 'Numéro à 9 chiffres obligatoire.'
   : ''
 
 const problem = computed(() => {
-  if (total.value > props.due)
-    return `Le total dépasse le reste dû de ${formatMoney(total.value - props.due)}.`
+  if (total.value > whole.value)
+    return `Le total dépasse le reste dû de ${formatMoney(total.value - whole.value)}.`
 
   return ''
 })
 
-const canSubmit = computed(() => props.due > 0 && total.value > 0 && total.value <= props.due)
+const canSubmit = computed(() => props.due > 0 && total.value > 0 && total.value <= whole.value)
 
 function addPart() {
   if (parts.value.length < MAX_PARTS)
@@ -69,16 +72,16 @@ function removePart(id: string) {
 function fillRest(part: Part) {
   const others = total.value - amountOf(part)
 
-  part.amount = String(Math.max(props.due - others, 0))
+  part.amount = String(Math.max(whole.value - others, 0))
 }
 
 /** Répartit le reste dû à parts égales (le reliquat va à la première ligne). */
 function splitEvenly() {
   const count = parts.value.length
-  const share = Math.floor(props.due / count)
+  const share = Math.floor(whole.value / count)
 
   parts.value.forEach((part, index) => {
-    part.amount = String(index === 0 ? props.due - share * (count - 1) : share)
+    part.amount = String(index === 0 ? whole.value - share * (count - 1) : share)
   })
 }
 
@@ -94,14 +97,18 @@ function submit() {
   if (filled.some(part => isMobile(part) && !phoneValid(part)))
     return
 
-  emit('submit', {
-    total: total.value,
-    items: filled.map(part => {
-      const reference = [isMobile(part) ? part.phone : '', part.reference.trim()].filter(Boolean).join(' · ')
+  const items = filled.map(part => {
+    const reference = [isMobile(part) ? part.phone : '', part.reference.trim()].filter(Boolean).join(' · ')
 
-      return { method: part.method, amount: amountOf(part), reference: reference || null }
-    }),
+    return { method: part.method, amount: amountOf(part), reference: reference || null }
   })
+
+  // Le total atteint le reste dû en francs entiers : la fraction de franc est absorbée par la
+  // dernière ligne, pour que l'addition soit réellement soldée.
+  if (total.value === whole.value)
+    items[items.length - 1].amount = round2(items[items.length - 1].amount + props.due - total.value)
+
+  emit('submit', { total: round2(items.reduce((sum, item) => sum + item.amount, 0)), items })
 }
 
 function reset() {

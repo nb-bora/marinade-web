@@ -54,6 +54,7 @@ const tableHint = computed(() => {
 
 const { submit, pending, message, apiError, reset } = useSubmit(async () => {
   const when = fromInputs(date.value, time.value).toISOString()
+
   const common = {
     customer_name: name.value.trim(),
     customer_phone: phone.value || null,
@@ -115,7 +116,7 @@ const rules = {
     subtitle="Le client, le jour, l'heure et le nombre de couverts suffisent ; la table peut être choisie plus tard."
     submit-label="Enregistrer"
     icon="ri-calendar-event-line"
-    :max-width="640"
+    :max-width="1000"
     :loading="pending"
     :error="message"
     @submit="submit"
@@ -148,7 +149,7 @@ const rules = {
       </VCol>
       <VCol
         cols="12"
-        sm="5"
+        sm="6"
       >
         <VTextField
           v-model="date"
@@ -171,7 +172,7 @@ const rules = {
       </VCol>
       <VCol
         cols="6"
-        sm="4"
+        sm="3"
       >
         <VTextField
           v-model="partySize"

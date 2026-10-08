@@ -1,7 +1,7 @@
 <!-- Encaissement avec un seul moyen : tuiles, montant au pavé numérique, rendu monnaie, téléphone. -->
 <script setup lang="ts">
 import { METHODS } from '../labels'
-import { cashSuggestions } from '../money'
+import { amountToPay, cashSuggestions, wholeDue } from '../money'
 import type { PaymentMethod } from '../types'
 import MethodTiles from './MethodTiles.vue'
 import NumPad from './NumPad.vue'
@@ -36,26 +36,29 @@ const phone = ref('')
 const reference = ref('')
 const triedToSubmit = ref(false)
 
+/** Ce que le client doit en francs entiers (voir `wholeDue`). */
+const whole = computed(() => wholeDue(props.due))
+
 const kind = computed(() => METHODS[method.value].kind)
 const isCash = computed(() => kind.value === 'cash')
 const isMobile = computed(() => kind.value === 'mobile')
 
 // Espèces : on saisit ce que le client remet. Autres moyens : on saisit ce que l'on débite, par défaut le reste dû.
 watch(method, () => {
-  entered.value = isCash.value ? 0 : props.due
+  entered.value = isCash.value ? 0 : whole.value
   triedToSubmit.value = false
 }, { immediate: true })
 
 /** Le reste dû bouge quand quelqu'un d'autre encaisse : un montant qui le suivait continue de le suivre. */
 watch(() => props.due, (next, previous) => {
-  if (!isCash.value && entered.value === previous)
-    entered.value = next
+  if (!isCash.value && entered.value === wholeDue(previous))
+    entered.value = wholeDue(next)
 })
 
-const amount = computed(() => Math.min(entered.value, props.due))
-const change = computed(() => isCash.value ? Math.max(entered.value - props.due, 0) : 0)
-const tooMuch = computed(() => !isCash.value && entered.value > props.due)
-const remaining = computed(() => Math.max(props.due - amount.value, 0))
+const amount = computed(() => amountToPay(entered.value, props.due))
+const change = computed(() => isCash.value ? Math.max(entered.value - whole.value, 0) : 0)
+const tooMuch = computed(() => !isCash.value && entered.value > whole.value)
+const remaining = computed(() => Math.round(Math.max(props.due - amount.value, 0)))
 
 const suggestions = computed(() => cashSuggestions(props.due))
 
@@ -102,7 +105,7 @@ function submit() {
 
 /** Après un encaissement, la saisie repart à zéro. */
 function reset() {
-  entered.value = isCash.value ? 0 : props.due
+  entered.value = isCash.value ? 0 : whole.value
   phone.value = ''
   reference.value = ''
   triedToSubmit.value = false
@@ -142,12 +145,12 @@ defineExpose({ reset })
         <div
           v-if="isCash"
           class="change-box pa-4"
-          :class="{ 'change-box--due': entered > 0 && entered < due }"
+          :class="{ 'change-box--due': entered > 0 && entered < whole }"
         >
           <template v-if="entered === 0">
             <span class="text-body-1 text-medium-emphasis">Saisissez ce que le client vous remet.</span>
           </template>
-          <template v-else-if="entered < due">
+          <template v-else-if="entered < whole">
             <span class="text-body-1">Il restera à payer</span>
             <span class="text-h5 font-weight-bold tabular-nums">{{ formatMoney(remaining) }}</span>
           </template>
@@ -176,7 +179,7 @@ defineExpose({ reset })
               color="secondary"
               @click="entered = value"
             >
-              {{ value === due ? 'Exact' : formatMoney(value) }}
+              {{ value === whole ? 'Exact' : formatMoney(value) }}
             </VBtn>
           </template>
           <template v-else>
@@ -184,7 +187,7 @@ defineExpose({ reset })
               size="large"
               variant="outlined"
               color="secondary"
-              @click="entered = due"
+              @click="entered = whole"
             >
               Tout le reste
             </VBtn>
@@ -192,8 +195,8 @@ defineExpose({ reset })
               size="large"
               variant="outlined"
               color="secondary"
-              :disabled="due < 2"
-              @click="entered = Math.floor(due / 2)"
+              :disabled="whole < 2"
+              @click="entered = Math.floor(whole / 2)"
             >
               Moitié
             </VBtn>
@@ -228,7 +231,7 @@ defineExpose({ reset })
         <VTextField
           v-if="!isCash"
           v-model="reference"
-          :label="isMobile ? 'Référence de l\'opérateur (facultatif)' : 'Référence du paiement (facultatif)'"
+          label="Référence (facultatif)"
           maxlength="120"
           autocomplete="off"
         />

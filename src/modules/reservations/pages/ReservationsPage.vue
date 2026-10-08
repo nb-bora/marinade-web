@@ -150,9 +150,9 @@ function suggested(day: Date): Date {
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 19, 0)
 }
 
-function openCreate(at?: Date) {
+function openCreate(at?: unknown) {
   editing.value = null
-  formDate.value = at ?? suggested(anchor.value)
+  formDate.value = at instanceof Date ? at : suggested(anchor.value)
   formOpen.value = true
 }
 
@@ -213,7 +213,7 @@ function resetFilters() {
         <VBtn
           class="d-md-none"
           prepend-icon="ri-add-line"
-          @click="openCreate()"
+          @click="openCreate"
         >
           Nouvelle réservation
         </VBtn>
@@ -234,7 +234,7 @@ function resetFilters() {
               size="large"
               prepend-icon="ri-add-line"
               class="d-none d-md-flex mb-5"
-              @click="openCreate()"
+              @click="openCreate"
             >
               Nouvelle réservation
             </VBtn>
@@ -258,11 +258,12 @@ function resetFilters() {
               v-model="visibleStatuses"
               :value="status"
               :color="presentStatus(status).color"
+              class="status-check"
               density="compact"
               hide-details
             >
               <template #label>
-                <span class="d-flex align-center justify-space-between w-100">
+                <span class="d-flex align-center justify-space-between flex-grow-1">
                   <span>{{ presentStatus(status).label }}</span>
                   <span class="text-medium-emphasis">{{ statusCounts.get(status) ?? 0 }}</span>
                 </span>
@@ -366,7 +367,7 @@ function resetFilters() {
               <VBtn
                 v-else
                 prepend-icon="ri-add-line"
-                @click="openCreate()"
+                @click="openCreate"
               >
                 Nouvelle réservation
               </VBtn>
@@ -390,7 +391,7 @@ function resetFilters() {
                 :days="view === 'day' ? [anchor] : weekDays(anchor)"
                 :bookings="shown"
                 :table-label-of="labelOf"
-                :can-create="true"
+                can-create
                 @select="selectedId = $event.reservation.id"
                 @create="openCreate($event)"
                 @pick-day="pickDay"
@@ -411,7 +412,7 @@ function resetFilters() {
       :reservation="selected"
       :table-label="labelOf(selected?.table_id)"
       @close="selectedId = null"
-      @changed="refresh()"
+      @changed="refresh"
       @edit="openEdit"
     />
 
@@ -426,6 +427,15 @@ function resetFilters() {
 </template>
 
 <style scoped>
+.status-check :deep(.v-selection-control) {
+  inline-size: 100%;
+}
+
+.status-check :deep(.v-label) {
+  flex: 1;
+  opacity: 1;
+}
+
 .live-dot {
   display: inline-block;
   inline-size: 8px;

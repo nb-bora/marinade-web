@@ -1,10 +1,10 @@
 <!-- Tableau de bord : les réservations d'aujourd'hui, les prochaines en premier. -->
 <script setup lang="ts">
 import { reservationsApi } from '../api'
-import { addDays, formatTime, startOfDay } from '@/lib/format'
 import { coversLabel, isDead, presentStatus } from '../labels'
 import type { Reservation } from '../types'
 import ReservationStatusChip from '../components/ReservationStatusChip.vue'
+import { addDays, formatTime, startOfDay } from '@/lib/format'
 import { useLive } from '@/composables/useLive'
 import { useTenantStore } from '@/stores/tenant.store'
 

@@ -19,7 +19,7 @@ const emit = defineEmits<{
 
 const openDialog = defineModel<boolean>('open', { required: true })
 const closeDialog = defineModel<boolean>('close', { required: true })
-const resultDialog = defineModel<boolean>('result', { required: true })
+const resultDialog = defineModel<boolean>('summary', { required: true })
 
 const opening = ref('')
 const counted = ref('')

@@ -104,7 +104,11 @@ export function useShift() {
       throw new Error('Aucun restaurant sélectionné.')
 
     try {
-      const closed = await cashDeskApi.closeShift(restaurantId, { closing_balance_counted: countedBalance })
+      const answer = await cashDeskApi.closeShift(restaurantId, { closing_balance_counted: countedBalance })
+
+      // Le back date la fermeture avec l'heure locale du serveur sans fuseau (décalée d'une heure
+      // ici) : on retient l'heure de ce poste, qui est celle à laquelle le caissier a fermé.
+      const closed = { ...answer, closed_at: new Date().toISOString() }
 
       save({ state: 'closed', shift: null, lastClosed: closed })
 

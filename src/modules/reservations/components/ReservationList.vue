@@ -66,7 +66,7 @@ const groups = computed(() => {
         @click="emit('select', booking)"
         @keydown.enter="emit('select', booking)"
       >
-        <td>
+        <td class="fill-cell">
           <div class="d-flex align-center gap-3 py-2">
             <VAvatar
               :color="TONE_COLOR[presentStatus(booking.reservation.status).tone]"
@@ -102,6 +102,11 @@ const groups = computed(() => {
 </template>
 
 <style scoped>
+.fill-cell {
+  inline-size: 100%;
+  max-inline-size: 0;
+}
+
 .day-row td {
   background: rgba(var(--v-theme-on-surface), 0.04);
   font-size: 0.8125rem;

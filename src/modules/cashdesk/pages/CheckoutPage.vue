@@ -300,17 +300,21 @@ const viewReceipt = () => {
         <VCard v-else>
           <VCardItem class="pb-2">
             <VCardTitle>Encaisser</VCardTitle>
-            <VCardSubtitle>Reste dû : <AppMoney :amount="due" :currency="currency" /></VCardSubtitle>
-            <template #append>
-              <AppSegmented
-                v-model="mode"
-                :options="MODES"
-                label="Mode de paiement"
+            <VCardSubtitle>
+              Reste dû : <AppMoney
+                :amount="due"
+                :currency="currency"
               />
-            </template>
+            </VCardSubtitle>
           </VCardItem>
 
           <VCardText>
+            <AppSegmented
+              v-model="mode"
+              :options="MODES"
+              label="Mode de paiement"
+              class="mb-4"
+            />
             <VAlert
               v-if="!shift.isOpen.value"
               type="info"

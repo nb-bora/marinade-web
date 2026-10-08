@@ -172,7 +172,7 @@ export function useKitchenBoard() {
     }
 
     socket = new KdsSocket({
-      url: `${container.config.wsBaseUrl}/ros/ws/kds/${id}/${station.value}`,
+      url: `${container.config.wsBaseUrl}/v1/ros/ws/kds/${id}/${station.value}`,
       getToken: () => container.tokens.read()?.accessToken ?? null,
       onMessage: () => {
         refresh()

@@ -59,6 +59,7 @@ export function useCashSessions() {
 
     const [sessions, tables] = await Promise.all([
       cashDeskApi.activeSessions(restaurantId, signal),
+
       // Les noms de table sont un confort : sans eux, la session reste encaissable.
       cashDeskApi.tables(restaurantId, signal).catch(() => []),
     ])

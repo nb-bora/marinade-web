@@ -118,7 +118,7 @@ const rules = {
             <AppPhoneField
               :key="phoneKey"
               v-model="phone"
-              label="Téléphone (facultatif)"
+              label="Téléphone"
               :error-messages="apiError?.fieldMessage('customer_phone')"
             />
           </VCol>

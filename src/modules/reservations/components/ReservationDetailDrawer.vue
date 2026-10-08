@@ -37,7 +37,8 @@ const isShown = computed({
 })
 
 onKeyStroke('Escape', () => {
-  if (isShown.value && !cancelOpen.value)
+  // Échap dans une fenêtre ouverte (modifier, annuler, confirmer) ne ferme que cette fenêtre.
+  if (isShown.value && !cancelOpen.value && !document.querySelector('.v-dialog.v-overlay--active'))
     emit('close')
 })
 
@@ -317,7 +318,7 @@ const busy = computed(() => confirming.value || checkingIn.value || removing.val
           prepend-icon="ri-checkbox-circle-line"
           :loading="confirming"
           :disabled="busy && !confirming"
-          @click="confirmReservation()"
+          @click="confirmReservation"
         >
           Confirmer
         </VBtn>
@@ -328,7 +329,7 @@ const busy = computed(() => confirming.value || checkingIn.value || removing.val
           prepend-icon="ri-user-received-line"
           :loading="checkingIn"
           :disabled="busy && !checkingIn"
-          @click="checkIn()"
+          @click="checkIn"
         >
           Arrivée
         </VBtn>
@@ -359,7 +360,7 @@ const busy = computed(() => confirming.value || checkingIn.value || removing.val
           prepend-icon="ri-delete-bin-line"
           :loading="removing"
           :disabled="busy && !removing"
-          @click="removeReservation()"
+          @click="removeReservation"
         >
           Supprimer
         </VBtn>
