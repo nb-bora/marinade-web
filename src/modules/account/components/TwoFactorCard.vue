@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
+import RecoveryCodesGrid from './RecoveryCodesGrid.vue'
 import { container } from '@/container'
 import { useSubmit } from '@/composables/useSubmit'
 import type { TwoFactorSetup } from '@/lib/api/types'
@@ -40,16 +41,6 @@ const { submit: confirm, pending: confirming, message: confirmError } = useSubmi
   toast.success('Authentification à deux facteurs activée.')
 })
 
-async function copyCodes() {
-  try {
-    await navigator.clipboard.writeText(setup.value?.recovery_codes.join('\n') ?? '')
-    toast.info('Codes copiés.')
-  }
-  catch {
-    toast.warning('Copie impossible : recopiez les codes à la main.')
-  }
-}
-
 // --- Désactivation ----------------------------------------------------------
 const showDisable = ref(false)
 const password = ref('')
@@ -64,10 +55,12 @@ const { submit: disable, pending: disabling, message: disableError } = useSubmit
 </script>
 
 <template>
-  <VCard class="h-100">
+  <VCard>
     <VCardItem>
       <VCardTitle>Authentification à deux facteurs</VCardTitle>
-      <VCardSubtitle>Un code de votre téléphone s'ajoute au mot de passe à chaque connexion.</VCardSubtitle>
+      <VCardSubtitle class="text-wrap">
+        Un code de votre téléphone s'ajoute au mot de passe à chaque connexion.
+      </VCardSubtitle>
     </VCardItem>
 
     <VCardText>
@@ -132,28 +125,10 @@ const { submit: disable, pending: disabling, message: disableError } = useSubmit
             <code class="text-caption text-wrap text-break">{{ setup.secret }}</code>
           </div>
 
-          <VCard
-            variant="tonal"
-            class="pa-3 mb-4"
-          >
-            <div class="d-flex align-center justify-space-between mb-2">
-              <span class="text-subtitle-2">Codes de secours</span>
-              <VBtn
-                size="x-small"
-                variant="text"
-                prepend-icon="ri-file-copy-line"
-                @click="copyCodes"
-              >
-                Copier
-              </VBtn>
-            </div>
-            <div class="recovery-grid">
-              <code
-                v-for="item in setup.recovery_codes"
-                :key="item"
-              >{{ item }}</code>
-            </div>
-          </VCard>
+          <RecoveryCodesGrid
+            :codes="setup.recovery_codes"
+            class="mb-4"
+          />
 
           <VCheckbox
             v-model="savedCodes"
@@ -252,12 +227,3 @@ const { submit: disable, pending: disabling, message: disableError } = useSubmit
     </VDialog>
   </VCard>
 </template>
-
-<style scoped>
-.recovery-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem 1rem;
-  font-size: 0.8125rem;
-}
-</style>

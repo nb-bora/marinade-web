@@ -86,7 +86,7 @@ const positiveInteger = (value: unknown) => (Number.isInteger(Number(value)) && 
     icon="ri-layout-grid-line"
     :loading="pending"
     :error="errorText"
-    :max-width="480"
+    :max-width="1000"
     @submit="submit"
   >
     <VRow>

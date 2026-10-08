@@ -1,6 +1,6 @@
 import { defineFeature } from '@/lib/module/types'
 
-/** Mon compte : identité, vérification de l'e-mail, authentification à deux facteurs. */
+/** Mon compte : identité, vérification de l'e-mail et du téléphone, double authentification, codes de secours. */
 export default defineFeature({
   id: 'account',
   routes: [

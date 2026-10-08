@@ -85,7 +85,7 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
     icon="ri-restaurant-2-line"
     :loading="pending"
     :error="message"
-    :max-width="640"
+    :max-width="1000"
     @submit="submit"
   >
     <VRow>

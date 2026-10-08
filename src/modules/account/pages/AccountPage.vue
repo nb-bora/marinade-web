@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import PhoneVerificationCard from '../components/PhoneVerificationCard.vue'
+import RecoveryCodesCard from '../components/RecoveryCodesCard.vue'
+import SecurityOverviewCard from '../components/SecurityOverviewCard.vue'
+import SecurityTipsCard from '../components/SecurityTipsCard.vue'
 import TwoFactorCard from '../components/TwoFactorCard.vue'
 import { container } from '@/container'
 import { useSubmit } from '@/composables/useSubmit'
@@ -16,6 +20,7 @@ const { submit: resend, pending: resending } = useSubmit(async () => {
 })
 
 const emailVerified = computed(() => Boolean(session.user?.email_verified_at))
+const phoneVerified = computed(() => Boolean(session.user?.phone_verified_at))
 
 const route = useRoute()
 const router = useRouter()
@@ -93,7 +98,21 @@ const tab = computed({
               </VListItem>
               <VListItem class="px-0">
                 <VListItemSubtitle>Téléphone</VListItemSubtitle>
-                <VListItemTitle>{{ session.user.phone }}</VListItemTitle>
+                <VListItemTitle class="d-flex flex-wrap align-center gap-2">
+                  {{ session.user.phone }}
+                  <AppStatusChip
+                    :label="phoneVerified ? 'Vérifié' : 'Non vérifié'"
+                    :tone="phoneVerified ? 'success' : 'warning'"
+                  />
+                  <VBtn
+                    v-if="!phoneVerified"
+                    size="x-small"
+                    variant="text"
+                    to="/account?tab=security"
+                  >
+                    Vérifier
+                  </VBtn>
+                </VListItemTitle>
               </VListItem>
             </VList>
 
@@ -130,7 +149,25 @@ const tab = computed({
       </VWindowItem>
 
       <VWindowItem value="security">
-        <TwoFactorCard />
+        <VRow>
+          <VCol cols="12">
+            <SecurityOverviewCard />
+          </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <TwoFactorCard class="mb-6" />
+            <RecoveryCodesCard />
+          </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <PhoneVerificationCard class="mb-6" />
+            <SecurityTipsCard />
+          </VCol>
+        </VRow>
       </VWindowItem>
     </VWindow>
   </div>
