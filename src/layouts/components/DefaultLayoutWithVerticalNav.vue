@@ -23,7 +23,7 @@ import AppTourOverlay from '@/ui/AppTourOverlay.vue'
           <VIcon icon="ri-menu-line" />
         </IconBtn>
 
-        <RestaurantSwitcher />
+        <RestaurantSwitcher class="min-w-0" />
 
         <VSpacer />
 

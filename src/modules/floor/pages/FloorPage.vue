@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { useEventListener, useStorage } from '@vueuse/core'
 import { floorApi } from '../api'
+import FloorPlan from '../components/FloorPlan.vue'
 import OpenSessionDialog from '../components/OpenSessionDialog.vue'
-import TableTile from '../components/TableTile.vue'
+import TableDetailPanel from '../components/TableDetailPanel.vue'
 import { useFloorData } from '../composables/useFloorData'
-import { plural } from '../labels'
-import { LOCATION_FALLBACK, locationOf, release, serviceOf, tableState } from '../service'
+import { planStateOf } from '../composables/useFloorPlan'
+import { playChime } from '../composables/useFloorSound'
+import { PLAN_STATE } from '../labels'
+import { locationOf, release } from '../service'
 import type { ServiceSession, Table, TableView } from '../types'
 import { useConfirm } from '@/composables/useConfirm'
 import { useLive } from '@/composables/useLive'
@@ -26,7 +30,9 @@ watch(data, () => {
   now.value = new Date()
 })
 
-const { isLive } = useLive(refresh)
+// Le plan se recharge toutes les 5 s (au lieu des 10 s par défaut) : une table prise
+// ou libérée doit se voir presque tout de suite.
+const { isLive } = useLive(refresh, 5000)
 
 const ALL = '__all__'
 const location = ref<string>(ALL)
@@ -47,21 +53,10 @@ const locationOptions = computed(() => [
   ...locations.value.map(value => ({ value, title: value })),
 ])
 
-const sections = computed(() => {
-  const groups = new Map<string, TableView[]>()
-
-  for (const view of views.value) {
-    const key = locationOf(view.table)
-
-    if (location.value === ALL || location.value === key)
-      groups.set(key, [...(groups.get(key) ?? []), view])
-  }
-
-  return [...groups.entries()].map(([title, items]) => ({ title, items }))
-})
+const planZone = computed(() => location.value === ALL ? null : location.value)
 
 const stats = computed<StatStripItem[]>(() => {
-  const free = views.value.filter(view => tableState(view) === 'libre').length
+  const free = views.value.filter(view => planStateOf(view) === 'free').length
   const occupied = views.value.filter(view => view.session).length
   const covers = views.value.reduce((sum, view) => sum + (view.session ? view.covers ?? 0 : 0), 0)
 
@@ -74,6 +69,30 @@ const stats = computed<StatStripItem[]>(() => {
     { label: 'Couverts en salle', value: String(covers), icon: 'ri-group-line' },
     { label: 'Addition en cours', value: formatMoney(due), icon: 'ri-money-dollar-circle-line', hint: 'Reste à encaisser' },
   ]
+})
+
+// Sélection --------------------------------------------------------------------------------
+
+const selectedId = ref<string | null>(null)
+const panel = ref<HTMLElement | null>(null)
+
+const selected = computed(() => views.value.find(view => view.table.id === selectedId.value) ?? null)
+
+// Une table supprimée pendant qu'on la regarde ne doit pas laisser un panneau vide.
+watch(selected, view => {
+  if (!view)
+    selectedId.value = null
+})
+
+watch(selectedId, async id => {
+  if (!id)
+    return
+
+  await nextTick()
+
+  // Sur téléphone, le détail est sous le plan : on y amène l'écran.
+  if (window.innerWidth < 1280)
+    panel.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 })
 
 // Ouverture d'une session ---------------------------------------------------------------
@@ -101,33 +120,106 @@ async function setStatus(table: Table, message: string) {
   }
 }
 
-async function select(view: TableView) {
-  const state = tableState(view)
+/** Libérer une table soldée, ou remettre en service une table hors service. */
+async function releaseTable(view: TableView) {
+  const { numero } = view.table
+  const maintenance = planStateOf(view) === 'maintenance'
 
-  if (view.session)
-    return goToSession(view.session)
+  const confirmed = await confirm(maintenance
+    ? { title: `Remettre la table ${numero} en service ?`, confirmLabel: 'Remettre en service' }
+    : { title: `Libérer la table ${numero} ?`, text: 'Aucune session ne l\'occupe plus : elle redeviendra disponible.', confirmLabel: 'Libérer' })
 
-  if (state === 'settled') {
-    const sessionId = serviceOf(view.table).session_id
+  if (confirmed)
+    await setStatus(view.table, maintenance ? `Table ${numero} remise en service.` : `Table ${numero} libérée.`)
+}
 
-    // La session soldée n'est plus listée par le serveur : on la retrouve par la table.
-    if (sessionId)
-      return router.push(`/salle/sessions/${sessionId}`)
+/** Clic sur une table du plan : une table libre ouvre tout de suite le dialogue, les autres montrent leur détail. */
+function select(view: TableView) {
+  selectedId.value = view.table.id
 
-    if (await confirm({ title: `Libérer la table ${view.table.numero} ?`, text: 'Aucune session ne l\'occupe plus : elle redeviendra disponible.', confirmLabel: 'Libérer' }))
-      await setStatus(view.table, `Table ${view.table.numero} libérée.`)
+  if (planStateOf(view) === 'free')
+    openSession(view.table)
+}
 
-    return
+function closePanel() {
+  selectedId.value = null
+}
+
+useEventListener(window, 'keydown', event => {
+  if (event.key === 'Escape' && selectedId.value && !openingDialog.value && !document.querySelector('.v-overlay--active'))
+    closePanel()
+})
+
+// Temps réel ---------------------------------------------------------------------------------
+
+const sound = useStorage('marinade.floor.sound', false)
+
+/** Tables dont l'état vient de changer : une onde de 1,3 s, puis plus rien. */
+const flashes = ref<Record<string, 'in' | 'out'>>({})
+const announcement = ref('')
+
+const timers = new Map<string, ReturnType<typeof setTimeout>>()
+let previous: Map<string, string> | null = null
+
+const ENGAGED = new Set(['busy', 'paying'])
+
+function flash(id: string, kind: 'in' | 'out') {
+  clearTimeout(timers.get(id))
+  flashes.value = { ...flashes.value, [id]: kind }
+
+  timers.set(id, setTimeout(() => {
+    const rest = { ...flashes.value }
+
+    delete rest[id]
+    flashes.value = rest
+    timers.delete(id)
+  }, 1300))
+}
+
+watch(views, list => {
+  const current = new Map(list.map(view => [view.table.id, planStateOf(view)]))
+
+  // Premier chargement (ou changement de restaurant) : rien ne « vient » de changer.
+  if (previous) {
+    let chime: 'in' | 'out' | null = null
+
+    for (const view of list) {
+      const before = previous.get(view.table.id)
+      const after = current.get(view.table.id)!
+
+      if (!before || before === after)
+        continue
+
+      const kind = ENGAGED.has(after) ? 'in' : ENGAGED.has(before) ? 'out' : null
+
+      if (!kind)
+        continue
+
+      flash(view.table.id, kind)
+      chime = kind === 'in' ? 'in' : chime ?? 'out'
+      announcement.value = `Table ${view.table.numero} : ${PLAN_STATE[after as keyof typeof PLAN_STATE].label.toLowerCase()}.`
+    }
+
+    if (chime && sound.value)
+      playChime(chime)
   }
 
-  if (state === 'maintenance') {
-    if (await confirm({ title: `Remettre la table ${view.table.numero} en service ?`, confirmLabel: 'Remettre en service' }))
-      await setStatus(view.table, `Table ${view.table.numero} remise en service.`)
+  previous = current
+})
 
-    return
-  }
+watch(() => tenant.currentId, () => {
+  previous = null
+  selectedId.value = null
+})
 
-  openSession(view.table)
+onBeforeUnmount(() => timers.forEach(timer => clearTimeout(timer)))
+
+function toggleSound() {
+  sound.value = !sound.value
+
+  // Le navigateur n'autorise le son qu'après un geste : on le prépare et on le fait entendre.
+  if (sound.value)
+    playChime('in')
 }
 
 const hasTables = computed(() => views.value.length > 0 || loose.value.length > 0)
@@ -152,6 +244,22 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
           />
           {{ isLive ? 'En direct' : 'En pause' }}
         </VChip>
+        <VBtn
+          :icon="sound ? 'ri-volume-up-line' : 'ri-volume-mute-line'"
+          :variant="sound ? 'tonal' : 'text'"
+          :color="sound ? 'primary' : undefined"
+          :aria-label="sound ? 'Couper le son des nouvelles tables' : 'Activer le son des nouvelles tables'"
+          :aria-pressed="sound"
+          @click="toggleSound"
+        >
+          <VIcon :icon="sound ? 'ri-volume-up-line' : 'ri-volume-mute-line'" />
+          <VTooltip
+            activator="parent"
+            location="bottom"
+          >
+            {{ sound ? 'Son activé : un signal à chaque changement' : 'Activer un signal sonore' }}
+          </VTooltip>
+        </VBtn>
         <VBtn
           variant="tonal"
           prepend-icon="ri-refresh-line"
@@ -221,25 +329,44 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
       </VCard>
 
       <template v-else>
-        <section
-          v-for="section in sections"
-          :key="section.title"
-          class="mt-6"
-        >
-          <h2 class="text-h6 mb-3 d-flex align-center gap-2">
-            {{ section.title === LOCATION_FALLBACK && locations.length === 1 ? 'Tables' : section.title }}
-            <span class="text-body-2 text-medium-emphasis font-weight-regular">{{ plural(section.items.length, 'table') }}</span>
-          </h2>
-          <div class="tiles">
-            <TableTile
-              v-for="view in section.items"
-              :key="view.table.id"
-              :view="view"
+        <div class="floor-layout mt-6">
+          <FloorPlan
+            v-if="views.length"
+            :views="views"
+            :now="now"
+            :selected-id="selectedId"
+            :zone="planZone"
+            :flashes="flashes"
+            @select="select"
+          />
+
+          <aside
+            ref="panel"
+            class="floor-layout__aside"
+            :class="{ 'floor-layout__aside--empty': !selected }"
+            aria-label="Détail de la table"
+          >
+            <TableDetailPanel
+              v-if="selected"
+              :view="selected"
+              :state="planStateOf(selected)"
               :now="now"
-              @select="select(view)"
+              @close="closePanel"
+              @open-session="openSession(selected.table)"
+              @release="releaseTable(selected)"
             />
-          </div>
-        </section>
+            <VCard
+              v-else
+              variant="outlined"
+            >
+              <AppEmptyState
+                icon="ri-cursor-line"
+                title="Choisissez une table"
+                text="Son état, ses couverts et son montant s'affichent ici."
+              />
+            </VCard>
+          </aside>
+        </div>
 
         <section
           v-if="loose.length && location === ALL"
@@ -248,7 +375,7 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
           <h2 class="text-h6 mb-3">
             Sessions sans table
           </h2>
-          <div class="tiles">
+          <div class="loose">
             <VCard
               v-for="item in loose"
               :key="item.session.id"
@@ -278,11 +405,44 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
       :table="opening"
       @opened="goToSession"
     />
+
+    <div
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+    >
+      {{ announcement }}
+    </div>
   </div>
 </template>
 
 <style scoped>
-.tiles {
+.floor-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.floor-layout__aside--empty {
+  display: none;
+}
+
+/* À partir de 1280 px, le détail passe à droite du plan et le suit au défilement. */
+@media (min-width: 1280px) {
+  .floor-layout {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  .floor-layout__aside,
+  .floor-layout__aside--empty {
+    position: sticky;
+    display: block;
+    inset-block-start: 88px;
+  }
+}
+
+.loose {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
   gap: 14px;
@@ -291,6 +451,15 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
 .zones {
   max-inline-size: 100%;
   overflow-x: auto;
+}
+
+.sr-only {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  block-size: 1px;
+  inline-size: 1px;
+  white-space: nowrap;
 }
 
 .live-dot {

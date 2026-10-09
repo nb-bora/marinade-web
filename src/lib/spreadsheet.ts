@@ -282,6 +282,12 @@ export interface ColumnSpec {
 
   /** Autres intitulés acceptés dans le fichier. */
   aliases?: string[]
+
+  /** Aide à la saisie, reprise dans la feuille « Instructions » du modèle téléchargeable. */
+  hint?: string
+
+  /** Exemple de valeur, repris dans la feuille « Instructions » du modèle. */
+  example?: string
 }
 
 export interface SheetRecord {

@@ -4,6 +4,7 @@ import PlatDetailDrawer from '../components/PlatDetailDrawer.vue'
 import PlatFormDialog from '../components/PlatFormDialog.vue'
 import ProductAvatar from '../components/ProductAvatar.vue'
 import { useMenus } from '../composables/useMenus'
+import { platsImport } from '../imports'
 import type { Plat } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
@@ -24,7 +25,11 @@ const { data, loading, error, reload, refresh } = useAsyncData(
   { watch: [() => tenant.currentId] },
 )
 
-const { categories, categoryName, refresh: refreshMenus } = useMenus()
+const { menus, categories, categoryName, refresh: refreshMenus } = useMenus()
+
+const route = useRoute()
+const importDialog = ref(false)
+const importDefinition = platsImport()
 
 const plats = computed(() => data.value ?? [])
 const loadedOnce = computed(() => data.value !== null)
@@ -33,9 +38,14 @@ const loadedOnce = computed(() => data.value !== null)
 const search = ref('')
 const searchDebounced = refDebounced(search, 250)
 const category = ref<string | null>(null)
+
+// « Voir les plats » d'un menu arrive ici avec ?menu=<identifiant>.
+const menuFilter = ref<string | null>(typeof route.query.menu === 'string' ? route.query.menu : null)
 const availability = ref<'all' | 'on' | 'off'>('all')
 
-const hasFilters = computed(() => search.value.trim() !== '' || category.value !== null || availability.value !== 'all')
+const hasFilters = computed(() => search.value.trim() !== '' || category.value !== null || menuFilter.value !== null || availability.value !== 'all')
+
+const menuCategoryIds = computed(() => new Set(categories.value.filter(item => item.menu_id === menuFilter.value).map(item => item.id)))
 
 const normalize = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
@@ -45,6 +55,8 @@ const filtered = computed(() => {
   return plats.value
     .filter(plat => {
       if (term && !normalize(`${plat.nom} ${plat.description ?? ''}`).includes(term))
+        return false
+      if (menuFilter.value && !(plat.category_id && menuCategoryIds.value.has(plat.category_id)))
         return false
       if (category.value === NO_CATEGORY && plat.category_id)
         return false
@@ -63,8 +75,11 @@ const pagination = useClientPagination(filtered, 10)
 function clearFilters() {
   search.value = ''
   category.value = null
+  menuFilter.value = null
   availability.value = 'all'
 }
+
+const menuItems = computed(() => menus.value.map(item => ({ value: item.id, title: item.name })))
 
 const categoryItems = computed(() => [
   { value: NO_CATEGORY, title: 'Sans catégorie' },
@@ -189,6 +204,15 @@ const openRow = (plat: Plat) => {
         </VBtn>
         <VBtn
           v-if="canWrite"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
+        </VBtn>
+        <VBtn
+          v-if="canWrite"
           prepend-icon="ri-add-line"
           @click="newPlat"
         >
@@ -210,7 +234,7 @@ const openRow = (plat: Plat) => {
         <VRow>
           <VCol
             cols="12"
-            md="4"
+            md="3"
           >
             <VTextField
               v-model="search"
@@ -224,7 +248,21 @@ const openRow = (plat: Plat) => {
           <VCol
             cols="12"
             sm="6"
-            md="4"
+            md="3"
+          >
+            <VSelect
+              v-model="menuFilter"
+              :items="menuItems"
+              label="Menu"
+              prepend-inner-icon="ri-book-open-line"
+              placeholder="Tous les menus"
+              clearable
+            />
+          </VCol>
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
           >
             <VSelect
               v-model="category"
@@ -238,7 +276,7 @@ const openRow = (plat: Plat) => {
           <VCol
             cols="12"
             sm="6"
-            md="4"
+            md="3"
           >
             <VSelect
               v-model="availability"
@@ -430,6 +468,13 @@ const openRow = (plat: Plat) => {
       :plat="edited"
       :categories="categories"
       @saved="afterSave"
+    />
+
+    <AppImportDialog
+      v-if="canWrite"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="afterSave"
     />
 
     <PlatDetailDrawer

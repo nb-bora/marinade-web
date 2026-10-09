@@ -3,6 +3,7 @@ import { stockApi } from '../api'
 import RecipeLineDialog from '../components/RecipeLineDialog.vue'
 import RecipeReplaceDialog from '../components/RecipeReplaceDialog.vue'
 import { useStockOverview } from '../composables/useStockOverview'
+import { recettesImport } from '../imports'
 import { STATE_INFO, componentTypeLabel, formatQty } from '../labels'
 import type { Plat, PlatComposant } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
@@ -18,6 +19,8 @@ const confirm = useConfirm()
 const canWrite = computed(() => tenant.can('management'))
 
 const overview = useStockOverview()
+const importDialog = ref(false)
+const importDefinition = recettesImport()
 
 const plats = useAsyncData(
   signal => tenant.currentId ? stockApi.plats(tenant.currentId, signal) : Promise.resolve([] as Plat[]),
@@ -85,6 +88,12 @@ watch(remove.error, cause => {
 const loadError = computed(() => plats.error.value ?? recipe.error.value ?? overview.error.value)
 const ready = computed(() => plats.data.value !== null && overview.loadedOnce.value)
 
+function afterImport() {
+  plats.refresh()
+  recipe.refresh()
+  overview.refresh()
+}
+
 function retry() {
   plats.reload()
   recipe.reload()
@@ -97,7 +106,21 @@ function retry() {
     <AppPageHeader
       title="Fiches techniques"
       subtitle="Ce que consomme chaque plat : le stock des composants baisse automatiquement à chaque commande."
-    />
+    >
+      <template
+        v-if="canWrite"
+        #actions
+      >
+        <VBtn
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <AppErrorState
       v-if="loadError && !ready"
@@ -334,6 +357,12 @@ function retry() {
       :lines="lines"
       :composants="composants"
       @saved="recipe.refresh()"
+    />
+    <AppImportDialog
+      v-if="canWrite"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="afterImport"
     />
   </div>
 </template>

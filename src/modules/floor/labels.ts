@@ -87,3 +87,15 @@ export const present = <K extends string>(map: Record<K, Presentation>, key: str
   (map as Record<string, Presentation | undefined>)[key] ?? { label: key, tone: 'neutral', icon: 'ri-question-line' }
 
 export const plural = (count: number, one: string, many: string = `${one}s`) => `${count} ${count > 1 ? many : one}`
+
+/** Ce que le plan de salle montre d'une table : sa couleur (thème Vuetify) et son libellé. */
+export type PlanState = 'free' | 'busy' | 'paying' | 'reserved' | 'maintenance' | 'settled'
+
+export const PLAN_STATE: Record<PlanState, { label: string; color: string; hint: string }> = {
+  free: { label: 'Libre', color: 'success', hint: 'Touchez pour ouvrir une session' },
+  busy: { label: 'Occupée', color: 'warning', hint: 'Touchez pour voir les détails' },
+  paying: { label: 'En paiement', color: 'error', hint: 'Touchez pour régler' },
+  reserved: { label: 'Réservée', color: 'info', hint: 'Réservée pour des clients attendus' },
+  maintenance: { label: 'Hors service', color: 'secondary', hint: 'Touchez pour la remettre en service' },
+  settled: { label: 'À libérer', color: 'warning', hint: 'Addition réglée : touchez pour libérer' },
+}

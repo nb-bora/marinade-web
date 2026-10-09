@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { stockApi } from '../api'
 import ComposantFormDialog from '../components/ComposantFormDialog.vue'
+import { composantsImport } from '../imports'
 import { componentTypeLabel } from '../labels'
 import type { Composant } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
@@ -16,6 +17,8 @@ const { data, loading, error, reload, refresh } = useAsyncData(
 )
 
 const search = ref('')
+const importDialog = ref(false)
+const importDefinition = composantsImport()
 const canWrite = computed(() => tenant.can('management'))
 const loadedOnce = computed(() => data.value !== null)
 
@@ -52,6 +55,15 @@ function openDialog(composant: Composant | null) {
           @click="reload"
         >
           Actualiser
+        </VBtn>
+        <VBtn
+          v-if="canWrite"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
         </VBtn>
         <VBtn
           v-if="canWrite"
@@ -203,6 +215,13 @@ function openDialog(composant: Composant | null) {
         />
       </template>
     </VCard>
+
+    <AppImportDialog
+      v-if="canWrite"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="refresh"
+    />
 
     <ComposantFormDialog
       v-model="dialogOpen"

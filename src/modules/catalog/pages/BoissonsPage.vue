@@ -3,6 +3,7 @@ import { catalogApi } from '../api'
 import BoissonDetailDrawer from '../components/BoissonDetailDrawer.vue'
 import BoissonFormDialog from '../components/BoissonFormDialog.vue'
 import ProductAvatar from '../components/ProductAvatar.vue'
+import { boissonsImport } from '../imports'
 import type { Boisson } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
@@ -17,6 +18,8 @@ const NO_CATEGORY = '__none__'
 const tenant = useTenantStore()
 const toast = useToast()
 const canWrite = computed(() => tenant.can('management'))
+const importDialog = ref(false)
+const importDefinition = boissonsImport()
 
 const { data, loading, error, reload, refresh } = useAsyncData(
   signal => tenant.currentId ? catalogApi.boissons(tenant.currentId, signal) : Promise.resolve([]),
@@ -196,6 +199,15 @@ const openRow = (boisson: Boisson) => {
           @click="reload"
         >
           Actualiser
+        </VBtn>
+        <VBtn
+          v-if="canWrite"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
         </VBtn>
         <VBtn
           v-if="canWrite"
@@ -455,6 +467,13 @@ const openRow = (boisson: Boisson) => {
       :boisson="edited"
       :suggestions="usedCategories"
       @saved="afterSave"
+    />
+
+    <AppImportDialog
+      v-if="canWrite"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="refresh"
     />
 
     <BoissonDetailDrawer

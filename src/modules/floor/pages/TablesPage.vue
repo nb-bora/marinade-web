@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TableFormDialog from '../components/TableFormDialog.vue'
 import { useFloorData } from '../composables/useFloorData'
+import { tablesImport } from '../imports'
 import { TABLE_STATE, TABLE_STATUS_OPTIONS, plural } from '../labels'
 import { locationOf, tableState } from '../service'
 import type { Table, TableView } from '../types'
@@ -10,6 +11,8 @@ import { formatRelative } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 
 const tenant = useTenantStore()
+const importDialog = ref(false)
+const importDefinition = tablesImport()
 
 const { data, loading, error, reload, refresh } = useFloorData(false)
 
@@ -77,6 +80,15 @@ const STATE_OPTIONS = [...TABLE_STATUS_OPTIONS, { value: 'settled', title: TABLE
           prepend-icon="ri-layout-grid-line"
         >
           Plan de salle
+        </VBtn>
+        <VBtn
+          v-if="tenant.can('management')"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
         </VBtn>
         <VBtn
           v-if="tenant.can('management')"
@@ -264,6 +276,12 @@ const STATE_OPTIONS = [...TABLE_STATUS_OPTIONS, { value: 'settled', title: TABLE
       </template>
     </VCard>
 
+    <AppImportDialog
+      v-if="tenant.can('management')"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="refresh"
+    />
     <TableFormDialog
       v-model="dialog"
       :table="editing"

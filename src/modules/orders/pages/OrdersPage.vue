@@ -3,6 +3,7 @@ import NewOrderDialog from '../components/NewOrderDialog.vue'
 import OrderDetailDrawer from '../components/OrderDetailDrawer.vue'
 import OrderStatusChip from '../components/OrderStatusChip.vue'
 import { pendingOf, refundedOf, useOrders } from '../composables/useOrders'
+import { commandesImport } from '../imports'
 import { presentOrder } from '../labels'
 import type { Commande } from '../types'
 import { useClientPagination } from '@/composables/useClientPagination'
@@ -19,6 +20,8 @@ const data = useOrders()
 const tab = ref<Tab>('active')
 const selectedId = ref<string | null>(null)
 const creating = ref(false)
+const importDialog = ref(false)
+const importDefinition = commandesImport()
 
 const rows = computed(() => (tab.value === 'active' ? data.active.value : data.history.value))
 const pager = useClientPagination(rows, 10)
@@ -103,6 +106,15 @@ function onCreated(order: Commande) {
           @click="data.orders.reload()"
         >
           Actualiser
+        </VBtn>
+        <VBtn
+          v-if="tenant.can('front_of_house')"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-upload-2-line"
+          @click="importDialog = true"
+        >
+          Importer
         </VBtn>
         <VBtn
           v-if="tenant.can('front_of_house')"
@@ -291,6 +303,12 @@ function onCreated(order: Commande) {
       et s'encaissent à la caisse.
     </p>
 
+    <AppImportDialog
+      v-if="tenant.can('front_of_house')"
+      v-model="importDialog"
+      v-bind="importDefinition"
+      @imported="data.reload()"
+    />
     <NewOrderDialog
       v-model="creating"
       @created="onCreated"
