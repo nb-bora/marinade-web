@@ -10,6 +10,8 @@ import { isApiError } from '@/lib/http/errors'
 import { CAMEROON_CITIES } from '@/lib/phone'
 import { PATHS } from '@/lib/router/paths'
 import { email as emailRule, minLength, positiveNumber, required, sameAs } from '@/lib/validation'
+import EstablishmentTypePicker from '@/modules/setup/components/EstablishmentTypePicker.vue'
+import type { EstablishmentType } from '@/lib/module/types'
 import { useSessionStore } from '@/stores/session.store'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -22,7 +24,7 @@ const toast = useToast()
 const STEPS = [
   { title: 'Bienvenue', subtitle: 'Votre rôle' },
   { title: 'Compte', subtitle: 'Vos identifiants' },
-  { title: 'Restaurant', subtitle: 'Votre établissement' },
+  { title: 'Établissement', subtitle: 'Votre activité' },
   { title: 'Abonnement', subtitle: 'Votre offre' },
   { title: 'Confirmation', subtitle: 'Vérifier et créer' },
 ]
@@ -40,8 +42,8 @@ const CURRENCIES = [
 ]
 
 const ROLES = [
-  { value: 'owner', title: 'Je suis propriétaire', text: 'Je possède le restaurant et je gère mon abonnement.', icon: 'ri-store-2-line' },
-  { value: 'manager', title: 'Je suis manager', text: 'Je dirige le restaurant au quotidien pour son propriétaire.', icon: 'ri-user-star-line' },
+  { value: 'owner', title: 'Je suis propriétaire', text: 'Je possède l\'établissement et je gère mon abonnement.', icon: 'ri-store-2-line' },
+  { value: 'manager', title: 'Je suis manager', text: 'Je dirige l\'établissement au quotidien pour son propriétaire.', icon: 'ri-user-star-line' },
 ] as const
 
 const step = ref(0)
@@ -60,6 +62,7 @@ const account = reactive({
 })
 
 const restaurant = reactive({
+  type: 'restaurant' as EstablishmentType,
   logoUrl: '',
   name: '',
   description: '',
@@ -80,6 +83,11 @@ const pending = ref(false)
 const error = ref('')
 const logoError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
+
+const isPressing = computed(() => restaurant.type === 'pressing')
+
+/** « restaurant » ou « pressing » : les textes de l'étape suivent le type choisi. */
+const noun = computed(() => isPressing.value ? 'pressing' : 'restaurant')
 
 const normalizedEmail = computed(() => account.email.trim().toLowerCase())
 const restaurantPhone = computed(() => (restaurant.samePhone ? account.phone : restaurant.phone))
@@ -214,6 +222,7 @@ async function finish() {
     await session.login({ email: normalizedEmail.value, password: account.password }, true)
     await container.account.createRestaurant({
       name: restaurant.name.trim(),
+      type_etablissement: restaurant.type,
       description: restaurant.description.trim() || undefined,
       logo_url: restaurant.logoUrl.trim() || undefined,
       city: restaurant.city?.trim() || undefined,
@@ -224,8 +233,8 @@ async function finish() {
 
       // Le serveur n'a pas de champ dédié pour ces choix : on les garde dans la configuration libre.
       config_jsonb: {
-        type_cuisine: restaurant.cuisine.trim() || undefined,
-        nombre_tables: restaurant.tables ? Number(restaurant.tables) : undefined,
+        type_cuisine: !isPressing.value ? restaurant.cuisine.trim() || undefined : undefined,
+        nombre_tables: !isPressing.value && restaurant.tables ? Number(restaurant.tables) : undefined,
         plusieurs_restaurants: restaurant.several,
         role_declare: declaredRole.value,
         offre_souhaitee: chosenTier.value ? { id: chosenTier.value.id, nom: chosenTier.value.name } : undefined,
@@ -236,7 +245,7 @@ async function finish() {
   }
   catch {
     // Le compte existe : on termine l'ouverture du restaurant depuis la page dédiée.
-    toast.warning('Votre compte est créé. Finalisons votre restaurant.')
+    toast.warning('Votre compte est créé. Finalisons votre établissement.')
     await router.replace(session.isAuthenticated ? PATHS.setup : { path: PATHS.login, query: { registered: '1' } })
   }
   finally {
@@ -289,7 +298,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
 <template>
   <AuthShell
     title="L'aventure commence ici 🚀"
-    subtitle="Quelques minutes pour ouvrir votre restaurant sur Marinade. C'est gratuit et sans engagement."
+    subtitle="Quelques minutes pour ouvrir votre restaurant ou votre pressing sur Marinade. C'est gratuit et sans engagement."
     wide
   >
     <VAlert
@@ -369,10 +378,10 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
             />
           </div>
           <h2 class="text-h6 mb-1">
-            Gérez votre restaurant sereinement
+            Gérez votre établissement sereinement
           </h2>
           <p class="text-body-2 text-medium-emphasis mb-0">
-            Salle, cuisine, caisse, stock et réservations au même endroit, du téléphone à l'écran de la caisse.
+            Restaurant ou pressing : l'activité, la caisse et l'équipe au même endroit, du téléphone à l'écran de la caisse.
           </p>
         </div>
 
@@ -581,13 +590,16 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
           @submit.prevent="next"
         >
           <h2 class="text-h6 mb-1">
-            Votre restaurant
+            Votre établissement
           </h2>
           <p class="text-body-2 text-medium-emphasis mb-5">
-            Affiché sur vos tickets et factures. Vous pourrez tout modifier plus tard.
+            Affiché sur vos tickets et factures. Vous pourrez tout modifier plus tard, sauf le type d'établissement.
           </p>
 
           <VRow>
+            <VCol cols="12">
+              <EstablishmentTypePicker v-model="restaurant.type" />
+            </VCol>
             <VCol
               cols="12"
               class="d-flex align-center gap-4"
@@ -601,7 +613,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
                 <VImg
                   v-if="restaurant.logoUrl"
                   :src="restaurant.logoUrl"
-                  alt="Logo du restaurant"
+                  alt="Logo de l'établissement"
                 />
                 <VIcon
                   v-else
@@ -611,7 +623,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               </VAvatar>
               <VFileInput
                 label="Logo (image)"
-                aria-label="Logo du restaurant, image"
+                aria-label="Logo de l'établissement, image"
                 accept="image/*"
                 prepend-icon=""
                 prepend-inner-icon="ri-upload-2-line"
@@ -633,10 +645,10 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
             <VCol cols="12">
               <VTextField
                 v-model="restaurant.name"
-                label="Nom du restaurant"
-                aria-label="Nom du restaurant"
-                placeholder="Chez Maman Ngo"
-                prepend-inner-icon="ri-restaurant-2-line"
+                :label="`Nom du ${noun}`"
+                :aria-label="`Nom du ${noun}`"
+                :placeholder="isPressing ? 'Pressing Éclat' : 'Chez Maman Ngo'"
+                :prepend-inner-icon="isPressing ? 'ri-t-shirt-air-line' : 'ri-restaurant-2-line'"
                 :rules="[required]"
               />
             </VCol>
@@ -644,7 +656,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               <VTextarea
                 v-model="restaurant.description"
                 label="Description"
-                aria-label="Description du restaurant"
+                aria-label="Description de l'établissement"
                 rows="2"
                 auto-grow
                 counter="300"
@@ -652,6 +664,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               />
             </VCol>
             <VCol
+              v-if="!isPressing"
               cols="12"
               sm="6"
             >
@@ -682,12 +695,13 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               <VTextField
                 v-model="restaurant.address"
                 label="Quartier, rue"
-                aria-label="Adresse du restaurant"
+                aria-label="Adresse de l'établissement"
                 prepend-inner-icon="ri-map-2-line"
                 placeholder="Akwa, rue Joffre"
               />
             </VCol>
             <VCol
+              v-if="!isPressing"
               cols="12"
               sm="6"
             >
@@ -717,7 +731,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
             <VCol cols="12">
               <VSwitch
                 v-model="restaurant.samePhone"
-                label="Le restaurant se joint au même numéro que moi"
+                :label="`Le ${noun} se joint au même numéro que moi`"
               />
             </VCol>
             <VCol
@@ -726,14 +740,14 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
             >
               <AppPhoneField
                 v-model="restaurant.phone"
-                label="Téléphone du restaurant"
-                aria-label="Téléphone du restaurant"
+                :label="`Téléphone du ${noun}`"
+                :aria-label="`Téléphone du ${noun}`"
               />
             </VCol>
             <VCol cols="12">
               <VSwitch
                 v-model="restaurant.several"
-                label="Je compte créer plusieurs restaurants"
+                :label="`Je compte créer plusieurs ${noun}s`"
                 hint="Vous pourrez les gérer ensemble avec la vue « Groupe »."
                 persistent-hint
               />
@@ -916,8 +930,8 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               class="pa-4 h-100"
             >
               <div class="d-flex align-center gap-2 mb-3">
-                <VIcon icon="ri-restaurant-2-line" />
-                <span class="font-weight-semibold">Restaurant</span>
+                <VIcon :icon="isPressing ? 'ri-t-shirt-air-line' : 'ri-restaurant-2-line'" />
+                <span class="font-weight-semibold">{{ isPressing ? 'Pressing' : 'Restaurant' }}</span>
                 <VSpacer />
                 <VBtn
                   size="x-small"
@@ -931,7 +945,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
                 {{ restaurant.name }}
               </div>
               <div class="text-body-2 text-medium-emphasis">
-                {{ [restaurant.cuisine, restaurant.city].filter(Boolean).join(' · ') || 'Cuisine et ville à compléter' }}
+                {{ [isPressing ? '' : restaurant.cuisine, restaurant.city].filter(Boolean).join(' · ') || (isPressing ? 'Ville à compléter' : 'Cuisine et ville à compléter') }}
               </div>
               <div class="text-body-2 text-medium-emphasis">
                 {{ restaurant.address || 'Adresse à compléter' }}
@@ -978,7 +992,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
                 class="text-primary"
                 @click.stop
               >conditions d'utilisation</RouterLink>
-              de Marinade et le traitement de mes données pour la gestion de mon restaurant.
+              de Marinade et le traitement de mes données pour la gestion de mon établissement.
             </span>
           </template>
         </VCheckbox>

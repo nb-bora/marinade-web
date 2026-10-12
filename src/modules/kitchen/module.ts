@@ -3,6 +3,7 @@ import { defineFeature } from '@/lib/module/types'
 /** Écrans de production : cuisine, bar et desserts (tickets en direct). */
 export default defineFeature({
   id: 'kitchen',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/cuisine',

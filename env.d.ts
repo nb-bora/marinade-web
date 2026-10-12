@@ -3,6 +3,7 @@
 import 'vue-router'
 import type { RouteLocationRaw } from 'vue-router'
 import type { Capability } from '@/lib/api/types'
+import type { EstablishmentType } from '@/lib/module/types'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -26,6 +27,9 @@ declare module 'vue-router' {
 
     /** Réservé aux administrateurs de la plateforme. */
     platformAdmin?: boolean
+
+    /** Réservé aux établissements de ce type ; copié du module par le registre. */
+    etablissement?: EstablishmentType
 
     layoutWrapperClasses?: string
     navActiveLink?: RouteLocationRaw

@@ -15,6 +15,7 @@ const sections = computed(() =>
   buildNavigation(features, {
     isPlatformAdmin: session.isPlatformAdmin,
     can: capability => tenant.can(capability),
+    etablissement: tenant.typeEtablissement,
   }),
 )
 </script>

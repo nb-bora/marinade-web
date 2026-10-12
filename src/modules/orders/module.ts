@@ -3,6 +3,7 @@ import { defineFeature } from '@/lib/module/types'
 /** Commandes de l'ancien circuit (routes dépréciées du back) et leurs remboursements. */
 export default defineFeature({
   id: 'orders',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/commandes/import',

@@ -126,20 +126,49 @@ export function dayError(day: DaySchedule): string {
       return 'L\'ouverture et la fermeture doivent être différentes.'
   }
 
+  return ''
+}
+
+/**
+ * Avertissement (non bloquant) pour un jour dont les plages se chevauchent. Une plage qui
+ * passe minuit (fermeture avant ouverture) suivie d'une autre plage est aussi signalée.
+ */
+export function dayWarning(day: DaySchedule): string {
+  if (!day.actif || dayError(day))
+    return ''
+
   const sorted = copyRanges(day.plages).sort(byOpening)
 
   for (let index = 1; index < sorted.length; index++) {
     const previous = sorted[index - 1]
-    const crossesMidnight = toMinutes(previous.fermeture) <= toMinutes(previous.ouverture)
+    const overnight = toMinutes(previous.fermeture) <= toMinutes(previous.ouverture)
 
-    if (crossesMidnight || toMinutes(previous.fermeture) > toMinutes(sorted[index].ouverture))
-      return 'Les plages ne doivent pas se chevaucher.'
+    if (overnight || toMinutes(previous.fermeture) > toMinutes(sorted[index].ouverture))
+      return 'Ces plages se chevauchent : vérifiez les heures avant d’enregistrer.'
   }
 
   return ''
 }
 
-/** « 11:00 – 15:00 · 18:00 – 22:30 » ou « Fermé ». */
+/** Vrai si la plage se termine le lendemain (fermeture avant l'ouverture). */
+export const crossesMidnight = (range: TimeRange) =>
+  isTime(range.ouverture) && isTime(range.fermeture) && toMinutes(range.fermeture) < toMinutes(range.ouverture)
+
+/** Horaires proposés par « Réinitialiser » : midi et soir, tous les jours. */
+export function defaultWeek(): WeekSchedule {
+  const week = {} as WeekSchedule
+
+  for (const { key } of DAYS) {
+    week[key] = {
+      actif: true,
+      plages: [{ ouverture: '09:00', fermeture: '12:00' }, { ouverture: '14:00', fermeture: '20:00' }],
+    }
+  }
+
+  return week
+}
+
+/** « 11:00 – 15:00 + 18:00 – 22:30 » ou « Fermé ». */
 export function summarizeDay(day: DaySchedule): string {
   if (!day.actif)
     return 'Fermé'
@@ -147,5 +176,5 @@ export function summarizeDay(day: DaySchedule): string {
   return copyRanges(day.plages)
     .sort(byOpening)
     .map(range => `${range.ouverture} – ${range.fermeture}`)
-    .join(' · ')
+    .join(' + ')
 }

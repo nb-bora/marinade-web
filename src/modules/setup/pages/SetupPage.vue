@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import EstablishmentTypePicker from '../components/EstablishmentTypePicker.vue'
 import { container } from '@/container'
 import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
+import type { EstablishmentType } from '@/lib/module/types'
 import { PATHS } from '@/lib/router/paths'
 import { required } from '@/lib/validation'
 import { useSessionStore } from '@/stores/session.store'
@@ -15,6 +17,11 @@ const toast = useToast()
 const confirm = useConfirm()
 const form = ref()
 
+const type = ref<EstablishmentType>('restaurant')
+const isPressing = computed(() => type.value === 'pressing')
+
+/** « restaurant » ou « pressing » : les textes suivent le type choisi. */
+const noun = computed(() => isPressing.value ? 'pressing' : 'restaurant')
 const name = ref('')
 const city = ref('')
 const phone = ref('')
@@ -25,13 +32,14 @@ const canCreate = computed(() => session.user?.role === 'restaurant')
 
 const { submit: create, pending, message, apiError } = useSubmit(async () => {
   if (!(await confirm({
-    title: 'Créer votre restaurant ?',
-    text: 'Votre restaurant sera créé avec ces informations. Vous pourrez les modifier plus tard.',
+    title: `Créer votre ${noun.value} ?`,
+    text: `Votre ${noun.value} sera créé avec ces informations. Vous pourrez les modifier plus tard, sauf le type d'établissement.`,
     confirmLabel: 'Créer',
   })))
     return
 
   await container.account.createRestaurant({
+    type_etablissement: type.value,
     name: name.value.trim(),
     city: city.value.trim() || undefined,
     country: 'Cameroun',
@@ -39,7 +47,7 @@ const { submit: create, pending, message, apiError } = useSubmit(async () => {
     address: address.value.trim() || undefined,
   })
   await tenant.reload()
-  toast.success('Votre restaurant est créé.')
+  toast.success(`Votre ${noun.value} est créé.`)
   await router.replace(PATHS.home)
 })
 
@@ -49,7 +57,7 @@ const { submit: recheck, pending: rechecking } = useSubmit(async () => {
   if (tenant.hasRestaurant)
     await router.replace(PATHS.home)
   else
-    toast.info('Toujours aucun restaurant rattaché à ce compte.')
+    toast.info('Toujours aucun établissement rattaché à ce compte.')
 })
 
 async function logout() {
@@ -81,7 +89,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
 <template>
   <AuthShell
     v-if="canCreate"
-    title="Ouvrez votre restaurant 🍽️"
+    :title="isPressing ? 'Ouvrez votre pressing 🧺' : 'Ouvrez votre restaurant 🍽️'"
     subtitle="Ces informations s'affichent sur vos tickets et vos factures. Vous pourrez les modifier plus tard."
   >
     <VForm
@@ -91,9 +99,12 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
     >
       <VRow>
         <VCol cols="12">
+          <EstablishmentTypePicker v-model="type" />
+        </VCol>
+        <VCol cols="12">
           <VTextField
             v-model="name"
-            label="Nom du restaurant"
+            :label="`Nom du ${noun}`"
             prepend-inner-icon="ri-store-2-line"
             autofocus
             :rules="[required]"
@@ -150,7 +161,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
             size="large"
             :loading="pending"
           >
-            Créer mon restaurant
+            Créer mon {{ noun }}
           </VBtn>
         </VCol>
       </VRow>
@@ -166,11 +177,11 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
 
   <AuthShell
     v-else
-    title="Aucun restaurant rattaché"
+    title="Aucun établissement rattaché"
     subtitle="Votre compte n'est lié à aucun restaurant pour l'instant."
   >
     <p class="text-body-1 mb-6">
-      Demandez au responsable de votre restaurant de vous ajouter à son équipe, puis revenez ici.
+      Demandez au responsable de votre établissement de vous ajouter à son équipe, puis revenez ici.
     </p>
     <VBtn
       block

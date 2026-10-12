@@ -53,7 +53,7 @@ export const useTours = createSharedComposable(() => {
   }
 
   const tours = ref<Record<string, Tour>>({
-    dashboard: {
+    'dashboard': {
       title: 'Le tableau de bord',
       paths: ['/dashboard'],
       steps: [
@@ -77,7 +77,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    catalog: {
+    'catalog': {
       title: 'La carte du restaurant',
       paths: ['/catalog'],
       steps: [
@@ -112,7 +112,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    stock: {
+    'stock': {
       title: 'Le stock',
       capability: 'stock',
       paths: ['/stock'],
@@ -155,7 +155,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    floor: {
+    'floor': {
       title: 'La salle',
       capability: 'front_of_house',
       paths: ['/salle'],
@@ -188,7 +188,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    cashdesk: {
+    'cashdesk': {
       title: 'La caisse',
       capability: 'cash_desk',
       paths: ['/caisse'],
@@ -217,7 +217,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    kitchen: {
+    'kitchen': {
       title: 'La cuisine et le bar',
       capability: 'production',
       paths: ['/cuisine'],
@@ -244,7 +244,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    reservations: {
+    'reservations': {
       title: 'Les réservations',
       capability: 'reservations',
       paths: ['/reservations'],
@@ -278,7 +278,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    subscription: {
+    'subscription': {
       title: 'Votre abonnement',
       capability: 'management',
       paths: ['/abonnement'],
@@ -305,7 +305,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    orders: {
+    'orders': {
       title: 'Les commandes',
       capability: 'front_of_house',
       paths: ['/commandes'],
@@ -333,7 +333,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    settings: {
+    'settings': {
       title: 'Les paramètres',
       capability: 'management',
       paths: ['/parametres'],
@@ -365,7 +365,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    platform: {
+    'platform': {
       title: 'La plateforme',
       capability: 'platformAdmin',
       paths: ['/admin'],
@@ -394,7 +394,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    group: {
+    'group': {
       title: 'Votre groupe',
       capability: 'management',
       paths: ['/groupe'],
@@ -421,7 +421,7 @@ export const useTours = createSharedComposable(() => {
       ],
     },
 
-    payments: {
+    'payments': {
       title: 'Les transactions',
       capability: 'cash_desk',
       paths: ['/payments'],
@@ -444,6 +444,230 @@ export const useTours = createSharedComposable(() => {
           text: 'Cliquez sur une ligne pour voir la référence, le numéro payeur et l\'historique des étapes du paiement.',
           target: TABLE,
           position: 'top',
+        },
+      ],
+    },
+
+    'pressing': {
+      title: 'Les tarifs et le calculateur',
+      paths: ['/pressing/tarifs', '/pressing/articles', '/pressing/combinaisons', '/pressing/calculateur'],
+      steps: [
+        {
+          title: 'Les tarifs',
+          text: 'Fixez le prix du kilo de lavage, proposez le séchage et choisissez comment arrondir les fractions de kilo. L\'aperçu montre l\'effet de vos réglages.',
+          target: CARD,
+          position: 'bottom',
+          action: go('/pressing/tarifs'),
+        },
+        {
+          title: 'Les articles',
+          text: 'Ajoutez les pièces facturées à l\'unité : drap, taie d\'oreiller, couette... Vous pouvez aussi les importer depuis Excel.',
+          target: HEADER,
+          position: 'bottom',
+          action: go('/pressing/articles'),
+        },
+        {
+          title: 'Les combinaisons',
+          text: 'Composez vos propres ensembles d\'articles vendus à prix fixe. L\'économie par rapport à la vente séparée s\'affiche en direct.',
+          target: HEADER,
+          position: 'bottom',
+          action: go('/pressing/combinaisons'),
+        },
+        {
+          title: 'Le calculateur',
+          text: 'Saisissez le poids du linge, ajoutez des articles ou des combinaisons : le total se met à jour tout seul à droite.',
+          target: '.calc-summary',
+          position: 'left',
+          action: go('/pressing/calculateur'),
+        },
+      ],
+    },
+
+    'pressing-plan': {
+      title: 'Le plan du pressing',
+      paths: ['/pressing/plan'],
+      steps: [
+        {
+          title: 'Votre local vu du dessus',
+          text: 'Chaque zone est un rectangle de couleur ; chaque machine est un cercle (lave-linge) ou un carré (sèche-linge) teinté selon son état. Ctrl + molette ou deux doigts pour zoomer.',
+          target: '[data-tour="plan-canvas"]',
+          position: 'top',
+          action: go('/pressing/plan'),
+        },
+        {
+          title: 'La légende',
+          text: 'Elle compte les machines par état : libre, réservée, en cycle, à décharger, en maintenance ou hors service.',
+          target: '[data-tour="plan-legend"]',
+          position: 'top',
+        },
+        {
+          title: 'Ouvrir la fiche d\'une machine',
+          text: 'Touchez une machine pour voir sa fiche technique et ses programmes, changer son état, déclarer une panne et lire son historique.',
+          target: '[data-tour="plan-canvas"]',
+          position: 'top',
+        },
+        {
+          title: 'Aménager le plan',
+          text: 'Passez en mode aménagement pour glisser les zones et les machines, tirer le coin d\'une zone pour la redimensionner, puis enregistrer. « Annuler » rend la mise en page d\'avant.',
+          target: '[data-tour="plan-edit"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Créer zones et machines',
+          text: 'Dessinez d\'abord vos zones (lavage, séchage, réception...), puis ajoutez vos machines et posez-les sur le plan.',
+          target: '[data-tour="plan-new-zone"]',
+          position: 'bottom',
+        },
+      ],
+    },
+
+    'pressing-machines': {
+      title: 'Les machines',
+      paths: ['/pressing/machines'],
+      steps: [
+        {
+          title: 'Le parc de machines',
+          text: 'Toutes vos machines avec leur état, leur capacité et leur zone. Filtrez par catégorie, état ou statut, ou cherchez par nom, marque ou numéro de série.',
+          target: CARD,
+          position: 'bottom',
+          action: go('/pressing/machines'),
+        },
+        {
+          title: 'Ajouter une machine',
+          text: 'La fiche technique tient en cinq onglets : identité, fonctionnement, programmes (nom, durée, types de linge), consommation et notes.',
+          target: '[data-tour="machines-add"]',
+          position: 'bottom',
+        },
+        {
+          title: 'La fiche d\'une machine',
+          text: 'Cliquez sur une ligne pour ouvrir la fiche : seuls les changements d\'état permis depuis l\'état actuel sont proposés.',
+          target: TABLE,
+          position: 'top',
+        },
+      ],
+    },
+
+    // Placées avant « pressing-dashboard », dont le chemin `/pressing` couvre toutes les pages du
+    // pressing : la recherche par chemin prend la première visite qui correspond.
+    'pressing-caisse': {
+      title: 'La caisse du pressing',
+      capability: 'front_of_house',
+      paths: ['/pressing/caisse'],
+      steps: [
+        {
+          title: 'Choisir le jour',
+          text: 'Aujourd\'hui, hier ou un autre jour passé : le journal de caisse se met à jour aussitôt. Celui du jour s\'actualise tout seul.',
+          target: '[data-tour="caisse-day"]',
+          position: 'bottom',
+          action: go('/pressing/caisse'),
+        },
+        {
+          title: 'Ce qui a été encaissé',
+          text: 'Le total encaissé du jour, puis le détail par moyen : espèces, Mobile Money, carte et autres moyens.',
+          target: '[data-tour="caisse-modes"]',
+          position: 'bottom',
+        },
+        {
+          title: 'La clôture de caisse',
+          text: 'En fin de journée, un responsable compte les espèces du tiroir : l\'écart avec les espèces attendues s\'affiche avant de clôturer.',
+          target: '[data-tour="caisse-cloture"]',
+          position: 'left',
+        },
+        {
+          title: 'Les paiements',
+          text: 'Chaque paiement avec son heure, sa commande et son client. Touchez le numéro de commande pour l\'ouvrir. Une annulation apparaît en rouge.',
+          target: '[data-tour="caisse-list"]',
+          position: 'top',
+        },
+        {
+          title: 'Imprimer et exporter',
+          text: 'Imprimez le journal du jour sur une page A4, ou exportez-le en CSV pour votre comptabilité.',
+          target: '[data-tour="caisse-print"]',
+          position: 'bottom',
+        },
+      ],
+    },
+
+    'pressing-clients': {
+      title: 'Les clients du pressing',
+      capability: 'front_of_house',
+      paths: ['/pressing/clients'],
+      steps: [
+        {
+          title: 'Retrouver un client',
+          text: 'Cherchez par nom ou par numéro de téléphone. Un client apparaît dès sa première commande.',
+          target: '[data-tour="clients-search"]',
+          position: 'bottom',
+          action: go('/pressing/clients'),
+        },
+        {
+          title: 'Ce que chaque client a commandé',
+          text: 'Nombre de commandes, total dépensé et reste à payer, en orange s\'il reste quelque chose. Touchez un client pour voir toutes ses commandes.',
+          target: '[data-tour="clients-list"]',
+          position: 'top',
+        },
+      ],
+    },
+
+    'pressing-rapports': {
+      title: 'Les rapports du pressing',
+      capability: 'management',
+      paths: ['/pressing/rapports'],
+      steps: [
+        {
+          title: 'Choisir la période',
+          text: 'Les 7, 30 ou 90 derniers jours, ou deux dates de votre choix, sur un an au plus.',
+          target: '[data-tour="rapports-period"]',
+          position: 'bottom',
+          action: go('/pressing/rapports'),
+        },
+        {
+          title: 'Les chiffres clés',
+          text: 'Le chiffre d\'affaires facturé compte les commandes non annulées ; la durée des cycles est mesurée sur les cycles réellement terminés.',
+          target: '[data-tour="rapports-metrics"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Jour après jour',
+          text: 'Le chiffre d\'affaires facturé de chaque jour. Survolez la courbe pour lire le montant d\'un jour.',
+          target: '[data-tour="rapports-chart"]',
+          position: 'top',
+        },
+        {
+          title: 'Les machines',
+          text: 'Les cycles terminés et le temps d\'utilisation de chaque machine, de la plus utilisée à la moins utilisée.',
+          target: '[data-tour="rapports-machines"]',
+          position: 'top',
+        },
+        {
+          title: 'Exporter',
+          text: 'Téléchargez tout le rapport de la période en CSV, lisible dans Excel.',
+          target: '[data-tour="rapports-export"]',
+          position: 'bottom',
+        },
+      ],
+    },
+
+    'pressing-dashboard': {
+      title: 'Le tableau de bord du pressing',
+      paths: ['/pressing'],
+      steps: [
+        {
+          title: 'Bienvenue',
+          text: 'Cette page résume l\'activité de votre pressing : le parc de machines, les cycles en cours et les alertes.',
+          action: go('/pressing'),
+        },
+        {
+          title: 'L\'état du parc',
+          text: 'Chaque tuile compte les machines libres, occupées, réservées, en maintenance ou hors service. Touchez-en une pour afficher ces machines.',
+          target: '[data-tour="dashboard-tiles"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Le plan',
+          text: 'Le plan montre l\'emplacement et l\'état de chaque machine dans votre local.',
+          target: '[data-tour="dashboard-plan"]',
+          position: 'bottom',
         },
       ],
     },

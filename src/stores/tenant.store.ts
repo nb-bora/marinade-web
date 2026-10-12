@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useSessionStore } from './session.store'
 import { container } from '@/container'
 import type { Capability, RestaurantAccess } from '@/lib/api/types'
+import type { EstablishmentType } from '@/lib/module/types'
 
 const storageKey = (userId: string) => `marinade.restaurant.${userId}`
 
@@ -39,6 +40,9 @@ export const useTenantStore = defineStore('tenant', () => {
 
   const current = computed(() => restaurants.value.find(item => item.restaurant_id === currentId.value) ?? null)
   const capabilities = computed(() => new Set<Capability>(current.value?.capabilities ?? []))
+
+  /** Restaurant ou pressing : le menu, les routes et l'accueil en dépendent. */
+  const typeEtablissement = computed<EstablishmentType>(() => current.value?.type_etablissement ?? 'restaurant')
   const hasRestaurant = computed(() => current.value !== null)
 
   const can = (capability: Capability) => capabilities.value.has(capability)
@@ -95,5 +99,5 @@ export const useTenantStore = defineStore('tenant', () => {
       reset()
   })
 
-  return { restaurants, currentId, current, capabilities, hasRestaurant, loaded, can, load, reload, select, reset }
+  return { restaurants, currentId, current, capabilities, typeEtablissement, hasRestaurant, loaded, can, load, reload, select, reset }
 })

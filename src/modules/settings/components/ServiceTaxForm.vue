@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useRestaurantUpdate } from '../composables/useRestaurantUpdate'
-import { CURRENCIES, DEFAULT_VAT_RATE, SERVICE_RATE_PRESETS, parseDecimal } from '../labels'
-import type { Restaurant } from '../types'
-import { useConfirm } from '@/composables/useConfirm'
-import { formatMoney } from '@/lib/format'
+import { useSettingsDraft } from '../composables/useSettingsDraft'
+import { CURRENCIES, DEFAULT_VAT_RATE, MAX_RATE, SERVICE_RATE_PRESETS, parseDecimal, ratePercent } from '../labels'
+import type { Restaurant, RestaurantUpdate } from '../types'
+import SettingsActions from './SettingsActions.vue'
 
 const props = defineProps<{
   restaurant: Restaurant
@@ -20,29 +20,27 @@ function vatOf(restaurant: Restaurant): string {
   const taxes = restaurant.config_jsonb?.taxes
   const configured = isRecord(taxes) ? taxes.tva : undefined
 
-  return String(configured ?? DEFAULT_VAT_RATE)
+  return String(Number(configured ?? DEFAULT_VAT_RATE))
 }
 
 const draftOf = (restaurant: Restaurant) => ({
   service: String(Number(restaurant.taux_service)),
-  currency: restaurant.currency,
   vat: vatOf(restaurant),
+  currency: restaurant.currency,
 })
 
-const draft = ref(draftOf(props.restaurant))
+const { draft, dirty, changed, changedKeys, restored, discard } = useSettingsDraft('service', () => props.restaurant, draftOf)
+
 const form = ref()
 
-watch(() => props.restaurant, restaurant => {
-  draft.value = draftOf(restaurant)
-})
+const { save, pending, errorMessage, fieldMessage, reset } = useRestaurantUpdate(
+  () => props.restaurant.id,
+  restaurant => emit('saved', restaurant),
+)
 
-const dirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(draftOf(props.restaurant)))
+const FIELD_LABELS = { service: 'taux de service', vat: 'TVA', currency: 'devise' } as const
 
-const percent = (label: string) => (value: unknown) => {
-  const parsed = parseDecimal(value as string)
-
-  return (parsed !== null && parsed >= 0 && parsed <= 100) || `${label} : un pourcentage entre 0 et 100.`
-}
+const changes = computed(() => changedKeys.value.map(key => FIELD_LABELS[key]))
 
 const currencies = computed(() =>
   CURRENCIES.some(item => item.value === draft.value.currency)
@@ -50,53 +48,69 @@ const currencies = computed(() =>
     : [...CURRENCIES, { value: draft.value.currency, title: draft.value.currency }],
 )
 
-const confirm = useConfirm()
+const rateOf = (text: string) => parseDecimal(text) ?? 0
+const clamp = (value: number) => Math.min(MAX_RATE, Math.max(0, value))
 
-const { save, pending, errorMessage, reset } = useRestaurantUpdate(
-  () => props.restaurant.id,
-  restaurant => emit('saved', restaurant),
-)
+const serviceRate = computed(() => rateOf(draft.value.service))
+const vatRate = computed(() => rateOf(draft.value.vat))
 
-// Exemple chiffré : l'addition type que le gérant a en tête.
+// Exemple chiffré : le plat à 10 000, avec service puis TVA.
 const SAMPLE = 10000
-const serviceRate = computed(() => parseDecimal(draft.value.service) ?? 0)
-const vatRate = computed(() => parseDecimal(draft.value.vat) ?? 0)
 const serviceAmount = computed(() => Math.round(SAMPLE * serviceRate.value) / 100)
+const vatAmount = computed(() => Math.round((SAMPLE + serviceAmount.value) * vatRate.value) / 100)
+const total = computed(() => SAMPLE + serviceAmount.value + vatAmount.value)
+const percentText = (value: number) => `${value.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`
+
+const rules = {
+  service: ratePercent('Taux de service'),
+  vat: ratePercent('TVA'),
+}
 
 async function submit() {
+  if (!props.canEdit || !dirty.value)
+    return
+
   if (!(await form.value?.validate())?.valid)
     return
 
-  if (!await confirm({
-    title: 'Enregistrer le service et les taxes ?',
-    text: 'Le taux de service, la TVA et la devise seront appliqués aux prochaines additions.',
-    confirmLabel: 'Enregistrer',
-  }))
-    return
+  const patch: RestaurantUpdate = {}
 
-  const existing = props.restaurant.config_jsonb ?? {}
-  const taxes = isRecord(existing.taxes) ? existing.taxes : {}
+  if (changed('service'))
+    patch.taux_service = rateOf(draft.value.service)
 
-  await save({
-    taux_service: parseDecimal(draft.value.service) ?? 0,
-    currency: draft.value.currency.trim().toUpperCase(),
+  if (changed('currency'))
+    patch.currency = draft.value.currency.trim().toUpperCase()
 
+  if (changed('vat')) {
     // Les autres réglages avancés du restaurant sont conservés tels quels.
-    config_jsonb: { ...existing, taxes: { ...taxes, tva: parseDecimal(draft.value.vat) ?? DEFAULT_VAT_RATE } },
-  }, 'Service et taxes enregistrés.')
+    const existing = props.restaurant.config_jsonb ?? {}
+    const taxes = isRecord(existing.taxes) ? existing.taxes : {}
+
+    patch.config_jsonb = { ...existing, taxes: { ...taxes, tva: rateOf(draft.value.vat) } }
+  }
+
+  await save(patch, 'Service et taxes enregistrés.')
 }
 
 function cancel() {
-  draft.value = draftOf(props.restaurant)
+  discard()
   reset()
   form.value?.resetValidation()
 }
+
+defineExpose({
+  dirty,
+  pending,
+  invalid: computed(() => form.value?.isValid === false),
+  submit,
+  cancel,
+})
 </script>
 
 <template>
   <VForm
     ref="form"
-    validate-on="submit"
+    validate-on="input"
     @submit.prevent="submit"
   >
     <VRow>
@@ -106,30 +120,69 @@ function cancel() {
       >
         <VCard>
           <VCardItem>
+            <template #prepend>
+              <VAvatar
+                variant="tonal"
+                rounded
+                color="primary"
+              >
+                <VIcon icon="ri-percent-line" />
+              </VAvatar>
+            </template>
             <VCardTitle>Service, TVA et devise</VCardTitle>
             <VCardSubtitle class="text-wrap">
               Appliqués automatiquement aux additions de ce restaurant.
             </VCardSubtitle>
           </VCardItem>
           <VCardText>
-            <VRow>
-              <VCol
-                cols="12"
-                md="6"
-              >
+            <!-- Taux de service -->
+            <div
+              class="rate-block mb-6"
+              :class="{ 'settings-changed--static': changed('service') }"
+            >
+              <div class="d-flex align-center justify-space-between gap-3 mb-1">
+                <div>
+                  <div class="text-subtitle-1 font-weight-medium">
+                    Taux de service
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    Pourboire ajouté à l'addition.
+                  </div>
+                </div>
+                <VChip
+                  color="primary"
+                  variant="tonal"
+                  label
+                >
+                  {{ percentText(serviceRate) }}
+                </VChip>
+              </div>
+              <VSlider
+                :model-value="clamp(serviceRate)"
+                :min="0"
+                :max="MAX_RATE"
+                :step="0.5"
+                color="primary"
+                :readonly="!canEdit"
+                :thumb-label="false"
+                aria-label="Taux de service"
+                @update:model-value="(value: number) => draft.service = String(value)"
+              />
+              <div class="d-flex flex-wrap align-center gap-3">
                 <VTextField
                   v-model="draft.service"
-                  label="Taux de service"
+                  label="Taux exact"
                   prepend-inner-icon="ri-percent-line"
                   suffix="%"
                   inputmode="decimal"
-                  hide-details="auto"
-                  :rules="[percent('Taux de service')]"
+                  class="rate-input"
+                  :rules="[rules.service]"
+                  :error-messages="fieldMessage('taux_service')"
                   :readonly="!canEdit"
                 />
                 <div
                   v-if="canEdit"
-                  class="d-flex flex-wrap gap-2 mt-2"
+                  class="d-flex flex-wrap gap-2"
                 >
                   <VChip
                     v-for="preset in SERVICE_RATE_PRESETS"
@@ -142,36 +195,63 @@ function cancel() {
                     {{ preset }} %
                   </VChip>
                 </div>
-              </VCol>
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <VTextField
-                  v-model="draft.vat"
-                  label="TVA sur le catalogue"
-                  prepend-inner-icon="ri-percent-line"
-                  suffix="%"
-                  inputmode="decimal"
-                  :hint="`Par défaut ${DEFAULT_VAT_RATE.toLocaleString('fr-FR')} % (Cameroun).`"
-                  persistent-hint
-                  :rules="[percent('TVA')]"
-                  :readonly="!canEdit"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <VSelect
-                  v-model="draft.currency"
-                  :items="currencies"
-                  label="Devise"
-                  prepend-inner-icon="ri-money-dollar-circle-line"
-                  :readonly="!canEdit"
-                />
-              </VCol>
-            </VRow>
+              </div>
+            </div>
+
+            <!-- TVA -->
+            <div
+              class="rate-block mb-6"
+              :class="{ 'settings-changed--static': changed('vat') }"
+            >
+              <div class="d-flex align-center justify-space-between gap-3 mb-1">
+                <div>
+                  <div class="text-subtitle-1 font-weight-medium">
+                    TVA
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    Par défaut {{ percentText(DEFAULT_VAT_RATE) }} (Cameroun).
+                  </div>
+                </div>
+                <VChip
+                  color="primary"
+                  variant="tonal"
+                  label
+                >
+                  {{ percentText(vatRate) }}
+                </VChip>
+              </div>
+              <VSlider
+                :model-value="clamp(vatRate)"
+                :min="0"
+                :max="MAX_RATE"
+                :step="0.25"
+                color="primary"
+                :readonly="!canEdit"
+                :thumb-label="false"
+                aria-label="TVA"
+                @update:model-value="(value: number) => draft.vat = String(value)"
+              />
+              <VTextField
+                v-model="draft.vat"
+                label="Taux exact"
+                prepend-inner-icon="ri-percent-line"
+                suffix="%"
+                inputmode="decimal"
+                class="rate-input"
+                :rules="[rules.vat]"
+                :readonly="!canEdit"
+              />
+            </div>
+
+            <VSelect
+              v-model="draft.currency"
+              :items="currencies"
+              label="Devise"
+              prepend-inner-icon="ri-money-dollar-circle-line"
+              :readonly="!canEdit"
+              :error-messages="fieldMessage('currency')"
+              :class="{ 'settings-changed': changed('currency') }"
+            />
           </VCardText>
         </VCard>
       </VCol>
@@ -180,63 +260,123 @@ function cancel() {
         cols="12"
         lg="5"
       >
-        <VCard>
+        <VCard class="preview-card">
           <VCardItem>
-            <VCardTitle>Exemple d'addition</VCardTitle>
+            <template #prepend>
+              <VAvatar
+                variant="tonal"
+                rounded
+                color="primary"
+              >
+                <VIcon icon="ri-receipt-line" />
+              </VAvatar>
+            </template>
+            <VCardTitle>Prévisualisation</VCardTitle>
             <VCardSubtitle class="text-wrap">
-              Pour des plats à {{ formatMoney(SAMPLE, draft.currency) }}.
+              Un plat à <AppMoney
+                :amount="SAMPLE"
+                :currency="draft.currency"
+              />, avec vos réglages.
             </VCardSubtitle>
           </VCardItem>
           <VCardText>
-            <div class="d-flex justify-space-between mb-2">
-              <span class="text-medium-emphasis">Plats et boissons</span>
-              <span>{{ formatMoney(SAMPLE, draft.currency) }}</span>
-            </div>
-            <div class="d-flex justify-space-between mb-2">
-              <span class="text-medium-emphasis">Service ({{ serviceRate.toLocaleString('fr-FR') }} %)</span>
-              <span>{{ formatMoney(serviceAmount, draft.currency) }}</span>
-            </div>
+            <dl class="preview-lines">
+              <div class="preview-line">
+                <dt class="text-medium-emphasis">
+                  Plat
+                </dt>
+                <dd>
+                  <AppMoney
+                    :amount="SAMPLE"
+                    :currency="draft.currency"
+                  />
+                </dd>
+              </div>
+              <div class="preview-line">
+                <dt class="text-medium-emphasis">
+                  Service ({{ percentText(serviceRate) }})
+                </dt>
+                <dd>
+                  <AppMoney
+                    :amount="serviceAmount"
+                    :currency="draft.currency"
+                  />
+                </dd>
+              </div>
+              <div class="preview-line">
+                <dt class="text-medium-emphasis">
+                  TVA ({{ percentText(vatRate) }})
+                </dt>
+                <dd>
+                  <AppMoney
+                    :amount="vatAmount"
+                    :currency="draft.currency"
+                  />
+                </dd>
+              </div>
+            </dl>
             <VDivider class="my-3" />
-            <div class="d-flex justify-space-between text-subtitle-1 font-weight-medium">
-              <span>Total avec service</span>
-              <span>{{ formatMoney(SAMPLE + serviceAmount, draft.currency) }}</span>
+            <div class="preview-line text-h6 font-weight-semibold">
+              <span>Total</span>
+              <AppMoney
+                :amount="total"
+                :currency="draft.currency"
+              />
             </div>
             <p class="text-caption text-medium-emphasis mt-3 mb-0">
-              La TVA de {{ vatRate.toLocaleString('fr-FR') }} % s'applique aux articles du catalogue lors de la prise de commande.
+              Estimation : le service s'ajoute au prix du plat, puis la TVA s'applique sur le tout.
+              Le calcul réel suit les articles de chaque commande.
             </p>
           </VCardText>
         </VCard>
       </VCol>
     </VRow>
 
-    <VAlert
-      v-if="errorMessage"
-      type="error"
-      variant="tonal"
-      class="mt-6"
-    >
-      {{ errorMessage }}
-    </VAlert>
-
-    <div
-      v-if="canEdit"
-      class="d-flex flex-wrap justify-end gap-3 mt-6"
-    >
-      <VBtn
-        variant="outlined"
-        color="secondary"
-        :disabled="!dirty || pending"
-        @click="cancel"
-      >
-        Annuler les modifications
-      </VBtn>
-      <VBtn
-        type="submit"
-        :loading="pending"
-        :disabled="!dirty"
-      >
-        Enregistrer
-      </VBtn>
-    </div>
+    <SettingsActions
+      :can-edit="canEdit"
+      :dirty="dirty"
+      :pending="pending"
+      :restored="restored"
+      :error-message="errorMessage"
+      :changes="changes"
+      @cancel="cancel"
+    />
   </VForm>
 </template>
+
+<style scoped>
+.rate-block {
+  padding: 0.75rem;
+  margin-inline: -0.75rem;
+}
+
+.rate-input {
+  max-inline-size: 180px;
+}
+
+.preview-card {
+  position: sticky;
+  inset-block-start: 1rem;
+}
+
+.preview-lines {
+  margin: 0;
+}
+
+.preview-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 0.5rem;
+}
+
+.preview-line dd {
+  margin: 0;
+}
+
+@media (max-width: 1279px) {
+  .preview-card {
+    position: static;
+  }
+}
+</style>

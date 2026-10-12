@@ -1387,6 +1387,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/restaurants/{restaurant_id}/export-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Télécharger un modèle Excel vierge pour un import en masse
+         * @description Renvoie un classeur `.xlsx` vide (en-têtes de colonnes seulement) pour le `type` demandé :
+         *         `menus` (feuilles « Menus » et « Catégories »), `plats`, `boissons`, `composants`,
+         *         `recettes` ou `tables`. Remplissez-le à partir de la deuxième ligne, puis importez-le.
+         */
+        get: operations["export_import_template_v1_restaurants__restaurant_id__export_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/restaurants/{restaurant_id}/import-csv": {
         parameters: {
             query?: never;
@@ -1496,6 +1518,774 @@ export interface paths {
          */
         post: operations["create_plat_v1_restaurants__restaurant_id__plats_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lister les articles unitaires */
+        get: operations["list_articles_v1_restaurants__restaurant_id__pressing_articles_get"];
+        put?: never;
+        /** Créer un article unitaire */
+        post: operations["create_article_v1_restaurants__restaurant_id__pressing_articles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/articles/{pressing_article_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détail d'un article */
+        get: operations["get_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__get"];
+        /** Modifier un article (permet aussi de le réactiver) */
+        put: operations["update_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__put"];
+        post?: never;
+        /**
+         * Désactiver un article
+         * @description Ne supprime rien : `actif` passe à `false`. L'article ne peut plus entrer dans un calcul ni une nouvelle combinaison, mais reste lisible dans les combinaisons existantes.
+         */
+        delete: operations["delete_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/caisse/clotures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clôturer la caisse d'un jour (management)
+         * @description Une seule clôture par jour (409 sinon). `ecart` = montant compté - espèces attendues.
+         */
+        post: operations["cloturer_caisse_v1_restaurants__restaurant_id__pressing_caisse_clotures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/caisse/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Journal de caisse d'un jour
+         * @description `date` au format AAAA-MM-JJ (défaut : aujourd'hui, fuseau Africa/Douala). Totaux NETS : une contre-passation compte en négatif dans son mode. Les paiements restent acceptés après la clôture du jour ; `encaisse_apres_cloture` en donne le net.
+         */
+        get: operations["journal_caisse_v1_restaurants__restaurant_id__pressing_caisse_journal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/calcul": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aperçu du prix d'une commande (aucune écriture)
+         * @description Poids facturable arrondi selon le tarif, lavage/séchage au kilo, articles à l'unité, combinaisons au prix fixé, remise. Montants entiers FCFA (demi vers le haut). `quantite` est une chaîne décimale : kg à 3 décimales pour lavage/séchage, entier sinon.
+         */
+        post: operations["calcul_v1_restaurants__restaurant_id__pressing_calcul_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clients (dérivés des commandes)
+         * @description Regroupés par téléphone, sinon par nom normalisé ; commandes annulées exclues.
+         */
+        get: operations["list_clients_v1_restaurants__restaurant_id__pressing_clients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/combinaisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lister les combinaisons */
+        get: operations["list_combinaisons_v1_restaurants__restaurant_id__pressing_combinaisons_get"];
+        put?: never;
+        /**
+         * Composer une combinaison à prix fixé
+         * @description Le prix est celui que l'utilisateur fixe, indépendant de la somme des articles. Chaque article doit appartenir au restaurant et être actif.
+         */
+        post: operations["create_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/combinaisons/{pressing_combinaison_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détail d'une combinaison */
+        get: operations["get_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__get"];
+        /** Modifier une combinaison (les lignes sont remplacées) */
+        put: operations["update_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__put"];
+        post?: never;
+        /** Désactiver une combinaison */
+        delete: operations["delete_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les commandes
+         * @description `q` cherche dans le numéro, le nom du client et son téléphone. Tri : plus récentes d'abord.
+         */
+        get: operations["list_commandes_v1_restaurants__restaurant_id__pressing_commandes_get"];
+        put?: never;
+        /**
+         * Créer une commande
+         * @description Le prix est calculé par le moteur de tarification (lignes figées). Le poids est obligatoire pour un lavage ou un séchage ; le séchage est refusé si le pressing ne le propose pas. Numéro `PR-AAAAMMJJ-NNN` (séquence du jour, fuseau Africa/Douala). `fin_estimee` reçoit une ESTIMATION initiale (`fin_estimee_source=estimation_initiale`) : fin de la meilleure option d'affectation de la première étape, plus le séchage le plus court si un séchage suit ; nulle si aucune machine ne convient. `paiement` (facultatif) encaisse au dépôt dans la même transaction : s'il est refusé (montant > total...), rien n'est créé.
+         */
+        post: operations["create_commande_v1_restaurants__restaurant_id__pressing_commandes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détail d'une commande (lignes figées et machines affectées) */
+        get: operations["get_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__get"];
+        /**
+         * Modifier une commande (tant qu'elle est « reçue »)
+         * @description Remplace poids, services, lignes, remise... Les lignes sont recalculées. 409 dès que la commande a quitté le statut `recue`.
+         */
+        put: operations["update_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/affectation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Affecter des machines à la commande
+         * @description `options_choisie` (index 0-2 de la recommandation) ou `machine_ids` ; `programmes` choisit le programme par machine. La recommandation est recalculée sous verrou : une machine déjà réservée ou en cycle -> 409. Les machines passent à `reservee` ; depuis `recue` ou `attente_sechage` la commande passe `en_attente_machine`, sinon (charges successives) son statut ne change pas. La charge affectée ne dépasse jamais la charge restante (409). Avec `machine_ids` dont la capacité cumulée est insuffisante : 422, sauf `accepter_partiel: true` (chaque machine remplie à sa capacité, le reste demeure à affecter).
+         */
+        post: operations["affecter_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__affectation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/affectations/liberer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Libérer des machines réservées (affectations non démarrées)
+         * @description Libère les affectations actives NON DÉMARRÉES de l'étape courante (`ligne_ids` : identifiants de `machines[].id` ; absent : toutes). Chaque machine réservée pour la commande redevient `libre` et la charge redevient à affecter. S'il ne reste aucune affectation active sur l'étape, une commande `en_attente_machine` revient à `recue` (étape lavage, ou séchage seul ; estimation initiale recalculée) ou à `attente_sechage` (séchage après lavage). 409 si rien n'est libérable (déjà démarré, terminé...), 404 si l'affectation n'existe pas.
+         */
+        post: operations["liberer_affectations_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__affectations_liberer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/annuler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Annuler une commande (management, motif obligatoire)
+         * @description Possible depuis `recue`, `en_attente_machine` et `attente_sechage`. Les machines réservées sont libérées. En lavage ou en séchage : 409 (terminer et décharger d'abord).
+         */
+        post: operations["annuler_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__annuler_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/livrer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Livrer une commande prête
+         * @description 409 si la commande n'est pas `pret`, ou s'il reste à payer. `forcer=true` livre malgré un reste à payer et écrit un audit « livraison forcée » : réservé au management (403 pour les autres rôles).
+         */
+        post: operations["livrer_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__livrer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/paiements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paiements d'une commande */
+        get: operations["list_paiements_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements_get"];
+        put?: never;
+        /**
+         * Encaisser un paiement (partiel ou total)
+         * @description 422 « Le montant dépasse le reste à payer de X FCFA » ; 409 si la commande est annulée.
+         */
+        post: operations["payer_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/paiements/{paiement_id}/annuler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Annuler un paiement (management, motif obligatoire)
+         * @description Remboursement ou correction traçable : écrit une contre-passation (montant négatif, même mode, `annule_paiement_id` = paiement annulé, référence « Annulation de … ») et la renvoie ; l'original reçoit `annule_le`, `annule_par`, `motif_annulation` ; `montant_paye` de la commande baisse d'autant. Le journal de caisse du jour de la contre-passation la compte en négatif dans son mode. Possible sur une commande annulée (remboursement). 409 : paiement déjà annulé, ou contre-passation (on n'annule pas une annulation).
+         */
+        post: operations["annuler_paiement_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements__paiement_id__annuler_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/pret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marquer prête une commande sans machine (articles seuls)
+         * @description Réservé aux commandes sans lavage ni séchage (repassage, articles à l'unité). 422 si la commande passe par les machines.
+         */
+        post: operations["marquer_pret_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__pret_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/commandes/{pressing_commande_id}/recommandation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommandation d'affectation de machines (aucune écriture)
+         * @description Étape `lavage` pour une commande `recue`, `sechage` pour une commande en `attente_sechage` (ou `recue` en séchage seul) ; aussi une commande en attente de machine, en lavage ou en séchage tant qu'il reste de la charge à affecter (`charge_restante_kg`). Calculée sur la charge RESTANTE de l'étape. Jusqu'à 3 options classées (libres d'abord, puis score, plus petit = meilleur) : machine unique (meilleur ajustement de capacité, équilibrage), répartition si la charge dépasse la plus grande machine compatible, ou `partielle` (charges successives : la plus grande machine libre remplie à sa capacité, le reste à affecter après ce cycle) quand aucune machine libre ne peut tout prendre. Une machine occupée est proposée avec son `attente_min` mais ne peut pas être réservée. 409 si toute la charge est affectée.
+         */
+        post: operations["recommandation_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__recommandation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importer des articles ou des combinaisons (XLSX ou CSV `;`)
+         * @description Idempotent par nom (casse ignorée), partiel (les lignes valides passent, les autres sont listées dans `errors`). Limites : 5 Mo, 5000 lignes, 1 import par minute et par restaurant (429 + `Retry-After`). Les articles d'une combinaison sont désignés par leur nom : importez d'abord les articles.
+         */
+        post: operations["import_pressing_v1_restaurants__restaurant_id__pressing_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lister les machines */
+        get: operations["list_machines_v1_restaurants__restaurant_id__pressing_machines_get"];
+        put?: never;
+        /**
+         * Créer une machine
+         * @description La machine est créée `libre` et active. Un sèche-linge exige au moins un programme ; une intervention humaine exige une machine semi-automatique.
+         */
+        post: operations["create_machine_v1_restaurants__restaurant_id__pressing_machines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/maintenances/{maintenance_id}/cloture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clôturer une maintenance
+         * @description Si la machine est en `maintenance` pour cette intervention, elle repasse `libre`. 409 si la maintenance est déjà clôturée ou si la machine a un cycle en cours.
+         */
+        post: operations["close_maintenance_v1_restaurants__restaurant_id__pressing_machines_maintenances__maintenance_id__cloture_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fiche d'une machine */
+        get: operations["get_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__get"];
+        /**
+         * Modifier une machine (champs de saisie, jamais l'état)
+         * @description Remplace les champs de saisie. L'état opérationnel se change par `POST /{id}/etat`.
+         */
+        put: operations["update_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__put"];
+        post?: never;
+        /**
+         * Désactiver une machine
+         * @description Désactivation (`actif=false`), jamais une suppression. Refusée (409) si la machine est `en_cycle` ou `reservee`.
+         */
+        delete: operations["deactivate_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/decharger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Décharger la machine (un seul appel)
+         * @description Depuis `cycle_termine` ou `attente_dechargement` -> `libre` (les transitions `cycle_termine` -> `attente_dechargement` -> `libre` sont journalisées dans l'ordre) ; `dechargee_le` horodaté. Corps facultatif : `apres` = `maintenance` ou `hors_service` laisse ensuite la machine dans cet état (motif obligatoire) ; `maintenance` {type, description} déclare en plus une maintenance ouverte (`maintenance_id` dans la réponse). 409 si la machine n'est pas à décharger.
+         */
+        post: operations["decharger_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__decharger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/demarrer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Démarrer un cycle pour une commande
+         * @description Machine `reservee` pour cette commande -> `en_cycle`. Machine `libre` sans affectation (départ direct) : affectation implicite de min(charge restante, capacité), ou de `charge_kg` s'il est fourni (422 s'il dépasse la capacité ou la charge restante). `fin_estimee` = maintenant + durée du programme (+10 min si intervention humaine). La commande passe en `en_lavage` / `en_sechage` (`fin_estimee_source=cycle`). 409 si la machine est réservée pour une autre commande ou occupée, ou si toute la charge est déjà affectée.
+         */
+        post: operations["demarrer_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__demarrer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/etat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Changer l'état opérationnel d'une machine
+         * @description Transitions autorisées :
+         *
+         *     - `libre` → `reservee`, `en_cycle`, `maintenance`, `hors_service`
+         *     - `reservee` → `libre`, `en_cycle`
+         *     - `en_cycle` → `cycle_termine`
+         *     - `cycle_termine` → `attente_dechargement`, `libre`
+         *     - `attente_dechargement` → `libre`
+         *     - `maintenance` → `libre`, `hors_service`
+         *     - `hors_service` → `libre`, `maintenance`
+         *
+         *     Autre transition : 409. Un motif est obligatoire pour `maintenance` et `hors_service` (422).
+         *     Chaque changement écrit un événement d'historique et une ligne d'audit.
+         */
+        post: operations["change_etat_v1_restaurants__restaurant_id__pressing_machines__machine_id__etat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/historique": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historique d'une machine (plus récent d'abord) */
+        get: operations["get_historique_v1_restaurants__restaurant_id__pressing_machines__machine_id__historique_get"];
+        put?: never;
+        /** Ajouter une note à l'historique d'une machine */
+        post: operations["add_note_v1_restaurants__restaurant_id__pressing_machines__machine_id__historique_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/interrompre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Interrompre le cycle en cours (panne, coupure, erreur de programme)
+         * @description `en_cycle` -> `cycle_termine` (motif obligatoire, journalisé). L'affectation reçoit `fin_reelle` = `interrompue_le` = maintenant et `motif_interruption`. `charge_traitee=false` (défaut) : l'affectation devient inactive et sa charge redevient à affecter (réaffectable sur une autre machine) ; `true` : la charge compte comme faite. L'étape avance comme pour `terminer`. La machine se libère au déchargement (`/decharger`, éventuellement vers la maintenance). 409 si la machine n'est pas en cycle.
+         */
+        post: operations["interrompre_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__interrompre_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/maintenances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maintenances d'une machine (plus récentes d'abord) */
+        get: operations["list_maintenances_v1_restaurants__restaurant_id__pressing_machines__machine_id__maintenances_get"];
+        put?: never;
+        /**
+         * Déclarer une maintenance (entretien, panne, réparation)
+         * @description Sans `fin` : la maintenance est ouverte et, si la machine est `libre` ou `hors_service`, elle passe en `maintenance`. Avec `fin` : la maintenance est seulement historisée, l'état ne change pas. `indisponibilite_min` = fin - debut (null tant qu'ouverte).
+         */
+        post: operations["declare_maintenance_v1_restaurants__restaurant_id__pressing_machines__machine_id__maintenances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/prolonger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prolonger le cycle en cours
+         * @description Machine `en_cycle` uniquement (409 sinon). Décale de `minutes` (1 à 240) la fin estimée de la machine et la fin prévue de l'affectation ; la fin estimée de la commande devient la plus tardive des affectations en cours. Note « Cycle prolongé de N min : motif » dans l'historique de la machine, et audit.
+         */
+        post: operations["prolonger_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__prolonger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/machines/{machine_id}/terminer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Terminer le cycle en cours
+         * @description `en_cycle` -> `cycle_termine`. Durée MESURÉE = fin réelle - début réel. La commande passe `attente_sechage` (lave-linge, séchage demandé) ou `pret` seulement quand toutes les machines de l'étape sont terminées ET qu'il ne reste plus de charge à traiter ; sinon son statut reste et elle est « à réaffecter » (`a_reaffecter`).
+         */
+        post: operations["terminer_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__terminer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/modele": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Modèle Excel vierge (articles ou combinaisons)
+         * @description Articles : `nom, prix_unitaire, categorie`. Combinaisons : `nom, prix, article_1, quantite_1 … article_5, quantite_5` (noms d'articles actifs du restaurant).
+         */
+        get: operations["modele_v1_restaurants__restaurant_id__pressing_modele_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan du pressing : zones et machines positionnées
+         * @description Machines actives uniquement, sauf `inclure_inactives=true`. La mise en page se fait par `PUT /zones/{id}` et `PUT /machines/{id}`.
+         */
+        get: operations["get_plan_v1_restaurants__restaurant_id__pressing_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/rapports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rapport d'activité sur une période
+         * @description `du` / `au` (inclus, AAAA-MM-JJ, défaut : 30 derniers jours). Période max 366 jours (422 sinon).
+         */
+        get: operations["rapports_v1_restaurants__restaurant_id__pressing_rapports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/tableau-de-bord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tableau de bord du pressing
+         * @description Champs `*_mesuree` : mesurés (horodatages réels) ; `*_estimee` : estimations. Finance : `source=transactions_pressing` ; `ca_*` = facturé (non annulé), `encaisse_jour` = paiements reçus (nets des contre-passations). Alertes (heures locales) : retard, panne, intervention, attente_dechargement (> 15 min, critique > 60), dechargement_tardif, reservation_non_demarree (> 15 min après le début prévu, critique > 45), prise_en_charge (commande reçue non affectée > 30 min, critique > 90), charge_restante (commande à réaffecter), sechage_en_attente (> 20 min après le dernier lavage, critique > 60), paiement_apres_cloture.
+         */
+        get: operations["tableau_de_bord_v1_restaurants__restaurant_id__pressing_tableau_de_bord_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/tarifs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tarifs du pressing
+         * @description Prix au kilo, prix du séchage (`null` : non proposé) et règle d'arrondi du poids. La ligne est créée avec les défauts (500 FCFA/kg, pas 1000 g, supérieur) à la première lecture.
+         */
+        get: operations["get_tarifs_v1_restaurants__restaurant_id__pressing_tarifs_get"];
+        /**
+         * Modifier les tarifs du pressing
+         * @description Réservé au management. Chaque modification est journalisée (ancienne et nouvelle valeur).
+         */
+        put: operations["put_tarifs_v1_restaurants__restaurant_id__pressing_tarifs_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les zones du pressing
+         * @description Zones du plan : x, y, w, h en pourcentages (0-100) du plan.
+         */
+        get: operations["list_zones_v1_restaurants__restaurant_id__pressing_zones_get"];
+        put?: never;
+        /** Créer une zone */
+        post: operations["create_zone_v1_restaurants__restaurant_id__pressing_zones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/restaurants/{restaurant_id}/pressing/zones/{zone_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Modifier une zone (nom, type, couleur, position et taille sur le plan) */
+        put: operations["update_zone_v1_restaurants__restaurant_id__pressing_zones__zone_id__put"];
+        post?: never;
+        /**
+         * Supprimer une zone
+         * @description Refusé (409) tant que des machines y sont rattachées.
+         */
+        delete: operations["delete_zone_v1_restaurants__restaurant_id__pressing_zones__zone_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2329,6 +3119,57 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActiviteResume */
+        ActiviteResume: {
+            /**
+             * Duree Estimee Moyenne Min
+             * @description ESTIMÉE (durées prévues des programmes), 30 derniers jours
+             */
+            duree_estimee_moyenne_min?: number | null;
+            /**
+             * Duree Moyenne Traitement Min Mesuree
+             * @description MESURÉE, 30 derniers jours, cycles terminés uniquement
+             */
+            duree_moyenne_traitement_min_mesuree?: number | null;
+            /** Nb Commandes Jour */
+            nb_commandes_jour: number;
+            /** Poids Traite Kg Jour */
+            poids_traite_kg_jour: number;
+            /** Poids Traite Kg Semaine */
+            poids_traite_kg_semaine: number;
+        };
+        /** AlerteOut */
+        AlerteOut: {
+            /** Commande Id */
+            commande_id?: string | null;
+            /** Machine Id */
+            machine_id?: string | null;
+            /** Message */
+            message: string;
+            /**
+             * Niveau
+             * @enum {string}
+             */
+            niveau: "info" | "avertissement" | "critique";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "retard" | "panne" | "intervention" | "attente_dechargement" | "dechargement_tardif" | "reservation_non_demarree" | "prise_en_charge" | "charge_restante" | "sechage_en_attente" | "paiement_apres_cloture";
+        };
+        /** AnnulationIn */
+        AnnulationIn: {
+            /** Motif */
+            motif: string;
+        };
+        /** Body_import_pressing_v1_restaurants__restaurant_id__pressing_import_post */
+        Body_import_pressing_v1_restaurants__restaurant_id__pressing_import_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post */
         Body_import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post: {
             /**
@@ -2464,6 +3305,27 @@ export interface components {
             /** Stock Par Vente */
             stock_par_vente?: number | string | null;
         };
+        /** CaJourOut */
+        CaJourOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Montant */
+            montant: number;
+        };
+        /** CaParService */
+        CaParService: {
+            /** Articles */
+            articles: number;
+            /** Combinaisons */
+            combinaisons: number;
+            /** Lavage */
+            lavage: number;
+            /** Sechage */
+            sechage: number;
+        };
         /**
          * CashShiftStatus
          * @enum {string}
@@ -2502,6 +3364,16 @@ export interface components {
             imported: number;
             /** Updated */
             updated: number;
+        };
+        /** ChangementEtat */
+        ChangementEtat: {
+            /**
+             * Etat
+             * @enum {string}
+             */
+            etat: "libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service";
+            /** Motif */
+            motif?: string | null;
         };
         /** CombinaisonCreate */
         CombinaisonCreate: {
@@ -3018,6 +3890,21 @@ export interface components {
             /** Used Balance Fcfa */
             used_balance_fcfa: number;
         };
+        /** DemarrageIn */
+        DemarrageIn: {
+            /**
+             * Charge Kg
+             * @description Départ direct sur une machine libre seulement : charge mise dans la machine (défaut : le minimum de la charge restante et de la capacité). 422 si elle dépasse la capacité ou la charge restante.
+             */
+            charge_kg?: number | string | null;
+            /**
+             * Commande Id
+             * Format: uuid
+             */
+            commande_id: string;
+            /** Programme */
+            programme: string;
+        };
         /** EasyTransactCheckoutCreate */
         EasyTransactCheckoutCreate: {
             /** Amount Fcfa */
@@ -3115,6 +4002,69 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** EtapeProgramme */
+        EtapeProgramme: {
+            /** Duree Min */
+            duree_min: number;
+            /** Nom */
+            nom: string;
+        };
+        /** EvenementOut */
+        EvenementOut: {
+            /** Ancien Etat */
+            ancien_etat?: ("libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service") | null;
+            /** Auteur Id */
+            auteur_id?: string | null;
+            /**
+             * Date
+             * Format: date-time
+             */
+            date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Maintenance Id
+             * @description Maintenance à l'origine de l'événement, s'il y en a une
+             */
+            maintenance_id?: string | null;
+            /** Motif */
+            motif?: string | null;
+            /** Nouvel Etat */
+            nouvel_etat?: ("libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service") | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "etat_change" | "maintenance" | "note";
+        };
+        /** FinanceResume */
+        FinanceResume: {
+            /**
+             * Ca Jour
+             * @description Facturé (commandes non annulées créées), remises déduites
+             */
+            ca_jour: number;
+            /** Ca Mois */
+            ca_mois: number;
+            /** Ca Semaine */
+            ca_semaine: number;
+            /**
+             * Encaisse Jour
+             * @description Paiements reçus aujourd'hui
+             */
+            encaisse_jour: number;
+            /** Reste A Payer Total */
+            reste_a_payer_total: number;
+            /**
+             * Source
+             * @default transactions_pressing
+             * @constant
+             */
+            source: "transactions_pressing";
+        };
         /**
          * FulfillmentType
          * @enum {string}
@@ -3188,6 +4138,246 @@ export interface components {
          * @enum {string}
          */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PARTIALLY_PAID" | "PAID" | "CANCELLED" | "REFUNDED";
+        /** JournalCaisseOut */
+        JournalCaisseOut: {
+            cloture?: components["schemas"]["PressingClotureOut"] | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Encaisse Apres Cloture
+             * @description Net des paiements du jour enregistrés après la clôture (contre-passations comprises) ; 0 sans clôture
+             * @default 0
+             */
+            encaisse_apres_cloture: number;
+            /** Fuseau */
+            fuseau: string;
+            /** Paiements */
+            paiements: components["schemas"]["PressingPaiementJournalOut"][];
+            par_mode: components["schemas"]["ParMode"];
+            /**
+             * Total Encaisse
+             * @description Net : contre-passations déduites
+             */
+            total_encaisse: number;
+        };
+        /** LiberationOut */
+        LiberationOut: {
+            /**
+             * Fin Estimee
+             * Format: date-time
+             */
+            fin_estimee: string;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Nom */
+            nom: string;
+        };
+        /** LigneOut */
+        LigneOut: {
+            /** Libelle */
+            libelle: string;
+            /** Montant */
+            montant: number;
+            /** Prix Unitaire */
+            prix_unitaire: number;
+            /**
+             * Quantite
+             * @description kg (3 décimales) pour lavage/séchage, entier sinon
+             */
+            quantite: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "lavage" | "sechage" | "article" | "combinaison";
+        };
+        /**
+         * MachineIn
+         * @description Champs de saisie d'une machine (création et modification ; jamais l'état).
+         */
+        MachineIn: {
+            /** Capacite Kg */
+            capacite_kg: number | string;
+            /**
+             * Categorie
+             * @enum {string}
+             */
+            categorie: "lave_linge" | "seche_linge";
+            /** Conso Eau Litres Cycle */
+            conso_eau_litres_cycle?: number | string | null;
+            /** Conso Electrique Kwh Cycle */
+            conso_electrique_kwh_cycle?: number | string | null;
+            /** Contraintes */
+            contraintes?: string | null;
+            /** Date Mise En Service */
+            date_mise_en_service?: string | null;
+            /** Marque */
+            marque?: string | null;
+            /** Modele */
+            modele?: string | null;
+            /** Nom */
+            nom: string;
+            /** Numero Serie */
+            numero_serie?: string | null;
+            /** Position X */
+            position_x?: number | null;
+            /** Position Y */
+            position_y?: number | null;
+            /** Programmes */
+            programmes?: components["schemas"]["ProgrammeMachine"][];
+            /** Remarques */
+            remarques?: string | null;
+            /**
+             * Type Fonctionnement
+             * @default automatique
+             * @enum {string}
+             */
+            type_fonctionnement: "semi_automatique" | "automatique" | "autre";
+            /** Zone Id */
+            zone_id?: string | null;
+        };
+        /** MachineOut */
+        MachineOut: {
+            /** Actif */
+            actif: boolean;
+            /** Capacite Kg */
+            capacite_kg: string;
+            /**
+             * Categorie
+             * @enum {string}
+             */
+            categorie: "lave_linge" | "seche_linge";
+            /** Commande Courante Id */
+            commande_courante_id?: string | null;
+            /** Conso Eau Litres Cycle */
+            conso_eau_litres_cycle?: string | null;
+            /** Conso Electrique Kwh Cycle */
+            conso_electrique_kwh_cycle?: string | null;
+            /** Contraintes */
+            contraintes?: string | null;
+            /**
+             * Cree Le
+             * Format: date-time
+             */
+            cree_le: string;
+            /** Date Mise En Service */
+            date_mise_en_service?: string | null;
+            /**
+             * Etat Operationnel
+             * @enum {string}
+             */
+            etat_operationnel: "libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service";
+            /** Fin Estimee */
+            fin_estimee?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Marque */
+            marque?: string | null;
+            /** Modele */
+            modele?: string | null;
+            /**
+             * Modifie Le
+             * Format: date-time
+             */
+            modifie_le: string;
+            /** Nom */
+            nom: string;
+            /** Numero Serie */
+            numero_serie?: string | null;
+            /** Position X */
+            position_x?: number | null;
+            /** Position Y */
+            position_y?: number | null;
+            /** Programmes */
+            programmes: components["schemas"]["ProgrammeMachine"][];
+            /** Remarques */
+            remarques?: string | null;
+            /**
+             * Type Fonctionnement
+             * @enum {string}
+             */
+            type_fonctionnement: "semi_automatique" | "automatique" | "autre";
+            /** Zone Id */
+            zone_id?: string | null;
+        };
+        /** MaintenanceCloture */
+        MaintenanceCloture: {
+            /**
+             * Fin
+             * @description Défaut : maintenant
+             */
+            fin?: string | null;
+        };
+        /** MaintenanceIn */
+        MaintenanceIn: {
+            /**
+             * Debut
+             * @description Défaut : maintenant
+             */
+            debut?: string | null;
+            /** Description */
+            description: string;
+            /**
+             * Duree Estimee Min
+             * @description Durée prévue de l'indisponibilité, en minutes
+             */
+            duree_estimee_min?: number | null;
+            /**
+             * Fin
+             * @description Absente : intervention ouverte, la machine passe en maintenance
+             */
+            fin?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "entretien" | "panne" | "reparation";
+        };
+        /** MaintenanceOut */
+        MaintenanceOut: {
+            /** Auteur Id */
+            auteur_id?: string | null;
+            /**
+             * Debut
+             * Format: date-time
+             */
+            debut: string;
+            /** Description */
+            description: string;
+            /** Duree Estimee Min */
+            duree_estimee_min?: number | null;
+            /** Fin */
+            fin?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Indisponibilite Min
+             * @description Indisponibilité mesurée = fin - debut, en minutes (null tant qu'ouverte)
+             */
+            indisponibilite_min?: number | null;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "entretien" | "panne" | "reparation";
+        };
         /** MenuCategoryCreate */
         MenuCategoryCreate: {
             /** Menu Id */
@@ -3356,6 +4546,41 @@ export interface components {
             /** Operator Name */
             operator_name?: string | null;
         };
+        /** NoteIn */
+        NoteIn: {
+            /**
+             * Motif
+             * @description Texte de la note
+             */
+            motif: string;
+        };
+        /** OccupationOut */
+        OccupationOut: {
+            /**
+             * Categorie
+             * @enum {string}
+             */
+            categorie: "lave_linge" | "seche_linge";
+            /** Commande Numero */
+            commande_numero?: string | null;
+            /** Debut Reel */
+            debut_reel?: string | null;
+            /** Ecoule Min */
+            ecoule_min?: number | null;
+            /** En Retard */
+            en_retard: boolean;
+            /** Fin Estimee */
+            fin_estimee?: string | null;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Nom */
+            nom: string;
+            /** Restant Min */
+            restant_min?: number | null;
+        };
         /**
          * OrderChannel
          * @enum {string}
@@ -3482,6 +4707,36 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** PannesOut */
+        PannesOut: {
+            /** Indisponibilite Min */
+            indisponibilite_min: number;
+            /** Nombre */
+            nombre: number;
+        };
+        /** ParMode */
+        ParMode: {
+            /**
+             * Autre
+             * @default 0
+             */
+            autre: number;
+            /**
+             * Carte
+             * @default 0
+             */
+            carte: number;
+            /**
+             * Especes
+             * @default 0
+             */
+            especes: number;
+            /**
+             * Mobile Money
+             * @default 0
+             */
+            mobile_money: number;
         };
         /**
          * PasswordConfirmRequest
@@ -3848,10 +5103,73 @@ export interface components {
             /** Subscription Id */
             subscription_id?: string | null;
         };
+        /** PeriodeOut */
+        PeriodeOut: {
+            /**
+             * Au
+             * Format: date
+             */
+            au: string;
+            /**
+             * Du
+             * Format: date
+             */
+            du: string;
+            /**
+             * Granularite
+             * @default jour
+             * @constant
+             */
+            granularite: "jour";
+            /** Jours */
+            jours: number;
+        };
         /** PhoneVerifyRequest */
         PhoneVerifyRequest: {
             /** Code */
             code: string;
+        };
+        /** PlanMachine */
+        PlanMachine: {
+            /** Actif */
+            actif: boolean;
+            /** Capacite Kg */
+            capacite_kg: string;
+            /**
+             * Categorie
+             * @enum {string}
+             */
+            categorie: "lave_linge" | "seche_linge";
+            /**
+             * Etat Operationnel
+             * @enum {string}
+             */
+            etat_operationnel: "libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Nom */
+            nom: string;
+            /** Position X */
+            position_x?: number | null;
+            /** Position Y */
+            position_y?: number | null;
+            /**
+             * Type Fonctionnement
+             * @enum {string}
+             */
+            type_fonctionnement: "semi_automatique" | "automatique" | "autre";
+            /** Zone Id */
+            zone_id?: string | null;
+        };
+        /** PlanOut */
+        PlanOut: {
+            /** Machines */
+            machines: components["schemas"]["PlanMachine"][];
+            /** Zones */
+            zones: components["schemas"]["ZoneOut"][];
         };
         /**
          * PlatComposantCreate
@@ -4046,6 +5364,955 @@ export interface components {
             /** Temps Preparation */
             temps_preparation?: number | null;
         };
+        /** PressingAffectationIn */
+        PressingAffectationIn: {
+            /**
+             * Accepter Partiel
+             * @description Avec machine_ids : si leur capacité cumulée est inférieure à la charge restante, chaque machine est remplie à sa capacité et le reste demeure à affecter
+             * @default false
+             */
+            accepter_partiel: boolean;
+            /**
+             * Machine Ids
+             * @description Machines choisies à la main (alternative)
+             */
+            machine_ids?: string[] | null;
+            /**
+             * Options Choisie
+             * @description Index de l'option de la recommandation (0 à 2)
+             */
+            options_choisie?: number | null;
+            /**
+             * Programmes
+             * @description Programme choisi par machine (sinon le plus court)
+             */
+            programmes?: {
+                [key: string]: string;
+            };
+        };
+        /** PressingArrondi */
+        PressingArrondi: {
+            /**
+             * Mode
+             * @default superieur
+             * @enum {string}
+             */
+            mode: "superieur" | "proche";
+            /**
+             * Pas Grammes
+             * @default 1000
+             * @enum {integer}
+             */
+            pas_grammes: 1 | 100 | 500 | 1000;
+        };
+        /** PressingArticleCreate */
+        PressingArticleCreate: {
+            /**
+             * Actif
+             * @default true
+             */
+            actif: boolean;
+            /** Categorie */
+            categorie?: string | null;
+            /** Nom */
+            nom: string;
+            /** Prix Unitaire */
+            prix_unitaire: number;
+        };
+        /** PressingArticleResponse */
+        PressingArticleResponse: {
+            /** Actif */
+            actif: boolean;
+            /** Categorie */
+            categorie?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Nom */
+            nom: string;
+            /** Prix Unitaire */
+            prix_unitaire: number;
+        };
+        /** PressingArticleUpdate */
+        PressingArticleUpdate: {
+            /**
+             * Actif
+             * @default true
+             */
+            actif: boolean;
+            /** Categorie */
+            categorie?: string | null;
+            /** Nom */
+            nom: string;
+            /** Prix Unitaire */
+            prix_unitaire: number;
+        };
+        /** PressingCalculArticle */
+        PressingCalculArticle: {
+            /**
+             * Article Id
+             * Format: uuid
+             */
+            article_id: string;
+            /** Quantite */
+            quantite: number;
+        };
+        /** PressingCalculCombinaison */
+        PressingCalculCombinaison: {
+            /**
+             * Combinaison Id
+             * Format: uuid
+             */
+            combinaison_id: string;
+            /** Quantite */
+            quantite: number;
+        };
+        /** PressingCalculLigne */
+        PressingCalculLigne: {
+            /** Libelle */
+            libelle: string;
+            /** Montant */
+            montant: number;
+            /** Prix Unitaire */
+            prix_unitaire: number;
+            /**
+             * Quantite
+             * @description kg (3 décimales) pour lavage/séchage, entier sinon
+             */
+            quantite: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "lavage" | "sechage" | "article" | "combinaison";
+        };
+        /** PressingCalculRequest */
+        PressingCalculRequest: {
+            /** Articles */
+            articles?: components["schemas"]["PressingCalculArticle"][];
+            /** Combinaisons */
+            combinaisons?: components["schemas"]["PressingCalculCombinaison"][];
+            /**
+             * Lavage
+             * @default true
+             */
+            lavage: boolean;
+            /**
+             * Poids Grams
+             * @description Grammes ; obligatoire si lavage ou séchage
+             */
+            poids_grams?: number | null;
+            /**
+             * Remise Fcfa
+             * @default 0
+             */
+            remise_fcfa: number;
+            /**
+             * Sechage
+             * @default false
+             */
+            sechage: boolean;
+        };
+        /** PressingCalculResponse */
+        PressingCalculResponse: {
+            /**
+             * Devise
+             * @default FCFA
+             * @constant
+             */
+            devise: "FCFA";
+            /** Lignes */
+            lignes: components["schemas"]["PressingCalculLigne"][];
+            /** Poids Facturable Grams */
+            poids_facturable_grams?: number | null;
+            /** Remise Fcfa */
+            remise_fcfa: number;
+            /** Sous Total */
+            sous_total: number;
+            /** Total */
+            total: number;
+        };
+        /** PressingClientOut */
+        PressingClientOut: {
+            /**
+             * Derniere Commande
+             * Format: date-time
+             */
+            derniere_commande: string;
+            /** Nb Commandes */
+            nb_commandes: number;
+            /** Nom */
+            nom: string;
+            /** Reste A Payer */
+            reste_a_payer: number;
+            /** Telephone */
+            telephone?: string | null;
+            /** Total Depense */
+            total_depense: number;
+        };
+        /** PressingClotureIn */
+        PressingClotureIn: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Montant Compte */
+            montant_compte: number;
+        };
+        /** PressingClotureOut */
+        PressingClotureOut: {
+            /** Auteur Id */
+            auteur_id?: string | null;
+            /**
+             * Cree Le
+             * Format: date-time
+             */
+            cree_le: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Ecart
+             * @description montant compté - espèces attendues (négatif : il manque)
+             */
+            ecart: number;
+            /** Especes Attendues */
+            especes_attendues: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Montant Compte */
+            montant_compte: number;
+            /** Total Encaisse */
+            total_encaisse: number;
+        };
+        /** PressingCombinaisonCreate */
+        PressingCombinaisonCreate: {
+            /**
+             * Actif
+             * @default true
+             */
+            actif: boolean;
+            /** Lignes */
+            lignes: components["schemas"]["PressingCombinaisonLigneCreate"][];
+            /** Nom */
+            nom: string;
+            /** Prix */
+            prix: number;
+        };
+        /** PressingCombinaisonLigneCreate */
+        PressingCombinaisonLigneCreate: {
+            /**
+             * Article Id
+             * Format: uuid
+             */
+            article_id: string;
+            /** Quantite */
+            quantite: number;
+        };
+        /** PressingCombinaisonLigneResponse */
+        PressingCombinaisonLigneResponse: {
+            /**
+             * Article Id
+             * Format: uuid
+             */
+            article_id: string;
+            /** Article Nom */
+            article_nom: string;
+            /** Prix Unitaire Reference */
+            prix_unitaire_reference: number;
+            /** Quantite */
+            quantite: number;
+        };
+        /** PressingCombinaisonResponse */
+        PressingCombinaisonResponse: {
+            /** Actif */
+            actif: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lignes */
+            lignes: components["schemas"]["PressingCombinaisonLigneResponse"][];
+            /** Nom */
+            nom: string;
+            /** Prix */
+            prix: number;
+            /**
+             * Total Articles
+             * @description Somme des articles au prix unitaire : l'économie est total_articles - prix
+             */
+            total_articles: number;
+        };
+        /** PressingCombinaisonUpdate */
+        PressingCombinaisonUpdate: {
+            /**
+             * Actif
+             * @default true
+             */
+            actif: boolean;
+            /** Lignes */
+            lignes: components["schemas"]["PressingCombinaisonLigneCreate"][];
+            /** Nom */
+            nom: string;
+            /** Prix */
+            prix: number;
+        };
+        /** PressingCommandeCreate */
+        PressingCommandeCreate: {
+            /** Articles */
+            articles?: components["schemas"]["PressingCalculArticle"][];
+            /** Client Nom */
+            client_nom: string;
+            /**
+             * Client Telephone
+             * @description Mobile camerounais (ex. 6 77 12 34 56) ; normalisé en +237...
+             */
+            client_telephone?: string | null;
+            /** Combinaisons */
+            combinaisons?: components["schemas"]["PressingCalculCombinaison"][];
+            /** Instructions */
+            instructions?: string | null;
+            /**
+             * Lavage
+             * @default true
+             */
+            lavage: boolean;
+            /** @description Paiement au dépôt (montant ≤ total), enregistré dans la même transaction : s'il est refusé, la commande n'est pas créée. */
+            paiement?: components["schemas"]["PressingPaiementIn"] | null;
+            /**
+             * Poids Grams
+             * @description Grammes ; obligatoire si lavage ou séchage
+             */
+            poids_grams?: number | null;
+            /**
+             * Remise Fcfa
+             * @default 0
+             */
+            remise_fcfa: number;
+            /**
+             * Sechage
+             * @default false
+             */
+            sechage: boolean;
+            /**
+             * Types Linge
+             * @description Ex. "coton", "drap", "delicat"
+             */
+            types_linge?: string[];
+        };
+        /** PressingCommandeListe */
+        PressingCommandeListe: {
+            /** Items */
+            items: components["schemas"]["PressingCommandeOut"][];
+            /** Total */
+            total: number;
+        };
+        /** PressingCommandeMachineOut */
+        PressingCommandeMachineOut: {
+            /**
+             * Actif
+             * @description Faux : affectation abandonnée (libérée, annulée, ou cycle interrompu dont la charge n'a pas été traitée) ; sa charge redevient à affecter
+             */
+            actif: boolean;
+            /** Charge Kg */
+            charge_kg: number;
+            /** Debut Prevu */
+            debut_prevu?: string | null;
+            /** Debut Reel */
+            debut_reel?: string | null;
+            /** Dechargee Le */
+            dechargee_le?: string | null;
+            /** Duree Min */
+            duree_min?: number | null;
+            /**
+             * Etape
+             * @enum {string}
+             */
+            etape: "lavage" | "sechage";
+            /** Fin Prevue */
+            fin_prevue?: string | null;
+            /** Fin Reelle */
+            fin_reelle?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Interrompue Le
+             * @description Cycle interrompu (panne, coupure...) : fin_reelle = interrompue_le
+             */
+            interrompue_le?: string | null;
+            /** Intervention Humaine */
+            intervention_humaine: boolean;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Machine Nom */
+            machine_nom?: string | null;
+            /** Motif Interruption */
+            motif_interruption?: string | null;
+            /** Programme */
+            programme?: string | null;
+        };
+        /** PressingCommandeOut */
+        PressingCommandeOut: {
+            /**
+             * A Reaffecter
+             * @description Vrai quand l'étape est entamée, qu'il reste de la charge et qu'aucune machine n'est réservée ou en cycle pour elle (charges successives, cycle interrompu)
+             * @default false
+             */
+            a_reaffecter: boolean;
+            /** Annule Le */
+            annule_le?: string | null;
+            /**
+             * Charge Engagee Kg
+             * @description Charge de l'étape courante déjà engagée (réservée, en cycle ou terminée)
+             * @default 0
+             */
+            charge_engagee_kg: number;
+            /**
+             * Charge Restante Kg
+             * @description Charge de l'étape courante encore à affecter ; null sans étape
+             */
+            charge_restante_kg?: number | null;
+            /** Client Nom */
+            client_nom: string;
+            /** Client Telephone */
+            client_telephone?: string | null;
+            /**
+             * Cree Le
+             * Format: date-time
+             */
+            cree_le: string;
+            /** Debut Prevu */
+            debut_prevu?: string | null;
+            /**
+             * Devise
+             * @default FCFA
+             * @constant
+             */
+            devise: "FCFA";
+            /**
+             * Etape
+             * @description Étape machine à traiter ; null (articles seuls, prête, livrée, annulée)
+             */
+            etape?: ("lavage" | "sechage") | null;
+            /**
+             * Fin Estimee
+             * @description ESTIMATION de fin (voir fin_estimee_source), jamais une mesure
+             */
+            fin_estimee?: string | null;
+            /**
+             * Fin Estimee Source
+             * @description estimation_initiale : calculée à la création (meilleure option + séchage) ; affectation : machines réservées ; cycle : cycle démarré ou prolongé
+             */
+            fin_estimee_source?: ("estimation_initiale" | "affectation" | "cycle") | null;
+            /** Fin Reelle */
+            fin_reelle?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Instructions */
+            instructions?: string | null;
+            /** Lavage */
+            lavage: boolean;
+            /** Lignes */
+            lignes: components["schemas"]["LigneOut"][];
+            /** Livre Le */
+            livre_le?: string | null;
+            /** Machines */
+            machines: components["schemas"]["PressingCommandeMachineOut"][];
+            /** Montant Paye */
+            montant_paye: number;
+            /** Montant Total */
+            montant_total: number;
+            /** Motif Annulation */
+            motif_annulation?: string | null;
+            /** Numero */
+            numero: string;
+            /** Poids Facturable Grams */
+            poids_facturable_grams?: number | null;
+            /** Poids Grams */
+            poids_grams?: number | null;
+            /** Pret Le */
+            pret_le?: string | null;
+            /** Pris En Charge Le */
+            pris_en_charge_le?: string | null;
+            /** Remise Fcfa */
+            remise_fcfa: number;
+            /**
+             * Restaurant Id
+             * Format: uuid
+             */
+            restaurant_id: string;
+            /** Reste A Payer */
+            reste_a_payer: number;
+            /** Sechage */
+            sechage: boolean;
+            /** Sous Total */
+            sous_total: number;
+            /**
+             * Statut
+             * @enum {string}
+             */
+            statut: "recue" | "en_attente_machine" | "en_lavage" | "attente_sechage" | "en_sechage" | "pret" | "livre" | "annulee";
+            /** Types Linge */
+            types_linge: string[];
+        };
+        /**
+         * PressingCommandeUpdate
+         * @description Remplace le contenu d'une commande encore « reçue » (mêmes champs qu'à la création).
+         */
+        PressingCommandeUpdate: {
+            /** Articles */
+            articles?: components["schemas"]["PressingCalculArticle"][];
+            /** Client Nom */
+            client_nom: string;
+            /**
+             * Client Telephone
+             * @description Mobile camerounais (ex. 6 77 12 34 56) ; normalisé en +237...
+             */
+            client_telephone?: string | null;
+            /** Combinaisons */
+            combinaisons?: components["schemas"]["PressingCalculCombinaison"][];
+            /** Instructions */
+            instructions?: string | null;
+            /**
+             * Lavage
+             * @default true
+             */
+            lavage: boolean;
+            /**
+             * Poids Grams
+             * @description Grammes ; obligatoire si lavage ou séchage
+             */
+            poids_grams?: number | null;
+            /**
+             * Remise Fcfa
+             * @default 0
+             */
+            remise_fcfa: number;
+            /**
+             * Sechage
+             * @default false
+             */
+            sechage: boolean;
+            /**
+             * Types Linge
+             * @description Ex. "coton", "drap", "delicat"
+             */
+            types_linge?: string[];
+        };
+        /** PressingCommandesResume */
+        PressingCommandesResume: {
+            /** En Attente Prise En Charge */
+            en_attente_prise_en_charge: number;
+            /** En Cours */
+            en_cours: number;
+            /** Par Statut */
+            par_statut: {
+                [key: string]: number;
+            };
+            /** Terminees Jour */
+            terminees_jour: number;
+        };
+        /** PressingDechargementIn */
+        PressingDechargementIn: {
+            /**
+             * Apres
+             * @description État de la machine une fois déchargée
+             * @default libre
+             * @enum {string}
+             */
+            apres: "libre" | "maintenance" | "hors_service";
+            /** @description Déclare une maintenance ouverte (entretien, panne, réparation) après le déchargement ; seulement avec `apres` = maintenance ou hors_service */
+            maintenance?: components["schemas"]["PressingDechargementMaintenanceIn"] | null;
+            /**
+             * Motif
+             * @description Obligatoire si `apres` vaut maintenance ou hors_service
+             */
+            motif?: string | null;
+        };
+        /** PressingDechargementMaintenanceIn */
+        PressingDechargementMaintenanceIn: {
+            /** Description */
+            description: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "entretien" | "panne" | "reparation";
+        };
+        /** PressingInterruptionIn */
+        PressingInterruptionIn: {
+            /**
+             * Charge Traitee
+             * @description Vrai : la charge compte comme faite. Faux : elle redevient à affecter.
+             * @default false
+             */
+            charge_traitee: boolean;
+            /**
+             * Motif
+             * @description Panne, coupure, erreur...
+             */
+            motif: string;
+        };
+        /** PressingLibererIn */
+        PressingLibererIn: {
+            /**
+             * Ligne Ids
+             * @description Affectations à libérer (identifiants de `machines[].id`) ; absent : toutes les affectations non démarrées de l'étape courante
+             */
+            ligne_ids?: string[] | null;
+            /** Motif */
+            motif?: string | null;
+        };
+        /** PressingMachineActionOut */
+        PressingMachineActionOut: {
+            /** Commande Id */
+            commande_id?: string | null;
+            /** Commande Statut */
+            commande_statut?: ("recue" | "en_attente_machine" | "en_lavage" | "attente_sechage" | "en_sechage" | "pret" | "livre" | "annulee") | null;
+            /** Debut Reel */
+            debut_reel?: string | null;
+            /** Dechargee Le */
+            dechargee_le?: string | null;
+            /**
+             * Duree Mesuree Min
+             * @description MESURÉE : fin réelle - début réel du cycle
+             */
+            duree_mesuree_min?: number | null;
+            /**
+             * Etat
+             * @enum {string}
+             */
+            etat: "libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service";
+            /** Fin Estimee */
+            fin_estimee?: string | null;
+            /** Fin Reelle */
+            fin_reelle?: string | null;
+            /** Interrompue Le */
+            interrompue_le?: string | null;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /**
+             * Maintenance Id
+             * @description Maintenance déclarée au déchargement, s'il y en a une
+             */
+            maintenance_id?: string | null;
+        };
+        /** PressingMachineExclueOut */
+        PressingMachineExclueOut: {
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Nom */
+            nom: string;
+            /** Raison */
+            raison: string;
+        };
+        /** PressingMachineProposeeOut */
+        PressingMachineProposeeOut: {
+            /** Attente Min */
+            attente_min: number;
+            /** Charge Kg */
+            charge_kg: number;
+            /**
+             * Debut Prevu
+             * Format: date-time
+             */
+            debut_prevu: string;
+            /** Duree Min */
+            duree_min: number;
+            /**
+             * Fin Prevue
+             * Format: date-time
+             */
+            fin_prevue: string;
+            /** Intervention Humaine */
+            intervention_humaine: boolean;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Nom */
+            nom: string;
+            /** Programme */
+            programme: string;
+        };
+        /** PressingMachinesResume */
+        PressingMachinesResume: {
+            /** Par Etat */
+            par_etat: {
+                [key: string]: number;
+            };
+            /** Total Lave Linge */
+            total_lave_linge: number;
+            /** Total Seche Linge */
+            total_seche_linge: number;
+        };
+        /** PressingOptionAffectationOut */
+        PressingOptionAffectationOut: {
+            /** Avertissements */
+            avertissements: string[];
+            /** Machines */
+            machines: components["schemas"]["PressingMachineProposeeOut"][];
+            /** Raisons */
+            raisons: string[];
+            /** Score */
+            score: number;
+            /**
+             * Type
+             * @description partielle : la machine est remplie à sa capacité, le reste de la charge sera affecté après ce cycle (charges successives)
+             * @enum {string}
+             */
+            type: "machine_unique" | "repartition" | "partielle";
+        };
+        /** PressingPaiementIn */
+        PressingPaiementIn: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "especes" | "mobile_money" | "carte" | "autre";
+            /** Montant */
+            montant: number;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PressingPaiementJournalOut */
+        PressingPaiementJournalOut: {
+            /**
+             * Annule Le
+             * @description Paiement annulé : date d'annulation
+             */
+            annule_le?: string | null;
+            /**
+             * Annule Paiement Id
+             * @description Contre-passation : paiement annulé par cette écriture
+             */
+            annule_paiement_id?: string | null;
+            /** Annule Par */
+            annule_par?: string | null;
+            /** Auteur Id */
+            auteur_id?: string | null;
+            /** Client Nom */
+            client_nom: string;
+            /**
+             * Commande Id
+             * Format: uuid
+             */
+            commande_id: string;
+            /** Commande Numero */
+            commande_numero: string;
+            /**
+             * Cree Le
+             * Format: date-time
+             */
+            cree_le: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "especes" | "mobile_money" | "carte" | "autre";
+            /**
+             * Montant
+             * @description Négatif pour une contre-passation (annulation)
+             */
+            montant: number;
+            /** Motif Annulation */
+            motif_annulation?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PressingPaiementOut */
+        PressingPaiementOut: {
+            /**
+             * Annule Le
+             * @description Paiement annulé : date d'annulation
+             */
+            annule_le?: string | null;
+            /**
+             * Annule Paiement Id
+             * @description Contre-passation : paiement annulé par cette écriture
+             */
+            annule_paiement_id?: string | null;
+            /** Annule Par */
+            annule_par?: string | null;
+            /** Auteur Id */
+            auteur_id?: string | null;
+            /**
+             * Commande Id
+             * Format: uuid
+             */
+            commande_id: string;
+            /**
+             * Cree Le
+             * Format: date-time
+             */
+            cree_le: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "especes" | "mobile_money" | "carte" | "autre";
+            /**
+             * Montant
+             * @description Négatif pour une contre-passation (annulation)
+             */
+            montant: number;
+            /** Motif Annulation */
+            motif_annulation?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PressingProlongationIn */
+        PressingProlongationIn: {
+            /** Minutes */
+            minutes: number;
+            /** Motif */
+            motif: string;
+        };
+        /** PressingRapportMachineOut */
+        PressingRapportMachineOut: {
+            /** Cycles */
+            cycles: number;
+            /**
+             * Heures Utilisation
+             * @description MESURÉES (somme des cycles terminés)
+             */
+            heures_utilisation: number;
+            /**
+             * Machine Id
+             * Format: uuid
+             */
+            machine_id: string;
+            /** Nom */
+            nom: string;
+        };
+        /** PressingRapportOut */
+        PressingRapportOut: {
+            /** Ca Par Jour */
+            ca_par_jour: components["schemas"]["CaJourOut"][];
+            /** @description Montant des lignes avant remise (la somme peut dépasser le CA) */
+            ca_par_service: components["schemas"]["CaParService"];
+            /** Duree Moyenne Cycle Min Mesuree */
+            duree_moyenne_cycle_min_mesuree?: number | null;
+            /** Machines */
+            machines: components["schemas"]["PressingRapportMachineOut"][];
+            /** Nb Commandes */
+            nb_commandes: number;
+            pannes: components["schemas"]["PannesOut"];
+            periode: components["schemas"]["PeriodeOut"];
+            /** Poids Kg */
+            poids_kg: number;
+        };
+        /** PressingRecommandationOut */
+        PressingRecommandationOut: {
+            /** Action Conseillee */
+            action_conseillee?: ("attendre" | "decision_responsable") | null;
+            /**
+             * Etape
+             * @enum {string}
+             */
+            etape: "lavage" | "sechage";
+            /** Faisable */
+            faisable: boolean;
+            /** Machines Exclues */
+            machines_exclues?: components["schemas"]["PressingMachineExclueOut"][];
+            /** Motif Si Non Faisable */
+            motif_si_non_faisable?: string | null;
+            /** Options */
+            options: components["schemas"]["PressingOptionAffectationOut"][];
+        };
+        /** PressingTableauDeBordOut */
+        PressingTableauDeBordOut: {
+            activite: components["schemas"]["ActiviteResume"];
+            /** Alertes */
+            alertes: components["schemas"]["AlerteOut"][];
+            commandes: components["schemas"]["PressingCommandesResume"];
+            finance: components["schemas"]["FinanceResume"];
+            /** Fuseau */
+            fuseau: string;
+            /**
+             * Genere A
+             * Format: date-time
+             */
+            genere_a: string;
+            machines: components["schemas"]["PressingMachinesResume"];
+            /** Occupations */
+            occupations: components["schemas"]["OccupationOut"][];
+            /** Prochaines Liberations */
+            prochaines_liberations: components["schemas"]["LiberationOut"][];
+            utilisation: components["schemas"]["UtilisationResume"];
+        };
+        /** PressingTarif */
+        PressingTarif: {
+            arrondi: components["schemas"]["PressingArrondi"];
+            /**
+             * Devise
+             * @default FCFA
+             * @constant
+             */
+            devise: "FCFA";
+            /**
+             * Prix Kg
+             * @description Montant entier en FCFA
+             */
+            prix_kg: number;
+            /**
+             * Prix Sechage Kg
+             * @description null : le séchage n'est pas proposé
+             */
+            prix_sechage_kg?: number | null;
+        };
+        /** PressingTarifUpdate */
+        PressingTarifUpdate: {
+            arrondi: components["schemas"]["PressingArrondi"];
+            /**
+             * Devise
+             * @default FCFA
+             * @constant
+             */
+            devise: "FCFA";
+            /**
+             * Prix Kg
+             * @description Montant entier en FCFA
+             */
+            prix_kg: number;
+            /** Prix Sechage Kg */
+            prix_sechage_kg?: number | null;
+        };
         /** ProcurementSuggestionItem */
         ProcurementSuggestionItem: {
             /**
@@ -4087,6 +6354,29 @@ export interface components {
          * @enum {string}
          */
         ProductionStation: "KITCHEN" | "BAR" | "DESSERT" | "PACKAGING";
+        /** ProgrammeMachine */
+        ProgrammeMachine: {
+            /**
+             * Duree Min
+             * @description Durée du programme en minutes
+             */
+            duree_min: number;
+            /** Etapes */
+            etapes?: components["schemas"]["EtapeProgramme"][] | null;
+            /**
+             * Intervention Humaine
+             * @description Un opérateur doit intervenir pendant le cycle (semi-automatique)
+             * @default false
+             */
+            intervention_humaine: boolean;
+            /** Nom */
+            nom: string;
+            /**
+             * Types Linge
+             * @description Ex. "coton", "delicat", "synthetique", "drap", "couette", "tout"
+             */
+            types_linge?: string[];
+        };
         /**
          * RefundRejectBody
          * @description Corps optionnel du rejet ; le motif peut aussi venir de `?reason=`.
@@ -4344,6 +6634,12 @@ export interface components {
             restaurant_id: string;
             /** Roles */
             roles: string[];
+            /**
+             * Type Etablissement
+             * @default restaurant
+             * @enum {string}
+             */
+            type_etablissement: "restaurant" | "pressing";
         };
         /** RestaurantConfigResponse */
         RestaurantConfigResponse: {
@@ -4408,6 +6704,13 @@ export interface components {
              * @default 0
              */
             taux_service: number | string;
+            /**
+             * Type Etablissement
+             * @description Type d'établissement, choisi à la création et jamais modifié ensuite.
+             * @default restaurant
+             * @enum {string}
+             */
+            type_etablissement: "restaurant" | "pressing";
         };
         /** RestaurantResponse */
         RestaurantResponse: {
@@ -4459,6 +6762,13 @@ export interface components {
              */
             taux_service: string;
             /**
+             * Type Etablissement
+             * @description Type d'établissement, choisi à la création et jamais modifié ensuite.
+             * @default restaurant
+             * @enum {string}
+             */
+            type_etablissement: "restaurant" | "pressing";
+            /**
              * Updated At
              * Format: date-time
              */
@@ -4499,6 +6809,11 @@ export interface components {
             phone?: string | null;
             /** Taux Service */
             taux_service?: number | string | null;
+            /**
+             * Type Etablissement
+             * @description Lecture seule après la création : toute valeur différente est refusée (409).
+             */
+            type_etablissement?: ("restaurant" | "pressing") | null;
         };
         /**
          * RosOrderStatus
@@ -5104,6 +7419,15 @@ export interface components {
             /** Role */
             role?: ("admin" | "pos" | "restaurant" | "manager" | "chef" | "waiter" | "cashier") | null;
         };
+        /** UtilisationResume */
+        UtilisationResume: {
+            /** Minutes Disponibles */
+            minutes_disponibles: number;
+            /** Minutes Occupees */
+            minutes_occupees: number;
+            /** Taux Pct Aujourdhui */
+            taux_pct_aujourdhui: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -5198,6 +7522,68 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ZoneIn */
+        ZoneIn: {
+            /**
+             * Couleur
+             * @description Couleur hexadécimale #RRGGBB
+             * @default #94A3B8
+             */
+            couleur: string;
+            /**
+             * H
+             * @description Hauteur en % du plan (> 0)
+             */
+            h: number;
+            /** Nom */
+            nom: string;
+            /**
+             * Type
+             * @default autre
+             * @enum {string}
+             */
+            type: "lavage" | "sechage" | "reception" | "attente" | "pliage" | "stockage" | "autre";
+            /**
+             * W
+             * @description Largeur en % du plan (> 0)
+             */
+            w: number;
+            /**
+             * X
+             * @description Pourcentage 0-100 de la largeur/hauteur du plan
+             */
+            x: number;
+            /**
+             * Y
+             * @description Pourcentage 0-100 de la largeur/hauteur du plan
+             */
+            y: number;
+        };
+        /** ZoneOut */
+        ZoneOut: {
+            /** Couleur */
+            couleur: string;
+            /** H */
+            h: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Nom */
+            nom: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "lavage" | "sechage" | "reception" | "attente" | "pliage" | "stockage" | "autre";
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
     };
     responses: never;
@@ -8043,6 +10429,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Changement de `type_etablissement` refusé : le type se fixe à la création. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -8802,6 +11195,46 @@ export interface operations {
             };
         };
     };
+    export_import_template_v1_restaurants__restaurant_id__export_template_get: {
+        parameters: {
+            query: {
+                type: string;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Classeur Excel vierge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Type de modèle inconnu. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     import_restaurant_csv_v1_restaurants__restaurant_id__import_csv_post: {
         parameters: {
             query?: {
@@ -9077,6 +11510,2297 @@ export interface operations {
             };
             /** @description Token JWT absent ou invalide. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_articles_v1_restaurants__restaurant_id__pressing_articles_get: {
+        parameters: {
+            query?: {
+                /** @description Filtre actif/inactif (absent : tous) */
+                actif?: boolean | null;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingArticleResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_article_v1_restaurants__restaurant_id__pressing_articles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingArticleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingArticleResponse"];
+                };
+            };
+            /** @description Un article porte déjà ce nom (casse ignorée). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_article_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingArticleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_article_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingArticleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingArticleResponse"];
+                };
+            };
+            /** @description Un autre article porte déjà ce nom. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_article_v1_restaurants__restaurant_id__pressing_articles__pressing_article_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_article_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cloturer_caisse_v1_restaurants__restaurant_id__pressing_caisse_clotures_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingClotureIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingClotureOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    journal_caisse_v1_restaurants__restaurant_id__pressing_caisse_journal_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalCaisseOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calcul_v1_restaurants__restaurant_id__pressing_calcul_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingCalculRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCalculResponse"];
+                };
+            };
+            /** @description Poids absent, séchage non proposé, article/combinaison inactif ou d'un autre restaurant, remise supérieure au sous-total, aucune ligne. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_clients_v1_restaurants__restaurant_id__pressing_clients_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingClientOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_combinaisons_v1_restaurants__restaurant_id__pressing_combinaisons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCombinaisonResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingCombinaisonCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCombinaisonResponse"];
+                };
+            };
+            /** @description Une combinaison porte déjà ce nom. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Article introuvable, désactivé ou en double. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_combinaison_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCombinaisonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_combinaison_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingCombinaisonUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCombinaisonResponse"];
+                };
+            };
+            /** @description Une autre combinaison porte déjà ce nom. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_combinaison_v1_restaurants__restaurant_id__pressing_combinaisons__pressing_combinaison_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_combinaison_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_commandes_v1_restaurants__restaurant_id__pressing_commandes_get: {
+        parameters: {
+            query?: {
+                statut?: ("recue" | "en_attente_machine" | "en_lavage" | "attente_sechage" | "en_sechage" | "pret" | "livre" | "annulee") | null;
+                q?: string | null;
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeListe"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_commande_v1_restaurants__restaurant_id__pressing_commandes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingCommandeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingCommandeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    affecter_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__affectation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingAffectationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    liberer_affectations_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__affectations_liberer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PressingLibererIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    annuler_commande_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__annuler_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnulationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    livrer_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__livrer_post: {
+        parameters: {
+            query?: {
+                /** @description Livrer malgré un reste à payer (management seulement, audité) */
+                forcer?: boolean;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description `forcer=true` sans rôle de management. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_paiements_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingPaiementOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payer_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingPaiementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingPaiementOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    annuler_paiement_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__paiements__paiement_id__annuler_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+                paiement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnulationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingPaiementOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    marquer_pret_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__pret_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingCommandeOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    recommandation_v1_restaurants__restaurant_id__pressing_commandes__pressing_commande_id__recommandation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                pressing_commande_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingRecommandationOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite, machine occupée, doublon. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    import_pressing_v1_restaurants__restaurant_id__pressing_import_post: {
+        parameters: {
+            query: {
+                type: string;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_pressing_v1_restaurants__restaurant_id__pressing_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogImportResponse"];
+                };
+            };
+            /** @description Fichier inutilisable (extension, en-tête, encodage). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Fichier de plus de 5 Mo. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Un import a déjà eu lieu dans la dernière minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_machines_v1_restaurants__restaurant_id__pressing_machines_get: {
+        parameters: {
+            query?: {
+                categorie?: ("lave_linge" | "seche_linge") | null;
+                etat?: ("libre" | "reservee" | "en_cycle" | "cycle_termine" | "attente_dechargement" | "maintenance" | "hors_service") | null;
+                /** @description Filtre actif/inactif (absent : toutes) */
+                actif?: boolean | null;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_machine_v1_restaurants__restaurant_id__pressing_machines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    close_maintenance_v1_restaurants__restaurant_id__pressing_machines_maintenances__maintenance_id__cloture_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                maintenance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceCloture"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deactivate_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decharger_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__decharger_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PressingDechargementIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingMachineActionOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    demarrer_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__demarrer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemarrageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingMachineActionOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    change_etat_v1_restaurants__restaurant_id__pressing_machines__machine_id__etat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangementEtat"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_historique_v1_restaurants__restaurant_id__pressing_machines__machine_id__historique_get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvenementOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_v1_restaurants__restaurant_id__pressing_machines__machine_id__historique_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvenementOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    interrompre_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__interrompre_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingInterruptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingMachineActionOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_maintenances_v1_restaurants__restaurant_id__pressing_machines__machine_id__maintenances_get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    declare_maintenance_v1_restaurants__restaurant_id__pressing_machines__machine_id__maintenances_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    prolonger_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__prolonger_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingProlongationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingMachineActionOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    terminer_machine_v1_restaurants__restaurant_id__pressing_machines__machine_id__terminer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                machine_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingMachineActionOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modele_v1_restaurants__restaurant_id__pressing_modele_get: {
+        parameters: {
+            query: {
+                type: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Classeur Excel. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_v1_restaurants__restaurant_id__pressing_plan_get: {
+        parameters: {
+            query?: {
+                inclure_inactives?: boolean;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rapports_v1_restaurants__restaurant_id__pressing_rapports_get: {
+        parameters: {
+            query?: {
+                du?: string | null;
+                au?: string | null;
+                granularite?: "jour";
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingRapportOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tableau_de_bord_v1_restaurants__restaurant_id__pressing_tableau_de_bord_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingTableauDeBordOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tarifs_v1_restaurants__restaurant_id__pressing_tarifs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingTarif"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_tarifs_v1_restaurants__restaurant_id__pressing_tarifs_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressingTarifUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressingTarif"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_zones_v1_restaurants__restaurant_id__pressing_zones_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneOut"][];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_zone_v1_restaurants__restaurant_id__pressing_zones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_zone_v1_restaurants__restaurant_id__pressing_zones__zone_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneOut"];
+                };
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Règle métier non respectée. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_zone_v1_restaurants__restaurant_id__pressing_zones__zone_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Introuvable, hors restaurant, ou l'établissement n'est pas un pressing. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Doublon, transition d'état interdite ou machine occupée. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

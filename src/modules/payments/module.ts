@@ -3,6 +3,7 @@ import { defineFeature } from '@/lib/module/types'
 /** Historique des paiements Mobile Money du restaurant (Easy Transact). */
 export default defineFeature({
   id: 'payments',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/payments',

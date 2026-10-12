@@ -1,0 +1,51 @@
+/* Styles propres au module « Paramètres » (classes préfixées pour ne rien toucher ailleurs). */
+
+/* Champ modifié et pas encore enregistré : fond jaune très clair. */
+.settings-changed .v-field {
+  background-color: rgba(var(--v-theme-warning), 0.08);
+}
+
+/* Champ modifié ET valide : contour vert discret. */
+.settings-changed:not(.v-input--error) .v-field__outline {
+  color: rgb(var(--v-theme-success));
+  --v-field-border-opacity: 0.55;
+}
+
+.settings-changed--static {
+  background-color: rgba(var(--v-theme-warning), 0.08);
+  border-radius: 6px;
+}
+
+.settings-tab-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  margin-inline-start: 6px;
+  border-radius: 50%;
+  background: rgb(var(--v-theme-warning));
+}
+
+.settings-banner {
+  border-block-end: 2px solid rgba(var(--v-theme-warning), 0.5);
+}
+
+.settings-window .v-window__container {
+  transition-duration: 0.3s;
+}
+
+.settings-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-window .v-window__container,
+  .settings-window .v-window-item {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Les titres de carte passent à la ligne au lieu d'être coupés (écrans étroits). */
+.settings-page .v-card-title,
+.settings-page .v-card-subtitle {
+  white-space: normal;
+}

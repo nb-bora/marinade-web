@@ -1,6 +1,7 @@
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 import { PATHS } from './paths'
 import type { Capability } from '@/lib/api/types'
+import type { EstablishmentType } from '@/lib/module/types'
 
 /** Ce que les gardes ont besoin de savoir, sans dépendre des stores eux-mêmes. */
 export interface GuardContext {
@@ -14,6 +15,15 @@ export interface GuardContext {
   loadRestaurants: () => Promise<void>
   hasRestaurant: () => boolean
   can: (capability: Capability) => boolean
+
+  /** Type de l'établissement courant (`restaurant` tant qu'il est inconnu). */
+  establishment?: () => EstablishmentType
+
+  /** Accueil du type d'établissement, tel que les modules le déclarent. */
+  homeFor?: (type: EstablishmentType) => string
+
+  /** Appelé quand une page d'un autre type d'établissement est refusée (pour prévenir l'utilisateur). */
+  onWrongEstablishment?: (type: EstablishmentType, wanted: EstablishmentType) => void
 }
 
 /** Renvoie `true` pour laisser passer, ou la destination vers laquelle rediriger. */
@@ -64,6 +74,20 @@ export function createAccessGuard(context: GuardContext): AccessGuard {
 
     if (to.meta.capability && !context.can(to.meta.capability))
       return { path: PATHS.forbidden }
+
+    // Une page réservée à un type d'établissement (pressing, restaurant) renvoie vers l'accueil
+    // du type courant ; l'accueil par défaut y mène sans bruit, toute autre page prévient.
+    const wanted = to.meta.etablissement
+    const current = context.establishment?.()
+
+    if (wanted && current && wanted !== current) {
+      const home = context.homeFor?.(current) ?? PATHS.home
+
+      if (to.path !== PATHS.home)
+        context.onWrongEstablishment?.(current, wanted)
+
+      return { path: home }
+    }
 
     return true
   }

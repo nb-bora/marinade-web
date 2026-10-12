@@ -10,7 +10,7 @@ import { useTenantStore } from '@/stores/tenant.store'
 const session = useSessionStore()
 const tenant = useTenantStore()
 
-const widgets = computed(() => collectWidgets(features, { can: capability => tenant.can(capability) }))
+const widgets = computed(() => collectWidgets(features, { can: capability => tenant.can(capability), etablissement: tenant.typeEtablissement }))
 
 // Un composant asynchrone par widget, créé une seule fois : sinon chaque recalcul de la
 // liste remonterait les widgets et leur ferait refaire leurs requêtes.

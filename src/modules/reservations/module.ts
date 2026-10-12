@@ -3,6 +3,7 @@ import { defineFeature } from '@/lib/module/types'
 /** Calendrier des réservations et liste d'attente de la salle. */
 export default defineFeature({
   id: 'reservations',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/reservations',

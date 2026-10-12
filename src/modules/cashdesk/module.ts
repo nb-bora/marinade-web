@@ -7,6 +7,7 @@ import { defineFeature } from '@/lib/module/types'
  */
 export default defineFeature({
   id: 'cashdesk',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/caisse',

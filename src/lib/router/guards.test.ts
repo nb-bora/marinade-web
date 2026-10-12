@@ -104,3 +104,36 @@ describe('safeRedirect', () => {
     expect(safeRedirect(input)).toBe(expected)
   })
 })
+
+describe('garde d\'accès : type d\'établissement', () => {
+  const pressing = { establishment: () => 'pressing' as const, homeFor: (type: 'restaurant' | 'pressing') => type === 'pressing' ? '/pressing' : '/dashboard' }
+
+  it('renvoie un restaurant qui ouvre une page de pressing, en le prévenant', async () => {
+    const onWrongEstablishment = vi.fn()
+
+    const result = await run(
+      context({ establishment: () => 'restaurant', homeFor: pressing.homeFor, onWrongEstablishment }),
+      route({ etablissement: 'pressing' }, '/pressing/plan'),
+    )
+
+    expect(result).toEqual({ path: '/dashboard' })
+    expect(onWrongEstablishment).toHaveBeenCalledWith('restaurant', 'pressing')
+  })
+
+  it('envoie un pressing qui arrive sur l\'accueil par défaut vers son tableau de bord, sans bruit', async () => {
+    const onWrongEstablishment = vi.fn()
+
+    const result = await run(
+      context({ ...pressing, onWrongEstablishment }),
+      { ...route({ etablissement: 'restaurant' }), path: PATHS.home } as RouteLocationNormalized,
+    )
+
+    expect(result).toEqual({ path: '/pressing' })
+    expect(onWrongEstablishment).not.toHaveBeenCalled()
+  })
+
+  it('laisse passer une page du bon type ou sans type', async () => {
+    await expect(run(context(pressing), route({ etablissement: 'pressing' }))).resolves.toBe(true)
+    await expect(run(context(pressing), route())).resolves.toBe(true)
+  })
+})

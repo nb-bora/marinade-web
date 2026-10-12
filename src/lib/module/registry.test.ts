@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildNavigation, collectRoutes, collectWidgets } from './registry'
+import { buildNavigation, collectRoutes, collectWidgets, homePaths } from './registry'
 import type { FeatureModule } from './types'
 import type { Capability } from '@/lib/api/types'
 
@@ -80,5 +80,65 @@ describe('collectWidgets', () => {
   it('filtre par droit et ordonne', () => {
     expect(collectWidgets(features, audience([])).map(widget => widget.id)).toEqual(['w-open'])
     expect(collectWidgets(features, audience(['cash_desk'])).map(widget => widget.id)).toEqual(['w-open', 'w-cash'])
+  })
+})
+
+describe('type d\'établissement', () => {
+  const typed: FeatureModule[] = [
+    {
+      id: 'resto',
+      etablissement: 'restaurant',
+      accueil: '/dashboard',
+      routes: [{ path: '/salle', component: {}, meta: {} }],
+      nav: [{ id: 'resto-salle', title: 'Salle', icon: 'ri-home-line', to: '/salle', section: 'service' }],
+      widgets: [{ id: 'resto-widget', component: async () => Stub, width: 6 }],
+    },
+    {
+      id: 'press',
+      etablissement: 'pressing',
+      accueil: '/pressing',
+      routes: [{ path: '/pressing', component: {}, meta: {} }, { path: '/pressing/autre', component: {}, meta: { etablissement: 'restaurant' } }],
+      nav: [
+        { id: 'press-plan', title: 'Plan', icon: 'ri-home-line', to: '/pressing/plan', section: 'operations' },
+        { id: 'press-aussi', title: 'Aussi au restaurant', icon: 'ri-home-line', to: '/x', section: 'operations', etablissement: 'restaurant' },
+      ],
+    },
+    {
+      id: 'commun',
+      routes: [{ path: '/parametres', component: {}, meta: {} }],
+      nav: [{ id: 'commun-params', title: 'Paramètres', icon: 'ri-settings-line', to: '/parametres', section: 'management' }],
+    },
+  ]
+
+  const ids = (type: 'restaurant' | 'pressing' | null) =>
+    buildNavigation(typed, { ...audience([]), etablissement: type }).flatMap(section => section.entries.map(entry => entry.id))
+
+  it('un restaurant ne voit jamais le pressing, ni l\'inverse', () => {
+    expect(ids('restaurant')).toEqual(['resto-salle', 'press-aussi', 'commun-params'])
+    expect(ids('pressing')).toEqual(['press-plan', 'commun-params'])
+  })
+
+  it('sans type connu, aucun filtre n\'est appliqué', () => {
+    expect(ids(null)).toHaveLength(4)
+  })
+
+  it('une entrée peut déclarer un autre type que son module', () => {
+    expect(ids('restaurant')).toContain('press-aussi')
+  })
+
+  it('les widgets suivent le type du module', () => {
+    expect(collectWidgets(typed, { ...audience([]), etablissement: 'pressing' })).toEqual([])
+    expect(collectWidgets(typed, { ...audience([]), etablissement: 'restaurant' }).map(widget => widget.id)).toEqual(['resto-widget'])
+  })
+
+  it('copie le type du module dans la route, sauf si la route en déclare un', () => {
+    const { default: routes } = collectRoutes(typed)
+    const byPath = Object.fromEntries(routes.map(route => [route.path, route.meta?.etablissement]))
+
+    expect(byPath).toEqual({ '/salle': 'restaurant', '/pressing': 'pressing', '/pressing/autre': 'restaurant', '/parametres': undefined })
+  })
+
+  it('retrouve la page d\'accueil de chaque type', () => {
+    expect(homePaths(typed)).toEqual({ restaurant: '/dashboard', pressing: '/pressing' })
   })
 })

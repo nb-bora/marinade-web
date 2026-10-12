@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
-import type { DashboardWidget, FeatureModule, NavEntry, NavSectionId } from './types'
+import type { DashboardWidget, EstablishmentType, FeatureModule, NavEntry, NavSectionId } from './types'
 import { NAV_SECTIONS } from './types'
 import type { Capability } from '@/lib/api/types'
 
@@ -7,7 +7,14 @@ import type { Capability } from '@/lib/api/types'
 export interface NavAudience {
   isPlatformAdmin: boolean
   can: (capability: Capability) => boolean
+
+  /** Type de l'établissement courant ; sans lui, aucun filtre par type n'est appliqué. */
+  etablissement?: EstablishmentType | null
 }
+
+/** Une entrée (ou un widget) réservée à un type est cachée aux autres types d'établissement. */
+const matchesEstablishment = (wanted: EstablishmentType | undefined, current: EstablishmentType | null | undefined) =>
+  !wanted || !current || wanted === current
 
 export interface NavSection {
   id: NavSectionId
@@ -19,19 +26,31 @@ export interface NavSection {
 export function collectRoutes(features: FeatureModule[]): { default: RouteRecordRaw[]; blank: RouteRecordRaw[] } {
   const grouped: { default: RouteRecordRaw[]; blank: RouteRecordRaw[] } = { default: [], blank: [] }
 
-  for (const route of features.flatMap(feature => feature.routes))
-    grouped[route.meta?.layout === 'blank' ? 'blank' : 'default'].push(route)
+  for (const feature of features) {
+    for (const route of feature.routes) {
+      // Le type du module vaut pour toutes ses routes, sauf si la route en déclare un autre.
+      const tagged = feature.etablissement && !route.meta?.etablissement
+        ? { ...route, meta: { ...route.meta, etablissement: feature.etablissement } } as RouteRecordRaw
+        : route
+
+      grouped[route.meta?.layout === 'blank' ? 'blank' : 'default'].push(tagged)
+    }
+  }
 
   return grouped
 }
 
 /** Le menu visible par `audience`, section par section, sans section vide. */
 export function buildNavigation(features: FeatureModule[], audience: NavAudience): NavSection[] {
-  const entries = features.flatMap(feature => feature.nav ?? [])
+  const entries = features.flatMap(feature => (feature.nav ?? []).map(entry => ({
+    ...entry,
+    etablissement: entry.etablissement ?? feature.etablissement,
+  })))
 
   const allowed = entries.filter(entry =>
     (!entry.platformAdmin || audience.isPlatformAdmin)
-    && (!entry.capability || audience.can(entry.capability)),
+    && (!entry.capability || audience.can(entry.capability))
+    && matchesEstablishment(entry.etablissement, audience.etablissement),
   )
 
   return NAV_SECTIONS
@@ -46,11 +65,24 @@ export function buildNavigation(features: FeatureModule[], audience: NavAudience
 }
 
 /** Les widgets du tableau de bord que `audience` peut voir, dans l'ordre. */
-export function collectWidgets(features: FeatureModule[], audience: Pick<NavAudience, 'can'>): DashboardWidget[] {
+export function collectWidgets(features: FeatureModule[], audience: Pick<NavAudience, 'can' | 'etablissement'>): DashboardWidget[] {
   return features
-    .flatMap(feature => feature.widgets ?? [])
-    .filter(widget => !widget.capability || audience.can(widget.capability))
+    .flatMap(feature => (feature.widgets ?? []).map(widget => ({ ...widget, etablissement: widget.etablissement ?? feature.etablissement })))
+    .filter(widget => (!widget.capability || audience.can(widget.capability))
+      && matchesEstablishment(widget.etablissement, audience.etablissement))
     .sort((a, b) => (a.order ?? 100) - (b.order ?? 100))
+}
+
+/** Page d'accueil de chaque type d'établissement, telle que les modules la déclarent (`accueil`). */
+export function homePaths(features: FeatureModule[]): Partial<Record<EstablishmentType, string>> {
+  const homes: Partial<Record<EstablishmentType, string>> = {}
+
+  for (const feature of features) {
+    if (feature.etablissement && feature.accueil)
+      homes[feature.etablissement] = feature.accueil
+  }
+
+  return homes
 }
 
 /** Découverte automatique : tout `src/modules/<nom>/module.ts` est une fonctionnalité. */

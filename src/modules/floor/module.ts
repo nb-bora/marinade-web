@@ -3,6 +3,7 @@ import { defineFeature } from '@/lib/module/types'
 /** Plan de salle et service en salle : tables, sessions, prise de commande. */
 export default defineFeature({
   id: 'floor',
+  etablissement: 'restaurant',
   routes: [
     {
       path: '/salle',
