@@ -257,7 +257,6 @@ async function finish() {
 
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname)
 const codeSent = ref(false)
-const codeReceived = ref(false)
 const devCode = ref('')
 const smsCode = ref('')
 
@@ -869,7 +868,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
               :disabled="tierId === null"
               @click="step = 4"
             >
-              Créer un compte avec cette offre
+              Continuer avec cette offre
             </VBtn>
           </div>
         </div>
@@ -1063,15 +1062,7 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
           </VBtn>
 
           <template v-else>
-            <VBtn
-              v-if="!codeReceived"
-              variant="outlined"
-              @click="codeReceived = true"
-            >
-              J'ai reçu un code
-            </VBtn>
             <form
-              v-else
               class="d-flex flex-column gap-3"
               @submit.prevent="verifyCode"
             >
@@ -1093,6 +1084,16 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
                 Vérifier
               </VBtn>
             </form>
+
+            <VBtn
+              variant="text"
+              size="small"
+              prepend-icon="ri-refresh-line"
+              :loading="sending"
+              @click="sendCode"
+            >
+              Renvoyer le code
+            </VBtn>
           </template>
 
           <VAlert
