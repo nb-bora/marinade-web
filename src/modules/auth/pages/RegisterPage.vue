@@ -1,25 +1,18 @@
 <script setup lang="ts">
 import { registrationApi } from '../api'
 import type { PublicTier } from '../api'
+import { savePendingRestaurant } from '../pendingRestaurant'
 import { container } from '@/container'
 import { useAsyncData } from '@/composables/useAsyncData'
-import { useSubmit } from '@/composables/useSubmit'
 import { formatMoney } from '@/lib/format'
 import { describeError } from '@/lib/http/errorMessages'
 import { isApiError } from '@/lib/http/errors'
 import { CAMEROON_CITIES } from '@/lib/phone'
-import { PATHS } from '@/lib/router/paths'
 import { email as emailRule, minLength, positiveNumber, required, sameAs } from '@/lib/validation'
 import EstablishmentTypePicker from '@/modules/setup/components/EstablishmentTypePicker.vue'
 import type { EstablishmentType } from '@/lib/module/types'
-import { useSessionStore } from '@/stores/session.store'
-import { useTenantStore } from '@/stores/tenant.store'
-import { useToast } from '@/stores/toast.store'
 
-const session = useSessionStore()
-const tenant = useTenantStore()
 const router = useRouter()
-const toast = useToast()
 
 const STEPS = [
   { title: 'Bienvenue', subtitle: 'Votre rôle' },
@@ -28,9 +21,6 @@ const STEPS = [
   { title: 'Abonnement', subtitle: 'Votre offre' },
   { title: 'Confirmation', subtitle: 'Vérifier et créer' },
 ]
-
-// Après la confirmation : vérification du téléphone (hors de la barre de progression).
-const PHONE_STEP = STEPS.length
 
 const CUISINES = ['Camerounaise', 'Africaine', 'Française', 'Fusion', 'Italienne', 'Libanaise', 'Asiatique', 'Grillades et braise', 'Fruits de mer', 'Rapide (fast-food)', 'Pâtisserie et café']
 
@@ -179,9 +169,35 @@ function back() {
 
 // --- Création --------------------------------------------------------------------------------
 
+/** Ce que l'on crée après l'activation du compte : le serveur n'a pas de restaurant avant. */
+function restaurantInput() {
+  return {
+    name: restaurant.name.trim(),
+    type_etablissement: restaurant.type,
+    description: restaurant.description.trim() || undefined,
+    logo_url: restaurant.logoUrl.trim() || undefined,
+    city: restaurant.city?.trim() || undefined,
+    country: 'Cameroun',
+    currency: restaurant.currency,
+    phone: restaurantPhone.value || undefined,
+    address: restaurant.address.trim() || undefined,
+
+    // Le serveur n'a pas de champ dédié pour ces choix : on les garde dans la configuration libre.
+    config_jsonb: {
+      type_cuisine: !isPressing.value ? restaurant.cuisine.trim() || undefined : undefined,
+      nombre_tables: !isPressing.value && restaurant.tables ? Number(restaurant.tables) : undefined,
+      plusieurs_restaurants: restaurant.several,
+      role_declare: declaredRole.value,
+      offre_souhaitee: chosenTier.value ? { id: chosenTier.value.id, nom: chosenTier.value.name } : undefined,
+    },
+  }
+}
+
 /**
- * Crée le compte, ouvre la session, puis crée le restaurant. Si le compte existe déjà
- * (e-mail ou téléphone pris), on revient à l'étape « Compte » sur le champ en cause.
+ * Crée le compte (non activé : un code à 6 chiffres part par e-mail), puis envoie vers la page
+ * de saisie du code. Si l'adresse correspond à un compte jamais activé, le serveur renvoie le code
+ * au lieu d'échouer : même redirection. Si le compte est déjà activé (e-mail pris) ou si le
+ * téléphone est pris, on revient à l'étape « Compte » sur le champ en cause.
  */
 async function finish() {
   if (pending.value || !accepted.value)
@@ -191,8 +207,10 @@ async function finish() {
   error.value = ''
   fieldErrors.value = {}
 
+  let registered
+
   try {
-    await container.auth.register({
+    registered = await container.auth.register({
       first_name: account.firstName.trim(),
       last_name: account.lastName.trim(),
       email: normalizedEmail.value,
@@ -218,80 +236,19 @@ async function finish() {
     return
   }
 
-  try {
-    await session.login({ email: normalizedEmail.value, password: account.password }, true)
-    await container.account.createRestaurant({
-      name: restaurant.name.trim(),
-      type_etablissement: restaurant.type,
-      description: restaurant.description.trim() || undefined,
-      logo_url: restaurant.logoUrl.trim() || undefined,
-      city: restaurant.city?.trim() || undefined,
-      country: 'Cameroun',
-      currency: restaurant.currency,
-      phone: restaurantPhone.value || undefined,
-      address: restaurant.address.trim() || undefined,
+  // Le restaurant ne peut être créé qu'une fois le compte activé : on le garde pour la page suivante.
+  savePendingRestaurant(restaurantInput())
 
-      // Le serveur n'a pas de champ dédié pour ces choix : on les garde dans la configuration libre.
-      config_jsonb: {
-        type_cuisine: !isPressing.value ? restaurant.cuisine.trim() || undefined : undefined,
-        nombre_tables: !isPressing.value && restaurant.tables ? Number(restaurant.tables) : undefined,
-        plusieurs_restaurants: restaurant.several,
-        role_declare: declaredRole.value,
-        offre_souhaitee: chosenTier.value ? { id: chosenTier.value.id, nom: chosenTier.value.name } : undefined,
-      },
+  try {
+    await router.replace({
+      path: '/activate-account',
+      query: { email: normalizedEmail.value, wait: String(registered.resend_available_in_seconds || 0) },
     })
-    await tenant.reload()
-    step.value = PHONE_STEP
-  }
-  catch {
-    // Le compte existe : on termine l'ouverture du restaurant depuis la page dédiée.
-    toast.warning('Votre compte est créé. Finalisons votre établissement.')
-    await router.replace(session.isAuthenticated ? PATHS.setup : { path: PATHS.login, query: { registered: '1' } })
   }
   finally {
     pending.value = false
   }
 }
-
-// --- Vérification du téléphone ---------------------------------------------------------------
-
-const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-const codeSent = ref(false)
-const devCode = ref('')
-const smsCode = ref('')
-
-/** Entre dans l'application, puis propose la visite guidée du tableau de bord. */
-async function enter() {
-  toast.success(`Bienvenue sur Marinade, ${account.firstName.trim()} !`)
-  await router.replace(PATHS.home)
-
-  // La visite appartient au gabarit de l'application : on déclenche son bouton dès qu'il est affiché.
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 150))
-
-    const button = document.querySelector<HTMLElement>('[aria-label="Découvrir cette page"]')
-
-    if (button) {
-      button.click()
-
-      return
-    }
-  }
-}
-
-const { submit: sendCode, pending: sending, message: sendError } = useSubmit(async () => {
-  const response = await registrationApi.sendPhoneCode()
-
-  devCode.value = isLocal ? response.verification_code ?? '' : ''
-  codeSent.value = true
-})
-
-const { submit: verifyCode, pending: verifying, message: verifyError } = useSubmit(async () => {
-  await registrationApi.verifyPhone(smsCode.value.replace(/\s/g, ''))
-  session.setUser(await container.account.me())
-  toast.success('Téléphone vérifié.')
-  await enter()
-})
 </script>
 
 <template>
@@ -301,7 +258,6 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
     wide
   >
     <VAlert
-      v-if="step < PHONE_STEP"
       type="info"
       variant="tonal"
       density="compact"
@@ -317,19 +273,17 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       </RouterLink>
     </VAlert>
 
-    <template v-if="step < PHONE_STEP">
-      <AppStepper
-        :steps="STEPS"
-        :current="step"
-        class="mb-2"
-      />
-      <p
-        class="text-caption text-medium-emphasis text-center mb-6"
-        aria-live="polite"
-      >
-        {{ progress || 'Bienvenue' }}
-      </p>
-    </template>
+    <AppStepper
+      :steps="STEPS"
+      :current="step"
+      class="mb-2"
+    />
+    <p
+      class="text-caption text-medium-emphasis text-center mb-6"
+      aria-live="polite"
+    >
+      {{ progress || 'Bienvenue' }}
+    </p>
 
     <VAlert
       v-if="error"
@@ -346,7 +300,11 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       class="register-window"
     >
       <!-- 00 Bienvenue -->
-      <VWindowItem :value="0">
+      <VWindowItem
+        :transition="false"
+        :reverse-transition="false"
+        :value="0"
+      >
         <div class="text-center mb-6">
           <div
             class="welcome-art mx-auto mb-4"
@@ -433,7 +391,11 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       </VWindowItem>
 
       <!-- 01 Compte -->
-      <VWindowItem :value="1">
+      <VWindowItem
+        :transition="false"
+        :reverse-transition="false"
+        :value="1"
+      >
         <VForm
           ref="accountForm"
           validate-on="submit"
@@ -582,7 +544,11 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       </VWindowItem>
 
       <!-- 02 Restaurant -->
-      <VWindowItem :value="2">
+      <VWindowItem
+        :transition="false"
+        :reverse-transition="false"
+        :value="2"
+      >
         <VForm
           ref="restaurantForm"
           validate-on="submit"
@@ -773,7 +739,11 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       </VWindowItem>
 
       <!-- 03 Abonnement -->
-      <VWindowItem :value="3">
+      <VWindowItem
+        :transition="false"
+        :reverse-transition="false"
+        :value="3"
+      >
         <h2 class="text-h6 mb-1">
           Choisissez votre offre
         </h2>
@@ -875,7 +845,11 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
       </VWindowItem>
 
       <!-- 04 Confirmation -->
-      <VWindowItem :value="4">
+      <VWindowItem
+        :transition="false"
+        :reverse-transition="false"
+        :value="4"
+      >
         <h2 class="text-h6 mb-1">
           Tout est prêt 🎉
         </h2>
@@ -1013,104 +987,6 @@ const { submit: verifyCode, pending: verifying, message: verifyError } = useSubm
             @click="finish"
           >
             Créer mon compte
-          </VBtn>
-        </div>
-      </VWindowItem>
-
-      <!-- Vérification du téléphone -->
-      <VWindowItem :value="PHONE_STEP">
-        <div class="text-center mb-5">
-          <VAvatar
-            color="success"
-            variant="tonal"
-            size="64"
-            class="mb-3"
-          >
-            <VIcon
-              icon="ri-smartphone-line"
-              size="32"
-            />
-          </VAvatar>
-          <h2 class="text-h6 mb-1">
-            Vérifier votre téléphone
-          </h2>
-          <p class="text-body-2 text-medium-emphasis mb-0">
-            Votre compte est créé. Confirmez le numéro {{ account.phone }} pour recevoir vos codes par SMS.
-          </p>
-        </div>
-
-        <VAlert
-          v-if="devCode"
-          type="info"
-          variant="tonal"
-          class="mb-4"
-        >
-          Mode développement : le code est <strong>{{ devCode }}</strong>.
-        </VAlert>
-
-        <div
-          class="d-flex flex-column gap-3 mx-auto"
-          style="max-inline-size: 360px;"
-        >
-          <VBtn
-            v-if="!codeSent"
-            :loading="sending"
-            prepend-icon="ri-message-3-line"
-            @click="sendCode"
-          >
-            Envoyer le code par SMS
-          </VBtn>
-
-          <template v-else>
-            <form
-              class="d-flex flex-column gap-3"
-              @submit.prevent="verifyCode"
-            >
-              <VTextField
-                v-model="smsCode"
-                label="Code reçu par SMS"
-                aria-label="Code reçu par SMS"
-                prepend-inner-icon="ri-shield-keyhole-line"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                maxlength="10"
-                autofocus
-              />
-              <VBtn
-                type="submit"
-                :loading="verifying"
-                :disabled="smsCode.trim().length < 4"
-              >
-                Vérifier
-              </VBtn>
-            </form>
-
-            <VBtn
-              variant="text"
-              size="small"
-              prepend-icon="ri-refresh-line"
-              :loading="sending"
-              @click="sendCode"
-            >
-              Renvoyer le code
-            </VBtn>
-          </template>
-
-          <VAlert
-            v-if="sendError || verifyError"
-            type="error"
-            variant="tonal"
-            density="compact"
-          >
-            {{ sendError || verifyError }}
-          </VAlert>
-
-          <VBtn
-            variant="text"
-            color="secondary"
-            @click="enter"
-          >
-            Plus tard
           </VBtn>
         </div>
       </VWindowItem>

@@ -1,6 +1,6 @@
 import { defineFeature } from '@/lib/module/types'
 
-/** Connexion, inscription, mot de passe oublié et vérification de l'e-mail. */
+/** Connexion, inscription, activation du compte par code, mot de passe oublié et vérification de l'e-mail. */
 export default defineFeature({
   id: 'auth',
   routes: [
@@ -13,6 +13,12 @@ export default defineFeature({
       path: '/register',
       component: () => import('./pages/RegisterPage.vue'),
       meta: { layout: 'blank', guestOnly: true, title: 'Créer un compte' },
+    },
+    {
+      // Public : le lien reçu par e-mail s'ouvre aussi dans un navigateur connecté à un autre compte.
+      path: '/activate-account',
+      component: () => import('./pages/ActivateAccountPage.vue'),
+      meta: { layout: 'blank', public: true, title: 'Activer mon compte' },
     },
     {
       path: '/forgot-password',

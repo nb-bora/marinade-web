@@ -148,8 +148,12 @@ withDefaults(defineProps<{
 }
 
 .auth-shell__visual {
-  position: relative;
+  // Collée à la fenêtre : sur un formulaire long, seul le formulaire défile, l'illustration reste en place.
+  position: sticky;
   display: none;
+  align-self: flex-start;
+  block-size: 100dvh;
+  inset-block-start: 0;
   flex: 1 1 58%;
   flex-direction: column;
   align-items: center;

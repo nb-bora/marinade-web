@@ -100,6 +100,10 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
   if (isRecord(body)) {
     const code = typeof body.code === 'string' ? body.code : undefined
 
+    // Données propres à l'erreur (ex. `two_factor_required`, `activation_required`, `attempts_left`) :
+    // elles accompagnent aussi bien un problème `detail` qu'un message métier, il ne faut pas les perdre.
+    const details = isRecord(body.details) ? body.details : {}
+
     // Problème Marinade (application/problem+json) : erreurs de champ dans `errors`, message dans `detail`.
     if (Array.isArray(body.errors)) {
       const fieldErrors = body.errors.filter(isRecord).map(item => ({
@@ -112,6 +116,7 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
           status,
           code,
           fieldErrors,
+          details,
           message: typeof body.detail === 'string' ? body.detail : fieldErrors[0].message,
         })
       }
@@ -128,13 +133,13 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
     }
 
     if (typeof body.detail === 'string')
-      return new ApiError({ status, code, message: body.detail })
+      return new ApiError({ status, code, message: body.detail, details })
 
     if (typeof body.message === 'string') {
       return new ApiError({
         status,
         message: body.message,
-        details: isRecord(body.details) ? body.details : {},
+        details,
       })
     }
   }

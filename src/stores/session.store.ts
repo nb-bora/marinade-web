@@ -40,8 +40,15 @@ export const useSessionStore = defineStore('session', () => {
    * signifie qu'il faut redemander la connexion avec le code de la 2FA.
    */
   async function login(input: LoginInput, remember: boolean): Promise<void> {
-    const tokens = await container.auth.login(input)
+    await open(await container.auth.login(input), remember)
+  }
 
+  /** Active le compte avec le code reçu par e-mail : le serveur ouvre la session dans la foulée. */
+  async function activate(email: string, code: string, remember = true): Promise<void> {
+    await open(await container.auth.activate(email, code), remember)
+  }
+
+  async function open(tokens: { access_token: string; refresh_token: string }, remember: boolean): Promise<void> {
     container.tokens.write({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token }, remember)
 
     try {
@@ -76,5 +83,5 @@ export const useSessionStore = defineStore('session', () => {
     user.value = updated
   }
 
-  return { user, isAuthenticated, isPlatformAdmin, displayName, initials, restore, login, logout, end, setUser }
+  return { user, isAuthenticated, isPlatformAdmin, displayName, initials, restore, login, activate, logout, end, setUser }
 })

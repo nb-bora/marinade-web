@@ -1,10 +1,16 @@
-import type { TokenResponse, TwoFactorRecoveryCodes, TwoFactorSetup, UserCreate, UserResponse } from '@/lib/api/types'
+import type { RegistrationResponse, TokenResponse, TwoFactorRecoveryCodes, TwoFactorSetup, UserCreate } from '@/lib/api/types'
 import type { HttpClient } from '@/lib/http/HttpClient'
 
 export interface LoginInput {
   email: string
   password: string
   twoFactorCode?: string
+}
+
+/** Réponse à « renvoyer le code » : identique que le compte existe ou non. */
+export interface ResendActivationResult {
+  message: string
+  resend_available_in_seconds: number
 }
 
 /** Routes `/v1/auth/*`. Aucune ne dépend d'un restaurant. */
@@ -19,8 +25,21 @@ export class AuthApi {
     )
   }
 
+  /**
+   * Crée un compte NON activé : un code à 6 chiffres part par e-mail. Si l'adresse correspond à un
+   * compte jamais activé, le serveur renvoie le code au lieu d'échouer (même forme de réponse).
+   */
   register(input: UserCreate) {
-    return this.http.post<UserResponse>('/v1/auth/register', input, { anonymous: true, withoutTenant: true })
+    return this.http.post<RegistrationResponse>('/v1/auth/register', input, { anonymous: true, withoutTenant: true })
+  }
+
+  /** Active le compte avec le code reçu par e-mail et ouvre la session. */
+  activate(email: string, code: string) {
+    return this.http.post<TokenResponse>('/v1/auth/activate', { email, code }, { anonymous: true, withoutTenant: true })
+  }
+
+  resendActivation(email: string) {
+    return this.http.post<ResendActivationResult>('/v1/auth/resend-activation', { email }, { anonymous: true, withoutTenant: true })
   }
 
   /** Le jeton de rafraîchissement voyage en paramètre d'URL (contrat du back). */

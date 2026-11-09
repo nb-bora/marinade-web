@@ -13,6 +13,9 @@ type Schemas = components['schemas']
 export type TokenResponse = Schemas['TokenResponse']
 export type UserResponse = Schemas['UserResponse']
 export type UserCreate = Schemas['UserCreate']
+
+/** Compte créé (ou compte en attente retrouvé) : il reste à saisir le code reçu par e-mail. */
+export type RegistrationResponse = Schemas['RegistrationResponse']
 export type TwoFactorSetup = Schemas['TwoFactorSetupResponse']
 export type TwoFactorRecoveryCodes = Schemas['TwoFactorRecoveryCodesResponse']
 

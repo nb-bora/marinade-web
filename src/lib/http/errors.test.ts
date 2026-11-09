@@ -11,6 +11,35 @@ describe('apiErrorFromResponse', () => {
     expect(error.message).toBe('Restaurant not found')
   })
 
+  it('conserve les détails d\'un problème Marinade (detail + details) : 2FA et activation du compte en dépendent', () => {
+    // Forme réelle d'un refus de connexion : le message est dans `detail`, les données dans `details`.
+    const error = apiErrorFromResponse(401, {
+      type: 'https://marinade.app/problems/auth.activation_required',
+      status: 401,
+      detail: 'Votre compte n\'est pas encore activé. Saisissez le code reçu par email.',
+      code: 'auth.activation_required',
+      message: 'Votre compte n\'est pas encore activé. Saisissez le code reçu par email.',
+      details: { activation_required: true, email: 'awa@example.com', resend_available_in_seconds: 60 },
+    })
+
+    expect(error.code).toBe('auth.activation_required')
+    expect(error.details).toEqual({ activation_required: true, email: 'awa@example.com', resend_available_in_seconds: 60 })
+  })
+
+  it('conserve le nombre d\'essais restants d\'un code d\'activation refusé', () => {
+    const error = apiErrorFromResponse(400, {
+      detail: 'Code d\'activation incorrect.',
+      code: 'auth.activation_code_invalid',
+      details: { attempts_left: 3 },
+    })
+
+    expect(error.details.attempts_left).toBe(3)
+  })
+
+  it('garde des détails vides quand le serveur n\'en envoie pas', () => {
+    expect(apiErrorFromResponse(404, { detail: 'Introuvable', code: 'http.not_found' }).details).toEqual({})
+  })
+
   it('lit la validation Pydantic et en tire les erreurs par champ', () => {
     const error = apiErrorFromResponse(422, {
       detail: [

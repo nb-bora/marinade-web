@@ -31,8 +31,21 @@ const { submit, pending, message } = useSubmit(async () => {
     )
   }
   catch (error) {
-    if ((error as { details?: { two_factor_required?: boolean } }).details?.two_factor_required) {
+    const details = (error as { details?: { two_factor_required?: boolean; activation_required?: boolean; resend_available_in_seconds?: number } }).details
+
+    if (details?.two_factor_required) {
       needsCode.value = true
+
+      return false
+    }
+
+    // Mot de passe juste, compte jamais activé : le serveur vient de renvoyer un code par e-mail.
+    // Ce n'est pas un échec de connexion (il ne compte pas dans le blocage) : on va le saisir.
+    if (details?.activation_required) {
+      await router.replace({
+        path: '/activate-account',
+        query: { email: email.value.trim().toLowerCase(), wait: String(details.resend_available_in_seconds ?? 0) },
+      })
 
       return false
     }

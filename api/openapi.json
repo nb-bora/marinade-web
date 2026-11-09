@@ -1,6 +1,28 @@
 {
   "components": {
     "schemas": {
+      "ActivateAccountRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 12,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "ActivateAccountRequest",
+        "type": "object"
+      },
       "ActiviteResume": {
         "properties": {
           "duree_estimee_moyenne_min": {
@@ -9140,6 +9162,133 @@
         "title": "RefundRejectBody",
         "type": "object"
       },
+      "RegistrationResponse": {
+        "description": "Compte créé (ou compte en attente d'activation retrouvé) : il reste à saisir le code.",
+        "properties": {
+          "activation_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation Code"
+          },
+          "activation_expires_in_seconds": {
+            "title": "Activation Expires In Seconds",
+            "type": "integer"
+          },
+          "activation_required": {
+            "default": true,
+            "title": "Activation Required",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "phone_verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Verified At"
+          },
+          "resend_available_in_seconds": {
+            "title": "Resend Available In Seconds",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "two_factor_enabled": {
+            "default": false,
+            "title": "Two Factor Enabled",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "phone",
+          "first_name",
+          "last_name",
+          "role",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "activation_expires_in_seconds",
+          "resend_available_in_seconds"
+        ],
+        "title": "RegistrationResponse",
+        "type": "object"
+      },
+      "ResendActivationRequest": {
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ResendActivationRequest",
+        "type": "object"
+      },
       "ReservationCancelRequest": {
         "properties": {
           "reason": {
@@ -13759,6 +13908,49 @@
         ]
       }
     },
+    "/v1/auth/activate": {
+      "post": {
+        "description": "Active le compte avec le code reçu par email et ouvre la session. Erreurs : code incorrect (`attempts_left` dans `details`), expiré, ou trop d'essais (il faut alors en redemander un).",
+        "operationId": "activate_account_v1_auth_activate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Account",
+        "tags": [
+          "authentication",
+          "authentication"
+        ]
+      }
+    },
     "/v1/auth/forgot-password": {
       "post": {
         "operationId": "forgot_password_v1_auth_forgot_password_post",
@@ -13912,6 +14104,7 @@
     },
     "/v1/auth/register": {
       "post": {
+        "description": "Crée un compte **non activé** et envoie par email un code à 6 chiffres, valable 15 minutes (à saisir sur `POST /auth/activate`). Si l'email correspond déjà à un compte jamais activé, rien n'est créé : le compte en attente est mis à jour, le code est renvoyé et la réponse est **200** (au lieu de 201). Un email déjà activé donne 409.",
         "operationId": "register_v1_auth_register_post",
         "requestBody": {
           "content": {
@@ -13928,7 +14121,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
+                  "$ref": "#/components/schemas/RegistrationResponse"
                 }
               }
             },
@@ -13946,6 +14139,47 @@
           }
         },
         "summary": "Register",
+        "tags": [
+          "authentication",
+          "authentication"
+        ]
+      }
+    },
+    "/v1/auth/resend-activation": {
+      "post": {
+        "description": "Renvoie un code d'activation. Réponse identique que le compte existe ou non, pour ne pas révéler quelles adresses sont inscrites. Un nouvel envoi n'est possible qu'une minute après le précédent.",
+        "operationId": "resend_activation_v1_auth_resend_activation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendActivationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Activation",
         "tags": [
           "authentication",
           "authentication"

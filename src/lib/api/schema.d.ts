@@ -176,6 +176,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Account
+         * @description Active le compte avec le code reçu par email et ouvre la session. Erreurs : code incorrect (`attempts_left` dans `details`), expiré, ou trop d'essais (il faut alors en redemander un).
+         */
+        post: operations["activate_account_v1_auth_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -256,8 +276,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register */
+        /**
+         * Register
+         * @description Crée un compte **non activé** et envoie par email un code à 6 chiffres, valable 15 minutes (à saisir sur `POST /auth/activate`). Si l'email correspond déjà à un compte jamais activé, rien n'est créé : le compte en attente est mis à jour, le code est renvoyé et la réponse est **200** (au lieu de 201). Un email déjà activé donne 409.
+         */
         post: operations["register_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/resend-activation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Activation
+         * @description Renvoie un code d'activation. Réponse identique que le compte existe ou non, pour ne pas révéler quelles adresses sont inscrites. Un nouvel envoi n'est possible qu'une minute après le précédent.
+         */
+        post: operations["resend_activation_v1_auth_resend_activation_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3420,6 +3463,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivateAccountRequest */
+        ActivateAccountRequest: {
+            /** Code */
+            code: string;
+            /** Email */
+            email: string;
+        };
         /** ActiviteResume */
         ActiviteResume: {
             /**
@@ -6819,6 +6869,64 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /**
+         * RegistrationResponse
+         * @description Compte créé (ou compte en attente d'activation retrouvé) : il reste à saisir le code.
+         */
+        RegistrationResponse: {
+            /** Activation Code */
+            activation_code?: string | null;
+            /** Activation Expires In Seconds */
+            activation_expires_in_seconds: number;
+            /**
+             * Activation Required
+             * @default true
+             */
+            activation_required: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /** Email Verified At */
+            email_verified_at?: string | null;
+            /** First Name */
+            first_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Last Name */
+            last_name: string;
+            /** Phone */
+            phone: string;
+            /** Phone Verified At */
+            phone_verified_at?: string | null;
+            /** Resend Available In Seconds */
+            resend_available_in_seconds: number;
+            /** Role */
+            role: string;
+            /**
+             * Two Factor Enabled
+             * @default false
+             */
+            two_factor_enabled: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ResendActivationRequest */
+        ResendActivationRequest: {
+            /** Email */
+            email: string;
+        };
         /** ReservationCancelRequest */
         ReservationCancelRequest: {
             /** Reason */
@@ -8587,6 +8695,39 @@ export interface operations {
             };
         };
     };
+    activate_account_v1_auth_activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     forgot_password_v1_auth_forgot_password_post: {
         parameters: {
             query?: never;
@@ -8723,7 +8864,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["RegistrationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_activation_v1_auth_resend_activation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendActivationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
