@@ -1,110 +1,188 @@
-<!-- Détail d'une réservation : le client, l'horaire, la table, et les actions possibles selon son statut. -->
+<!--
+  Détail d'une réservation dans un tiroir. Les actions suivent l'état : la principale d'abord, puis
+  les autres, « Absent » seulement après l'heure prévue. Annuler demande un motif ; absent et
+  supprimer demandent une confirmation.
+-->
 <script setup lang="ts">
-import { onKeyStroke } from '@vueuse/core'
+import { useNow } from '@vueuse/core'
 import { reservationsApi } from '../api'
-import { formatFullDate } from '../calendar'
-import { coversLabel, isOpen, presentStatus, sourceLabel } from '../labels'
-import type { Reservation } from '../types'
-import CancelDialog from './CancelDialog.vue'
+import { formatClock, formatFullDate } from '../calendar'
+import type { Booking } from '../composables/useReservationRange'
+import { ACTION_LABELS, actionsFor, coversLabel, formatWait, messageOf, presentStatus, primaryActionFor, sourceLabel } from '../labels'
+import type { ReservationAction } from '../labels'
+import type { ClientSummary, Reservation } from '../types'
 import ReservationStatusChip from './ReservationStatusChip.vue'
+import CancelDialog from './CancelDialog.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useSubmit } from '@/composables/useSubmit'
-import { formatDateTime, formatTime } from '@/lib/format'
-import { formatNational, nationalDigits } from '@/lib/phone'
+import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
 
 const props = defineProps<{
-  reservation: Reservation | null
-  tableLabel: string
+  booking: Booking | null
+  zone: string
+  tableLabelOf: (id: string | null | undefined) => string
 }>()
 
 const emit = defineEmits<{
-  changed: []
+  changed: [reservation: Reservation]
   edit: [reservation: Reservation]
+  deleted: [id: string]
   close: []
 }>()
 
+const tenant = useTenantStore()
 const toast = useToast()
-const confirm = useConfirm()
+const askConfirm = useConfirm()
+const now = useNow({ interval: 30_000 })
+
 const cancelOpen = ref(false)
+const busy = ref(false)
+const summary = ref<ClientSummary | null>(null)
 
-const isShown = computed({
-  get: () => props.reservation !== null,
-  set: shown => {
-    if (!shown)
-      emit('close')
-  },
+const reservation = computed(() => props.booking?.reservation ?? null)
+const view = computed(() => (reservation.value ? presentStatus(reservation.value.status) : null))
+
+const ICONS: Record<ReservationAction, string> = {
+  confirm: 'ri-checkbox-circle-line',
+  checkin: 'ri-user-received-line',
+  noshow: 'ri-user-unfollow-line',
+  complete: 'ri-flag-line',
+  edit: 'ri-edit-line',
+  cancel: 'ri-close-circle-line',
+}
+
+const actions = computed(() => {
+  if (!props.booking || !reservation.value)
+    return []
+
+  return actionsFor(reservation.value.status, { starts: props.booking.start, now: now.value })
 })
 
-onKeyStroke('Escape', () => {
-  // Échap dans une fenêtre ouverte (modifier, annuler, confirmer) ne ferme que cette fenêtre.
-  if (isShown.value && !cancelOpen.value && !document.querySelector('.v-dialog.v-overlay--active'))
-    emit('close')
+const primary = computed(() => (reservation.value ? primaryActionFor(reservation.value.status) : null))
+
+const waitText = computed(() => {
+  if (!props.booking || !reservation.value || reservation.value.status !== 'pending')
+    return ''
+
+  const minutes = (props.booking.start.getTime() - now.value.getTime()) / 60_000
+
+  return minutes > 0 ? `Dans ${formatWait(minutes)}` : ''
 })
 
-const start = computed(() => props.reservation ? new Date(props.reservation.reservation_date) : null)
-const end = computed(() => props.reservation && start.value ? new Date(start.value.getTime() + props.reservation.duration_minutes * 60_000) : null)
+// Historique du client -----------------------------------------------------------------------
 
-const open = computed(() => props.reservation ? isOpen(props.reservation.status) : false)
-const canCheckIn = computed(() => open.value)
-const canEdit = computed(() => props.reservation ? !['cancelled', 'no_show', 'completed'].includes(props.reservation.status) : false)
+watch(() => reservation.value?.customer_id ?? null, async customerId => {
+  summary.value = null
 
-const phone = computed(() => {
-  const value = props.reservation?.customer_phone
+  if (!customerId || !tenant.currentId)
+    return
 
-  if (!value)
-    return null
+  try {
+    summary.value = await reservationsApi.customerSummary(tenant.currentId, customerId)
+  }
+  catch {
+    summary.value = null
+  }
+}, { immediate: true })
 
-  const digits = nationalDigits(value)
+const historyLine = computed(() => {
+  const s = summary.value
 
-  return digits.length === 9 ? { text: `+237 ${formatNational(digits)}`, href: `tel:+237${digits}` } : { text: value, href: `tel:${value}` }
+  if (!s)
+    return ''
+
+  const parts = [`${s.visites} visite${s.visites > 1 ? 's' : ''}`]
+
+  if (s.absences)
+    parts.push(`${s.absences} absence${s.absences > 1 ? 's' : ''}`)
+  if (s.derniere_visite)
+    parts.push(`dernière visite le ${new Date(s.derniere_visite).toLocaleDateString('fr-FR', { timeZone: props.zone })}`)
+
+  return parts.join(' · ')
 })
 
-const { submit: confirmReservation, pending: confirming } = useSubmit(async () => {
-  if (!props.reservation)
+// Actions --------------------------------------------------------------------------------------
+
+const ACTION_CALLS: Partial<Record<ReservationAction, (r: Reservation) => Promise<Reservation>>> = {
+  confirm: r => reservationsApi.confirm(r.id),
+  checkin: r => reservationsApi.checkIn(r.id),
+  complete: r => reservationsApi.complete(r.id),
+}
+
+/** Message de réussite par action directe (confirmer, arrivée, terminer). */
+const ACTION_SUCCESS: Partial<Record<ReservationAction, string>> = {
+  confirm: 'Réservation confirmée.',
+  checkin: 'Client installé : table occupée, session ouverte.',
+  complete: 'Réservation terminée.',
+}
+
+async function run(action: ReservationAction) {
+  const current = reservation.value
+
+  if (!current)
     return
 
-  const accepted = await confirm({
-    title: 'Confirmer cette réservation ?',
-    text: `La réservation de ${props.reservation.customer_name} sera marquée comme confirmée.`,
-    confirmLabel: 'Enregistrer',
-  })
+  if (action === 'edit') {
+    emit('edit', current)
 
-  if (!accepted)
+    return
+  }
+
+  if (action === 'cancel') {
+    cancelOpen.value = true
+
+    return
+  }
+
+  if (action === 'noshow') {
+    const accepted = await askConfirm({
+      title: 'Marquer le client absent ?',
+      text: 'La réservation est close. La table est libérée si rien d\'autre ne la prend dans les quatre heures.',
+      confirmLabel: 'Marquer absent',
+      danger: true,
+    })
+
+    if (!accepted)
+      return
+
+    await perform(() => reservationsApi.noShow(current.id), 'Client marqué absent.')
+
+    return
+  }
+
+  const call = ACTION_CALLS[action]
+  const success = ACTION_SUCCESS[action]
+
+  if (call && success)
+    await perform(() => call(current), success)
+}
+
+async function perform(call: () => Promise<Reservation>, success: string) {
+  busy.value = true
+
+  try {
+    const saved = await call()
+
+    toast.success(success)
+    emit('changed', saved)
+  }
+  catch (error) {
+    toast.error(messageOf(error))
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+async function remove() {
+  const current = reservation.value
+
+  if (!current)
     return
 
-  await reservationsApi.confirm(props.reservation.id)
-  toast.success('Réservation confirmée.')
-  emit('changed')
-})
-
-const { submit: checkIn, pending: checkingIn } = useSubmit(async () => {
-  if (!props.reservation)
-    return
-
-  const accepted = await confirm({
-    title: 'Enregistrer l\'arrivée ?',
-    text: `${props.reservation.customer_name} sera marqué comme arrivé.`,
-    confirmLabel: 'Enregistrer',
-  })
-
-  if (!accepted)
-    return
-
-  await reservationsApi.checkIn(props.reservation.id)
-  toast.success(`${props.reservation.customer_name} est arrivé.`)
-  emit('changed')
-})
-
-const { submit: removeReservation, pending: removing, message: removeError } = useSubmit(async () => {
-  const reservation = props.reservation
-
-  if (!reservation)
-    return
-
-  const accepted = await confirm({
-    title: 'Supprimer cette réservation ?',
-    text: `La réservation de ${reservation.customer_name} sera définitivement effacée. Pour garder une trace, préférez l'annulation.`,
+  const accepted = await askConfirm({
+    title: 'Supprimer la réservation ?',
+    text: 'Elle disparaît de l\'agenda. L\'historique du client est conservé.',
     confirmLabel: 'Supprimer',
     danger: true,
   })
@@ -112,289 +190,227 @@ const { submit: removeReservation, pending: removing, message: removeError } = u
   if (!accepted)
     return
 
-  await reservationsApi.remove(reservation.id)
-  toast.success('Réservation supprimée.')
-  emit('close')
-  emit('changed')
-})
+  busy.value = true
 
-const busy = computed(() => confirming.value || checkingIn.value || removing.value)
+  try {
+    await reservationsApi.remove(current.id)
+    toast.success('Réservation supprimée.')
+    emit('deleted', current.id)
+  }
+  catch (error) {
+    toast.error(messageOf(error))
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+function onCancelled(saved: Reservation) {
+  emit('changed', saved)
+}
+
+const phoneHref = computed(() => (reservation.value?.customer_phone ? `tel:${reservation.value.customer_phone.replace(/\s/g, '')}` : ''))
 </script>
 
 <template>
   <VNavigationDrawer
-    v-model="isShown"
+    :model-value="booking !== null"
     location="end"
     temporary
     width="440"
+    class="reservation-drawer"
     aria-label="Détail de la réservation"
+    @update:model-value="value => { if (!value) emit('close') }"
   >
-    <div class="d-flex align-center justify-space-between pa-4 pb-2">
-      <h2 class="text-h6">
-        Réservation
-      </h2>
-      <IconBtn
-        aria-label="Fermer"
-        @click="emit('close')"
-      >
-        <VIcon icon="ri-close-line" />
-      </IconBtn>
-    </div>
-
     <div
-      v-if="reservation && start && end"
-      class="px-4 pb-6"
+      v-if="reservation && view && booking"
+      class="pa-5 reservation-drawer__body"
     >
-      <div class="d-flex align-center justify-space-between gap-3 mb-3">
-        <ReservationStatusChip :status="reservation.status" />
-        <span class="text-body-2 text-medium-emphasis">{{ sourceLabel(reservation.source) }}</span>
+      <div class="d-flex align-start justify-space-between ga-3">
+        <div class="min-w-0">
+          <div class="text-caption text-medium-emphasis">
+            {{ formatFullDate(booking.start, zone) }}
+          </div>
+          <h2
+            class="text-h5 mt-1 reservation-drawer__name"
+            :class="{ 'reservation-drawer__name--closed': view.closed }"
+          >
+            {{ reservation.customer_name }}
+          </h2>
+          <div class="mt-2">
+            <ReservationStatusChip :status="reservation.status" />
+          </div>
+        </div>
+        <VBtn
+          icon="ri-close-line"
+          variant="text"
+          aria-label="Fermer le détail"
+          @click="emit('close')"
+        />
       </div>
-
-      <div class="text-h5 font-weight-semibold">
-        {{ reservation.customer_name }}
-      </div>
-      <div class="text-body-1 mt-1">
-        {{ formatFullDate(start) }}
-      </div>
-      <div class="text-body-1 text-medium-emphasis">
-        de {{ formatTime(start) }} à {{ formatTime(end) }}
-      </div>
-
-      <VAlert
-        v-if="removeError"
-        type="error"
-        variant="tonal"
-        density="compact"
-        class="mt-4"
-      >
-        {{ removeError }}
-      </VAlert>
-
-      <VAlert
-        v-if="reservation.status === 'cancelled' && reservation.cancel_reason"
-        type="error"
-        variant="tonal"
-        density="compact"
-        class="mt-4"
-      >
-        Annulée : {{ reservation.cancel_reason }}
-      </VAlert>
 
       <VList
         density="compact"
-        class="pa-0 mt-4 bg-transparent"
+        class="mt-4 pa-0 reservation-drawer__facts"
       >
-        <VListItem class="px-0">
-          <template #prepend>
-            <VIcon
-              icon="ri-group-line"
-              class="me-3"
-            />
-          </template>
-          <VListItemSubtitle>Couverts</VListItemSubtitle>
-          <VListItemTitle>{{ coversLabel(reservation.party_size) }}</VListItemTitle>
-        </VListItem>
-        <VListItem class="px-0">
-          <template #prepend>
-            <VIcon
-              icon="ri-layout-grid-line"
-              class="me-3"
-            />
-          </template>
-          <VListItemSubtitle>Table</VListItemSubtitle>
-          <VListItemTitle>{{ tableLabel }}</VListItemTitle>
-        </VListItem>
-        <VListItem class="px-0">
-          <template #prepend>
-            <VIcon
-              icon="ri-phone-line"
-              class="me-3"
-            />
-          </template>
-          <VListItemSubtitle>Téléphone</VListItemSubtitle>
-          <VListItemTitle>
-            <a
-              v-if="phone"
-              :href="phone.href"
-              class="text-primary text-decoration-none"
-            >{{ phone.text }}</a>
-            <span v-else>Non renseigné</span>
-          </VListItemTitle>
+        <VListItem
+          prepend-icon="ri-time-line"
+          title="Heure"
+          :subtitle="`${formatClock(booking.start, zone)} · ${reservation.duration_minutes} min`"
+        />
+        <VListItem
+          prepend-icon="ri-group-line"
+          title="Couverts"
+          :subtitle="coversLabel(reservation.party_size)"
+        />
+        <VListItem
+          prepend-icon="ri-layout-grid-line"
+          title="Table"
+          :subtitle="reservation.table_id ? tableLabelOf(reservation.table_id) : 'Pas encore choisie'"
+        />
+        <VListItem
+          v-if="reservation.customer_phone"
+          prepend-icon="ri-phone-line"
+          title="Téléphone"
+        >
+          <a
+            :href="phoneHref"
+            class="reservation-drawer__link"
+          >{{ reservation.customer_phone }}</a>
         </VListItem>
         <VListItem
           v-if="reservation.customer_email"
-          class="px-0"
-        >
-          <template #prepend>
-            <VIcon
-              icon="ri-mail-line"
-              class="me-3"
-            />
-          </template>
-          <VListItemSubtitle>E-mail</VListItemSubtitle>
-          <VListItemTitle class="text-wrap">
-            {{ reservation.customer_email }}
-          </VListItemTitle>
-        </VListItem>
+          prepend-icon="ri-mail-line"
+          title="E-mail"
+          :subtitle="reservation.customer_email"
+        />
         <VListItem
-          v-if="reservation.notes"
-          class="px-0"
-        >
-          <template #prepend>
-            <VIcon
-              icon="ri-sticky-note-line"
-              class="me-3"
-            />
-          </template>
-          <VListItemSubtitle>Notes</VListItemSubtitle>
-          <VListItemTitle class="text-wrap notes">
-            {{ reservation.notes }}
-          </VListItemTitle>
-        </VListItem>
+          prepend-icon="ri-store-2-line"
+          title="Réservé"
+          :subtitle="sourceLabel(reservation.source)"
+        />
       </VList>
 
-      <template v-if="reservation.invites.length">
-        <h3 class="text-subtitle-1 font-weight-medium mt-5 mb-1">
-          Invités
-        </h3>
-        <ul class="pa-0 ma-0 text-body-2">
-          <li
-            v-for="guest in reservation.invites"
-            :key="guest.id"
-            class="py-1"
-          >
-            {{ guest.name || 'Invité' }}<span
-              v-if="guest.is_vegetarian"
-              class="text-medium-emphasis"
-            > · végétarien</span>
-          </li>
-        </ul>
-      </template>
-
-      <h3 class="text-subtitle-1 font-weight-medium mt-5 mb-2">
-        Suivi
-      </h3>
-      <VTimeline
-        density="compact"
-        side="end"
-        align="start"
-        truncate-line="both"
+      <div
+        v-if="reservation.notes"
+        class="reservation-drawer__note mt-4"
       >
-        <VTimelineItem
-          dot-color="secondary"
-          size="x-small"
-        >
-          <div class="font-weight-medium">
-            Réservation enregistrée
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ formatDateTime(reservation.created_at) }}
-          </div>
-        </VTimelineItem>
-        <VTimelineItem
-          v-if="reservation.confirmed_at"
-          :dot-color="presentStatus('confirmed').color"
-          size="x-small"
-        >
-          <div class="font-weight-medium">
-            Confirmée
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ formatDateTime(reservation.confirmed_at) }}
-          </div>
-        </VTimelineItem>
-        <VTimelineItem
-          v-if="reservation.checked_in_at"
-          :dot-color="presentStatus('checked_in').color"
-          size="x-small"
-        >
-          <div class="font-weight-medium">
-            Arrivée du client
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ formatDateTime(reservation.checked_in_at) }}
-          </div>
-        </VTimelineItem>
-        <VTimelineItem
-          v-if="reservation.cancelled_at"
-          :dot-color="presentStatus('cancelled').color"
-          size="x-small"
-        >
-          <div class="font-weight-medium">
-            Annulée
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ formatDateTime(reservation.cancelled_at) }}
-          </div>
-        </VTimelineItem>
-      </VTimeline>
+        <div class="text-caption text-medium-emphasis mb-1">
+          Notes
+        </div>
+        <div class="text-body-2">
+          {{ reservation.notes }}
+        </div>
+      </div>
 
-      <div class="d-flex flex-wrap gap-2 mt-6">
-        <VBtn
-          v-if="reservation.status === 'pending'"
-          color="primary"
-          prepend-icon="ri-checkbox-circle-line"
-          :loading="confirming"
-          :disabled="busy && !confirming"
-          @click="confirmReservation"
+      <div
+        class="reservation-drawer__history mt-4"
+        aria-live="polite"
+      >
+        <div class="text-caption text-medium-emphasis mb-1">
+          Historique client
+        </div>
+        <div
+          v-if="historyLine"
+          class="text-body-2"
         >
-          Confirmer
-        </VBtn>
-        <VBtn
-          v-if="canCheckIn"
-          :color="reservation.status === 'pending' ? undefined : 'primary'"
-          :variant="reservation.status === 'pending' ? 'tonal' : 'flat'"
-          prepend-icon="ri-user-received-line"
-          :loading="checkingIn"
-          :disabled="busy && !checkingIn"
-          @click="checkIn"
+          {{ historyLine }}
+        </div>
+        <div
+          v-else-if="reservation.customer_id"
+          class="text-body-2 text-medium-emphasis"
         >
-          Arrivée
-        </VBtn>
+          Pas encore de visite enregistrée.
+        </div>
+        <div
+          v-else
+          class="text-body-2 text-medium-emphasis"
+        >
+          Client non enregistré dans la fiche clients.
+        </div>
+      </div>
+
+      <div
+        v-if="waitText"
+        class="text-body-2 text-medium-emphasis mt-3"
+      >
+        {{ waitText }}
+      </div>
+
+      <div
+        v-if="reservation.status === 'checked_in'"
+        class="text-body-2 mt-4"
+      >
+        Installé à {{ reservation.checked_in_at ? formatClock(new Date(reservation.checked_in_at), zone) : '—' }}.
+        <span v-if="!reservation.table_id">Aucune table : choisissez-la sur le plan.</span>
+      </div>
+
+      <div
+        v-if="actions.length"
+        class="reservation-drawer__actions mt-5"
+      >
         <VBtn
-          v-if="canEdit"
-          variant="outlined"
-          color="secondary"
-          prepend-icon="ri-edit-line"
+          v-for="action in actions"
+          :key="action"
+          :color="action === 'cancel' ? 'error' : action === primary ? 'primary' : undefined"
+          :variant="action === primary ? 'flat' : action === 'cancel' ? 'text' : 'outlined'"
+          :prepend-icon="ICONS[action]"
+          :loading="busy && action !== 'edit' && action !== 'cancel'"
           :disabled="busy"
-          @click="emit('edit', reservation)"
+          block
+          class="mb-2"
+          @click="run(action)"
         >
-          Modifier
+          {{ ACTION_LABELS[action] }}
         </VBtn>
-        <VBtn
-          v-if="open"
-          variant="outlined"
-          color="warning"
-          prepend-icon="ri-calendar-close-line"
-          :disabled="busy"
-          @click="cancelOpen = true"
-        >
-          Annuler
-        </VBtn>
-        <VSpacer />
+      </div>
+
+      <div class="mt-4 text-right">
         <VBtn
           variant="text"
           color="error"
+          size="small"
           prepend-icon="ri-delete-bin-line"
-          :loading="removing"
-          :disabled="busy && !removing"
-          @click="removeReservation"
+          :disabled="busy"
+          @click="remove"
         >
-          Supprimer
+          Supprimer la réservation
         </VBtn>
       </div>
     </div>
-  </VNavigationDrawer>
 
-  <CancelDialog
-    v-model="cancelOpen"
-    :reservation="reservation"
-    @cancelled="emit('changed')"
-  />
+    <CancelDialog
+      v-model="cancelOpen"
+      :reservation="reservation"
+      @cancelled="onCancelled"
+    />
+  </VNavigationDrawer>
 </template>
 
 <style scoped>
-.notes {
-  white-space: pre-line;
+.reservation-drawer__name--closed {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: rgb(var(--v-theme-on-surface) / 0.7);
+}
+
+.reservation-drawer__link {
+  color: rgb(var(--v-theme-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.reservation-drawer__note,
+.reservation-drawer__history {
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.25);
+  border-radius: 16px;
+}
+
+.reservation-drawer__actions .v-btn {
+  min-height: 44px;
+}
+
+.min-w-0 {
+  min-width: 0;
 }
 </style>

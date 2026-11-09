@@ -1,60 +1,126 @@
 <script setup lang="ts">
-import { formatElapsed, linesOf, orderNumber, ticketTime, urgencyOf } from '../labels'
-import type { LaneInfo } from '../labels'
+import { formatElapsed, linesOf, nextAction, orderNumber, placeOf, recallRemainingMs, ticketTime, urgencyOf } from '../labels'
 import type { Ticket } from '../types'
 
 const props = defineProps<{
   ticket: Ticket
-  lane: LaneInfo
 
-  /** Heure courante en millisecondes : un seul minuteur pour tous les tickets. */
+  /** Heure courante en millisecondes : un seul minuteur pour toutes les cartes. */
   now: number
   fresh?: boolean
   busy?: boolean
 }>()
 
-defineEmits<{ advance: [] }>()
+const emit = defineEmits<{
+  advance: []
+  recall: []
+  togglePriority: []
+}>()
 
 const lines = computed(() => linesOf(props.ticket))
+const number = computed(() => orderNumber(props.ticket))
+const place = computed(() => placeOf(props.ticket))
+const action = computed(() => nextAction(props.ticket))
+
+const isOpenTicket = computed(() => props.ticket.status === 'QUEUED' || props.ticket.status === 'IN_PREPARATION')
+const isReady = computed(() => props.ticket.status === 'READY')
+const isServed = computed(() => props.ticket.status === 'SERVED')
+
 const elapsed = computed(() => Math.max(0, props.now - ticketTime(props.ticket.created_at)))
 
-// Une fois le plat prêt, l'attente n'est plus un souci : le minuteur redevient neutre.
-const urgency = computed(() => (props.lane.value === 'READY' ? 'normal' : urgencyOf(elapsed.value)))
+// Seul le travail à faire vire de couleur. Un plat prêt ou servi n'est plus une urgence.
+const urgency = computed(() => (isOpenTicket.value ? urgencyOf(elapsed.value) : 'normal'))
+
+const readySince = computed(() => (props.ticket.ready_at ? Math.max(0, props.now - ticketTime(props.ticket.ready_at)) : null))
+const recallLeft = computed(() => recallRemainingMs(props.ticket, props.now))
+const canRecall = computed(() => isServed.value && recallLeft.value > 0)
+const urgent = computed(() => props.ticket.priority > 0)
 const hasNotes = computed(() => lines.value.some(line => line.notes))
+
+const summary = computed(() => {
+  const count = lines.value.reduce((sum, line) => sum + line.quantity, 0)
+
+  return `${place.value}, ${count} article${count > 1 ? 's' : ''}`
+})
+
+const timerText = computed(() => {
+  if (isReady.value && readySince.value !== null)
+    return `Prêt · ${formatElapsed(readySince.value)}`
+
+  return formatElapsed(elapsed.value)
+})
+
+/** Entrée sur la carte elle-même (pas sur un bouton, qui a déjà son propre effet). */
+function onEnter() {
+  if (action.value && !props.busy)
+    emit('advance')
+}
 </script>
 
 <template>
   <article
     class="ticket"
-    :class="[`ticket--${urgency}`, { 'ticket--fresh': fresh }]"
-    :aria-label="`Commande ${orderNumber(ticket)}`"
+    :class="[
+      `ticket--${urgency}`,
+      {
+        'ticket--fresh': fresh,
+        'ticket--urgent': urgent,
+        'ticket--ready': isReady,
+        'ticket--served': isServed,
+      },
+    ]"
+    tabindex="0"
+    role="group"
+    :aria-label="`Commande ${number}, ${summary}${urgent ? ', urgente' : ''}`"
+    @keydown.enter.self.prevent="onEnter"
   >
     <header class="ticket__head">
       <div class="min-w-0">
         <div class="ticket__number">
-          Commande n° {{ orderNumber(ticket) }}
+          Commande {{ number }}
         </div>
-        <VChip
-          v-if="fresh"
-          color="primary"
-          size="small"
-          label
-          class="mt-1 font-weight-semibold"
-        >
-          Nouveau
-        </VChip>
+        <div class="ticket__place">
+          <VIcon
+            icon="ri-map-pin-line"
+            size="18"
+            aria-hidden="true"
+          />
+          <span>{{ place }}</span>
+        </div>
+        <div class="ticket__badges">
+          <VChip
+            v-if="urgent"
+            color="error"
+            size="small"
+            label
+            class="font-weight-semibold"
+          >
+            Urgent
+          </VChip>
+          <VChip
+            v-if="fresh"
+            color="primary"
+            size="small"
+            label
+            class="font-weight-semibold"
+          >
+            Nouveau
+          </VChip>
+        </div>
       </div>
 
       <div
+        v-if="!isServed"
         class="ticket__timer"
         :class="`ticket__timer--${urgency}`"
-        :aria-label="`En attente depuis ${formatElapsed(elapsed)}`"
+        :aria-label="timerText"
       >
         <VIcon
           icon="ri-timer-line"
-          size="22"
+          size="20"
+          aria-hidden="true"
         />
-        <span>{{ formatElapsed(elapsed) }}</span>
+        <span class="tabular-nums">{{ timerText }}</span>
       </div>
     </header>
 
@@ -64,7 +130,7 @@ const hasNotes = computed(() => lines.value.some(line => line.notes))
         :key="index"
         class="ticket__line"
       >
-        <span class="ticket__qty">{{ line.quantity }}×</span>
+        <span class="ticket__qty tabular-nums">{{ line.quantity }}×</span>
         <div class="min-w-0">
           <div class="ticket__name">
             {{ line.name }}
@@ -75,7 +141,8 @@ const hasNotes = computed(() => lines.value.some(line => line.notes))
           >
             <VIcon
               icon="ri-sticky-note-line"
-              size="20"
+              size="18"
+              aria-hidden="true"
             />
             <span>{{ line.notes }}</span>
           </div>
@@ -83,18 +150,51 @@ const hasNotes = computed(() => lines.value.some(line => line.notes))
       </li>
     </ul>
 
-    <VBtn
-      block
-      size="x-large"
-      class="ticket__action"
-      :color="lane.color"
-      :prepend-icon="lane.action.icon"
-      :loading="busy"
-      :aria-label="`${lane.action.label} : commande ${orderNumber(ticket)}${hasNotes ? ' (avec notes)' : ''}`"
-      @click="$emit('advance')"
-    >
-      {{ lane.action.label }}
-    </VBtn>
+    <footer class="ticket__actions">
+      <VBtn
+        v-if="isOpenTicket"
+        class="ticket__urgent"
+        variant="tonal"
+        :color="urgent ? 'error' : 'secondary'"
+        prepend-icon="ri-alarm-warning-line"
+        :aria-pressed="urgent"
+        :disabled="busy"
+        :aria-label="`${urgent ? 'Retirer l\'urgence' : 'Marquer urgent'} : commande ${number}`"
+        @click="emit('togglePriority')"
+      >
+        {{ urgent ? 'Retirer l\'urgence' : 'Marquer urgent' }}
+      </VBtn>
+
+      <VBtn
+        v-if="action"
+        class="ticket__action"
+        size="x-large"
+        :color="isOpenTicket && ticket.status === 'QUEUED' ? 'info' : isOpenTicket ? 'warning' : 'success'"
+        :prepend-icon="action.icon"
+        :loading="busy"
+        :disabled="busy"
+        :aria-label="`${action.label} : commande ${number}${hasNotes ? ', avec notes' : ''}`"
+        @click="emit('advance')"
+      >
+        {{ action.label }}
+      </VBtn>
+
+      <VBtn
+        v-if="canRecall"
+        class="ticket__recall"
+        size="large"
+        variant="outlined"
+        color="warning"
+        prepend-icon="ri-arrow-go-back-line"
+        :loading="busy"
+        :disabled="busy"
+        :aria-label="`Rappeler la commande ${number} : encore ${Math.ceil(recallLeft / 1000)} secondes`"
+        @click="emit('recall')"
+      >
+        Rappeler
+        <span class="ticket__countdown tabular-nums">{{ Math.ceil(recallLeft / 1000) }} s</span>
+      </VBtn>
+    </footer>
   </article>
 </template>
 
@@ -102,13 +202,19 @@ const hasNotes = computed(() => lines.value.some(line => line.notes))
 .ticket {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
   padding: 1rem 1.125rem 1.125rem;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-inline-start: 6px solid rgb(var(--v-theme-secondary));
-  border-radius: 12px;
+  border: 1px solid rgba(var(--v-border-color), 0.14);
+  border-inline-start: 6px solid rgb(var(--v-theme-info));
+  border-radius: 16px;
   background: rgb(var(--v-theme-surface));
-  box-shadow: 0 2px 8px rgba(var(--v-shadow-key-umbra-color), 0.12);
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.ticket:focus-visible {
+  outline: 3px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
 }
 
 .ticket--warning {
@@ -119,115 +225,143 @@ const hasNotes = computed(() => lines.value.some(line => line.notes))
   border-inline-start-color: rgb(var(--v-theme-error));
 }
 
+.ticket--ready {
+  border-inline-start-color: rgb(var(--v-theme-success));
+}
+
+.ticket--served {
+  border-inline-start-color: rgba(var(--v-theme-on-surface), 0.3);
+  opacity: 0.85;
+}
+
+.ticket--urgent {
+  box-shadow: 0 0 0 1px rgba(var(--v-theme-error), 0.35), 0 2px 8px rgba(var(--v-theme-error), 0.12);
+}
+
 .ticket--fresh {
-  animation: arrival 8s ease-out;
-  outline: 2px solid rgb(var(--v-theme-primary));
+  border-color: rgba(var(--v-theme-primary), 0.5);
 }
 
 .ticket__head {
-  display: flex;
   align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
   justify-content: space-between;
-  gap: 0.75rem;
 }
 
 .ticket__number {
-  font-size: 1.25rem;
+  font-size: 1.0625rem;
   font-weight: 700;
-  line-height: 1.75rem;
+  letter-spacing: 0.02em;
+}
+
+.ticket__place {
+  align-items: center;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  display: flex;
+  font-size: 0.9375rem;
+  gap: 0.25rem;
+  margin-block-start: 0.125rem;
+}
+
+.ticket__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-block-start: 0.375rem;
 }
 
 .ticket__timer {
-  display: inline-flex;
-  flex: none;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 8px;
-  background: rgba(var(--v-theme-on-surface), 0.08);
-  font-size: 1.5rem;
-  font-variant-numeric: tabular-nums;
+  border-radius: 10px;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 1.125rem;
   font-weight: 700;
-  line-height: 2rem;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  white-space: nowrap;
+}
+
+.ticket__timer--normal {
+  background: rgba(var(--v-theme-on-surface), 0.05);
 }
 
 .ticket__timer--warning {
-  background: rgb(var(--v-theme-warning));
-  color: rgb(var(--v-theme-on-warning));
+  background: rgba(var(--v-theme-warning), 0.16);
+  color: rgb(var(--v-theme-warning));
 }
 
 .ticket__timer--alert {
-  background: rgb(var(--v-theme-error));
-  color: rgb(var(--v-theme-on-error));
+  background: rgba(var(--v-theme-error), 0.14);
+  color: rgb(var(--v-theme-error));
 }
 
 .ticket__lines {
-  display: grid;
-  gap: 0.875rem;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
   list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .ticket__line {
-  display: flex;
   align-items: flex-start;
-  gap: 0.875rem;
+  display: flex;
+  gap: 0.75rem;
 }
 
 .ticket__qty {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: 3.25rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 8px;
-  background: rgba(var(--v-theme-primary), 0.16);
-  color: rgb(var(--v-theme-primary));
-  font-size: 1.75rem;
-  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  font-size: 1.25rem;
   font-weight: 800;
-  line-height: 2.5rem;
+  line-height: 1.5rem;
+  min-inline-size: 2.5rem;
 }
 
 .ticket__name {
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 2rem;
-  overflow-wrap: anywhere;
-}
-
-.ticket__note {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.375rem;
-  margin-block-start: 0.375rem;
-  padding: 0.375rem 0.625rem;
-  border-radius: 8px;
-  background: rgba(var(--v-theme-warning), 0.22);
-  border-inline-start: 4px solid rgb(var(--v-theme-warning));
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.5rem;
   overflow-wrap: anywhere;
 }
 
+/* Les notes sont la première chose à lire : fond ambré et icône, pas une simple ligne grise. */
+.ticket__note {
+  align-items: flex-start;
+  background: rgba(var(--v-theme-warning), 0.14);
+  border-radius: 8px;
+  color: rgb(var(--v-theme-warning));
+  display: flex;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  gap: 0.375rem;
+  margin-block-start: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.ticket__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .ticket__action {
-  min-block-size: 4rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0;
+  flex: 1 1 12rem;
+  min-block-size: 56px;
 }
 
-@keyframes arrival {
-  from {
-    background: rgba(var(--v-theme-primary), 0.3);
-  }
+.ticket__urgent,
+.ticket__recall {
+  min-block-size: 48px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ticket--fresh {
-    animation: none;
-  }
+.ticket__countdown {
+  font-weight: 500;
+  margin-inline-start: 0.375rem;
+  opacity: 0.8;
 }
 </style>

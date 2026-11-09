@@ -1,331 +1,292 @@
 <!--
-  Grille horaire d'un ou plusieurs jours : les réservations sont des blocs colorés par statut,
-  placés à leur heure et à la hauteur de leur durée ; ceux qui se chevauchent se partagent la largeur.
+  Grille horaire d'une journée (heure du restaurant). Chaque réservation est un bloc coloré par
+  état, placé à son heure ; les blocs qui se chevauchent se partagent la largeur. Un clic sur une
+  zone libre propose une réservation à cette demi-heure. Le trait rouge marque l'heure actuelle.
 -->
 <script setup lang="ts">
-import { HOUR_PX, dayKey, formatWeekday, formatWeekdayShort, layoutDay, minutesOfDay, sameDay } from '../calendar'
-import { coversLabel, isDead, presentStatus } from '../labels'
 import type { Booking } from '../composables/useReservationRange'
+import { HOUR_PX, dayKey, formatClock, fromInputs, layoutDay, minutesOfDay, sameDay, toDateInput } from '../calendar'
+import { presentStatus } from '../labels'
 
 const props = defineProps<{
-  days: Date[]
+  day: Date
   bookings: Booking[]
+  zone: string
+  now: Date
   tableLabelOf: (id: string | null | undefined) => string
-
-  /** Autorise le clic sur un créneau vide pour créer une réservation. */
-  canCreate: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [booking: Booking]
-  create: [date: Date]
-  pickDay: [date: Date]
+  open: [booking: Booking]
+  create: [instant: Date]
 }>()
 
-const compact = computed(() => props.days.length > 1)
+const DEFAULT_FIRST = 11 * 60
+const DEFAULT_LAST = 23 * 60
 
-const byDay = computed(() => {
-  const groups = new Map<string, Booking[]>()
+const dayBookings = computed(() => props.bookings.filter(({ start }) => dayKey(start, props.zone) === dayKey(props.day, props.zone)))
 
-  for (const booking of props.bookings) {
-    const key = dayKey(booking.start)
+/** Plage horaire affichée : de 11 h à 23 h, élargie aux réservations qui sortent de cette plage. */
+const range = computed(() => {
+  let first = DEFAULT_FIRST
+  let last = DEFAULT_LAST
 
-    groups.set(key, [...(groups.get(key) ?? []), booking])
+  for (const { reservation, start } of dayBookings.value) {
+    const from = minutesOfDay(start, props.zone)
+    const to = from + reservation.duration_minutes
+
+    first = Math.min(first, Math.floor(from / 60) * 60)
+    last = Math.max(last, Math.min(1440, Math.ceil(to / 60) * 60))
   }
 
-  return groups
+  return { first: Math.max(0, first), last: Math.min(1440, last) }
 })
 
-// La plage horaire s'élargit si une réservation tombe en dehors des heures habituelles.
-const startHour = computed(() => {
-  const earliest = Math.min(...props.bookings.map(({ start }) => start.getHours()), 10)
+const hours = computed(() => {
+  const count = (range.value.last - range.value.first) / 60
 
-  return Math.max(0, earliest)
+  return Array.from({ length: count }, (_, index) => range.value.first + index * 60)
 })
 
-const endHour = computed(() => {
-  const latest = Math.max(...props.bookings.map(({ end, start }) => (sameDay(start, end) ? Math.ceil(minutesOfDay(end) / 60) : 24)), 23)
+const height = computed(() => ((range.value.last - range.value.first) / 60) * HOUR_PX)
 
-  return Math.min(24, latest + (latest < 24 ? 1 : 0))
+const placed = computed(() => layoutDay(dayBookings.value.map(booking => {
+  const start = minutesOfDay(booking.start, props.zone) - range.value.first
+  const end = Math.min(range.value.last - range.value.first, start + booking.reservation.duration_minutes)
+
+  return { item: booking, start, end: Math.max(end, start + 30) }
+})))
+
+const isToday = computed(() => sameDay(props.now, props.day, props.zone))
+
+const nowTop = computed(() => {
+  if (!isToday.value)
+    return null
+
+  const minutes = minutesOfDay(props.now, props.zone) - range.value.first
+
+  return minutes < 0 || minutes > range.value.last - range.value.first ? null : (minutes / 60) * HOUR_PX
 })
 
-const hours = computed(() => Array.from({ length: endHour.value - startHour.value }, (_, index) => startHour.value + index))
-const bodyHeight = computed(() => hours.value.length * HOUR_PX)
-const topOf = (minutes: number) => ((minutes - startHour.value * 60) / 60) * HOUR_PX
+const hourLabel = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:00`
 
-const columns = computed(() => props.days.map(day => {
-  const items = (byDay.value.get(dayKey(day)) ?? []).map(booking => ({
-    item: booking,
-    start: minutesOfDay(booking.start),
-    end: Math.min(endHour.value * 60, sameDay(booking.start, booking.end) ? minutesOfDay(booking.end) : 24 * 60),
-  }))
+function blockStyle(start: number, end: number, lane: number, lanes: number) {
+  const width = 100 / lanes
 
   return {
-    day,
-    placed: layoutDay(items).map(entry => ({
-      ...entry,
-      style: {
-        insetBlockStart: `${topOf(entry.start)}px`,
-        blockSize: `${Math.max(((entry.end - entry.start) / 60) * HOUR_PX - 2, 26)}px`,
-        insetInlineStart: `calc(${(entry.lane / entry.lanes) * 100}% + 2px)`,
-        inlineSize: `calc(${100 / entry.lanes}% - 4px)`,
-      },
-      short: ((entry.end - entry.start) / 60) * HOUR_PX < 48,
-    })),
+    top: `${(start / 60) * HOUR_PX}px`,
+    height: `${Math.max(30, ((end - start) / 60) * HOUR_PX - 3)}px`,
+    left: `calc(${lane * width}% + 2px)`,
+    width: `calc(${width}% - 4px)`,
   }
-}))
-
-const now = useNow({ interval: 60_000 })
-const nowTop = computed(() => topOf(minutesOfDay(now.value)))
-const nowVisible = computed(() => nowTop.value >= 0 && nowTop.value <= bodyHeight.value)
-
-const timeFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
-
-/** Clic sur un créneau vide : l'heure visée, arrondie à la demi-heure. */
-function onColumnClick(event: MouseEvent, day: Date) {
-  if (!props.canCreate || event.target !== event.currentTarget)
-    return
-
-  const offset = (event as MouseEvent & { offsetY: number }).offsetY
-  const minutes = Math.floor(((offset / HOUR_PX) * 60 + startHour.value * 60) / 30) * 30
-  const date = new Date(day.getFullYear(), day.getMonth(), day.getDate(), Math.floor(minutes / 60), minutes % 60)
-
-  emit('create', date)
 }
 
-function describe(booking: Booking) {
-  const { reservation } = booking
+function describe(booking: Booking): string {
+  const { reservation, start } = booking
+  const table = reservation.table_id ? props.tableLabelOf(reservation.table_id) : 'sans table'
 
-  return `${timeFormat.format(booking.start)}, ${reservation.customer_name}, ${coversLabel(reservation.party_size)}, ${presentStatus(reservation.status).label}`
+  return `${reservation.customer_name}, ${formatClock(start, props.zone)}, ${reservation.party_size} couvert${reservation.party_size > 1 ? 's' : ''}, ${table}, ${presentStatus(reservation.status).label}`
+}
+
+/** Clic sur une zone libre : proposition à la demi-heure cliquée. */
+function onGridClick(event: MouseEvent) {
+  const target = event.currentTarget as HTMLElement
+
+  if ((event.target as HTMLElement).closest('.time-grid__block'))
+    return
+
+  const rect = target.getBoundingClientRect()
+  const minutes = range.value.first + Math.floor(((event.clientY - rect.top) / HOUR_PX) * 60 / 30) * 30
+  const date = toDateInput(props.day, props.zone)
+  const time = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+
+  emit('create', fromInputs(date, time, props.zone))
 }
 </script>
 
 <template>
-  <div class="tg">
-    <div class="tg__head">
-      <div class="tg__gutter-head" />
-      <button
-        v-for="day in days"
-        :key="dayKey(day)"
-        type="button"
-        class="tg__day-head"
-        :class="{ 'tg__day-head--today': sameDay(day, now) }"
-        :aria-label="`Afficher le ${formatWeekday(day)} ${day.getDate()}`"
-        @click="emit('pickDay', day)"
-      >
-        <span class="text-caption">{{ compact ? formatWeekdayShort(day) : formatWeekday(day) }}</span>
-        <span class="tg__day-number text-h6">{{ day.getDate() }}</span>
-      </button>
-    </div>
-
-    <div
-      class="tg__body"
-      :style="{ blockSize: `${bodyHeight}px` }"
-    >
-      <div class="tg__gutter">
-        <span
-          v-for="hour in hours"
-          :key="hour"
-          class="tg__hour text-caption text-medium-emphasis"
-          :style="{ insetBlockStart: `${(hour - startHour) * HOUR_PX}px` }"
-        >{{ String(hour).padStart(2, '0') }}:00</span>
-      </div>
-
+  <div
+    class="time-grid"
+    role="group"
+    aria-label="Grille horaire de la journée"
+  >
+    <div class="time-grid__scroll">
       <div
-        v-for="column in columns"
-        :key="dayKey(column.day)"
-        class="tg__col"
-        :class="{ 'tg__col--create': canCreate }"
-        :style="{ '--hour': `${HOUR_PX}px` }"
-        @click="onColumnClick($event, column.day)"
+        class="time-grid__body"
+        :style="{ height: `${height}px` }"
       >
-        <button
-          v-for="entry in column.placed"
-          :key="entry.item.reservation.id"
-          type="button"
-          class="tg__event"
-          :class="[
-            `tg__event--${presentStatus(entry.item.reservation.status).color}`,
-            { 'tg__event--dead': isDead(entry.item.reservation.status), 'tg__event--short': entry.short },
-          ]"
-          :style="entry.style"
-          :aria-label="describe(entry.item)"
-          @click.stop="emit('select', entry.item)"
-        >
-          <span class="tg__event-title">
-            <strong>{{ timeFormat.format(entry.item.start) }}</strong>
-            {{ entry.item.reservation.customer_name }}
-          </span>
-          <span
-            v-if="!entry.short"
-            class="tg__event-meta"
+        <div class="time-grid__hours">
+          <div
+            v-for="minutes in hours"
+            :key="minutes"
+            class="time-grid__hour"
+            :style="{ height: `${HOUR_PX}px` }"
           >
-            {{ coversLabel(entry.item.reservation.party_size) }}<template v-if="!compact || column.placed.length < 3"> · {{ tableLabelOf(entry.item.reservation.table_id) }}</template>
-          </span>
-        </button>
+            {{ hourLabel(minutes) }}
+          </div>
+        </div>
 
         <div
-          v-if="nowVisible && sameDay(column.day, now)"
-          class="tg__now"
-          :style="{ insetBlockStart: `${nowTop}px` }"
-        />
+          class="time-grid__column"
+          :style="{ height: `${height}px` }"
+          @click="onGridClick"
+        >
+          <div
+            v-for="minutes in hours"
+            :key="`line-${minutes}`"
+            class="time-grid__line"
+            :style="{ top: `${((minutes - range.first) / 60) * HOUR_PX}px` }"
+          />
+
+          <button
+            v-for="entry in placed"
+            :key="entry.item.reservation.id"
+            type="button"
+            class="time-grid__block"
+            :class="[`time-grid__block--${entry.item.reservation.status}`, { 'time-grid__block--closed': presentStatus(entry.item.reservation.status).closed }]"
+            :style="blockStyle(entry.start, entry.end, entry.lane, entry.lanes)"
+            :aria-label="describe(entry.item)"
+            @click.stop="emit('open', entry.item)"
+          >
+            <span class="time-grid__time">
+              {{ formatClock(entry.item.start, zone) }}
+            </span>
+            <span class="time-grid__name">{{ entry.item.reservation.customer_name }}</span>
+            <span class="time-grid__meta">
+              {{ entry.item.reservation.party_size }} · {{ entry.item.reservation.table_id ? tableLabelOf(entry.item.reservation.table_id) : 'sans table' }}
+            </span>
+            <span class="time-grid__status">{{ presentStatus(entry.item.reservation.status).label }}</span>
+          </button>
+
+          <div
+            v-if="nowTop !== null"
+            class="time-grid__now"
+            :style="{ top: `${nowTop}px` }"
+            aria-hidden="true"
+          />
+        </div>
       </div>
     </div>
+    <p
+      v-if="!dayBookings.length"
+      class="time-grid__empty text-body-2 text-medium-emphasis"
+    >
+      Aucune réservation ce jour-là. Cliquez sur une heure pour en créer une.
+    </p>
   </div>
 </template>
 
 <style scoped>
-.tg {
-  --gutter: 52px;
-
-  min-inline-size: 0;
+.time-grid__scroll {
+  overflow-x: hidden;
 }
 
-.tg__head,
-.tg__body {
+.time-grid__body {
   display: grid;
-  grid-template-columns: var(--gutter) repeat(v-bind('days.length'), minmax(0, 1fr));
-}
-
-.tg__head {
-  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-.tg__day-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-block: 8px;
-  border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-}
-
-.tg__day-head:hover {
-  background: rgba(var(--v-theme-on-surface), var(--v-hover-opacity));
-}
-
-.tg__day-number {
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.tg__day-head--today .tg__day-number {
-  display: grid;
-  border-radius: 50%;
-  background: rgb(var(--v-theme-primary));
-  block-size: 2rem;
-  color: rgb(var(--v-theme-on-primary));
-  inline-size: 2rem;
-  place-items: center;
-}
-
-.tg__body {
+  grid-template-columns: 56px minmax(0, 1fr);
   position: relative;
 }
 
-.tg__gutter {
+.time-grid__hours {
   position: relative;
-}
-
-.tg__hour {
-  position: absolute;
-  inset-inline-end: 8px;
-  transform: translateY(-50%);
-}
-
-.tg__hour:first-child {
-  transform: translateY(2px);
-}
-
-.tg__col {
-  position: relative;
-  border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(var(--hour) - 1px),
-    rgba(var(--v-border-color), var(--v-border-opacity)) calc(var(--hour) - 1px),
-    rgba(var(--v-border-color), var(--v-border-opacity)) var(--hour)
-  );
-}
-
-.tg__col--create {
-  cursor: copy;
-}
-
-.tg__event {
-  --tone: var(--v-theme-primary);
-
-  position: absolute;
-  display: flex;
-  overflow: hidden;
-  flex-direction: column;
-  padding: 4px 8px;
-  border-inline-start: 3px solid rgb(var(--tone));
-  border-radius: 6px;
-  background: color-mix(in srgb, rgb(var(--tone)) 18%, rgb(var(--v-theme-surface)));
-  color: rgb(var(--v-theme-on-surface));
-  cursor: pointer;
-  font-size: 0.8125rem;
-  line-height: 1.25;
-  text-align: start;
-  transition: box-shadow 0.12s ease;
-}
-
-.tg__event:hover {
-  box-shadow: 0 2px 8px rgba(var(--v-shadow-key-umbra-color), 0.3);
-  z-index: 2;
-}
-
-.tg__event:focus-visible {
-  outline: 2px solid rgb(var(--v-theme-primary));
-  z-index: 3;
-}
-
-.tg__event--warning { --tone: var(--v-theme-warning); }
-.tg__event--info { --tone: var(--v-theme-info); }
-.tg__event--success { --tone: var(--v-theme-success); }
-.tg__event--error { --tone: var(--v-theme-error); }
-.tg__event--secondary { --tone: var(--v-theme-secondary); }
-
-.tg__event--dead {
-  opacity: 0.6;
-  text-decoration: line-through;
-}
-
-.tg__event--short {
-  justify-content: center;
-}
-
-.tg__event-title,
-.tg__event-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tg__event-meta {
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.75rem;
+  color: rgb(var(--v-theme-on-surface) / 0.6);
+  font-variant-numeric: tabular-nums;
 }
 
-.tg__now {
+.time-grid__hour {
+  transform: translateY(-8px);
+  padding-right: 8px;
+  text-align: right;
+}
+
+.time-grid__column {
+  position: relative;
+  border-left: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.25);
+  cursor: cell;
+}
+
+.time-grid__line {
   position: absolute;
-  z-index: 1;
-  background: rgb(var(--v-theme-error));
-  block-size: 2px;
-  inline-size: 100%;
-  inset-inline: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.18);
   pointer-events: none;
 }
 
-.tg__now::before {
+.time-grid__block {
   position: absolute;
-  border-radius: 50%;
-  background: inherit;
-  block-size: 10px;
-  content: '';
-  inline-size: 10px;
-  inset-block-start: -4px;
-  inset-inline-start: -5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: rgb(var(--v-theme-surface-variant, 240 240 240) / 0.6);
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.time-grid__block:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+}
+
+.time-grid__block--pending { border-left-color: rgb(var(--v-theme-warning)); background: rgb(var(--v-theme-warning) / 0.14); }
+.time-grid__block--confirmed { border-left-color: rgb(var(--v-theme-success)); background: rgb(var(--v-theme-success) / 0.14); }
+.time-grid__block--checked_in { border-left-color: rgb(var(--v-theme-info)); background: rgb(var(--v-theme-info) / 0.16); }
+.time-grid__block--no_show { border-left-color: rgb(var(--v-theme-error)); background: rgb(var(--v-theme-error) / 0.12); }
+.time-grid__block--completed,
+.time-grid__block--cancelled { border-left-color: rgb(var(--v-theme-outline, 128 128 128)); opacity: 0.75; }
+
+.time-grid__block--closed .time-grid__name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.time-grid__time,
+.time-grid__meta,
+.time-grid__status {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-grid__time {
+  font-weight: 600;
+}
+
+.time-grid__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.time-grid__meta,
+.time-grid__status {
+  font-size: 0.75rem;
+  color: rgb(var(--v-theme-on-surface) / 0.75);
+}
+
+.time-grid__now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgb(var(--v-theme-error));
+  pointer-events: none;
+}
+
+.time-grid__empty {
+  margin-top: 12px;
 }
 </style>

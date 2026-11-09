@@ -23,27 +23,15 @@ const emit = defineEmits<{
   plats: []
 }>()
 
-/** Trois dégradés de la palette Marinade et quelques pictogrammes : chaque menu garde les siens. */
-const COVERS = [
-  { from: '#EA6A2B', to: '#F6A35F' },
-  { from: '#D55A1E', to: '#EE8A43' },
-  { from: '#F08A3C', to: '#F8BC72' },
-]
+/**
+ * Une seule couverture pour tous les menus, aux couleurs de la marque : un menu actif est orange,
+ * un menu inactif reste gris. Le même pictogramme partout, pour que la grille reste lisible.
+ */
+const cover = computed(() => (props.menu.actif
+  ? { '--cover-from': '#D55A1E', '--cover-to': '#F08A3C' }
+  : {}))
 
-const GLYPHS = ['ri-book-open-line', 'ri-restaurant-2-line', 'ri-cup-line', 'ri-cake-3-line', 'ri-goblet-line', 'ri-bowl-line']
-
-const seed = computed(() => [...props.menu.id].reduce((sum, char) => sum + char.charCodeAt(0), 0))
-
-const cover = computed(() => {
-  if (!props.menu.actif)
-    return {}
-
-  const colors = COVERS[seed.value % COVERS.length]
-
-  return { '--cover-from': colors.from, '--cover-to': colors.to }
-})
-
-const glyph = computed(() => GLYPHS[seed.value % GLYPHS.length])
+const glyph = 'ri-book-open-line'
 
 const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`
 </script>
@@ -173,17 +161,15 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   block-size: 100%;
   overflow: hidden;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
+  border-radius: 16px;
   background: rgb(var(--v-theme-surface));
-  box-shadow: 0 2px 6px rgba(15, 10, 5, 0.1);
-  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+  transition: border-color 0.2s ease;
 }
 
+/* Survol discret : seule la bordure change, la carte ne bouge pas. */
 .menu-card:hover,
 .menu-card:focus-within {
-  border-color: rgba(var(--v-theme-primary), 0.35);
-  box-shadow: 0 10px 24px rgba(15, 10, 5, 0.24);
-  transform: translateY(-4px);
+  border-color: rgba(var(--v-theme-primary), 0.45);
 }
 
 .menu-card__cover {
@@ -204,39 +190,13 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   filter: saturate(0.6);
 }
 
-/* Reflet et cercle décoratifs : donnent du relief au dégradé sans image. */
-.menu-card__cover::before,
-.menu-card__cover::after {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  content: "";
-  pointer-events: none;
-}
-
-.menu-card__cover::before {
-  block-size: 150px;
-  inline-size: 150px;
-  inset-block-start: -64px;
-  inset-inline-end: -36px;
-}
-
-.menu-card__cover::after {
-  block-size: 90px;
-  inline-size: 90px;
-  inset-block-end: -40px;
-  inset-inline-start: -20px;
-}
-
 .menu-card__glyph {
   position: relative;
   color: rgba(255, 255, 255, 0.92);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
-  transition: transform 0.35s ease;
 }
 
 .menu-card:hover .menu-card__glyph {
-  transform: scale(1.08) rotate(-4deg);
+  transform: none;
 }
 
 .menu-card__status {

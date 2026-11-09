@@ -48,6 +48,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vérifier la connexion à la base de données
+         * @description Interroge réellement PostgreSQL et vérifie que le rôle de l'API respecte la RLS.
+         *         Répond 503 si la base est injoignable ou si le rôle contourne la RLS.
+         *         Utilisé par le pipeline de déploiement pour valider l'API et la base ensemble.
+         */
+        get: operations["readiness_check_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/mobile-operator-prefixes": {
         parameters: {
             query?: never;
@@ -327,6 +349,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/emails/preview/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Template
+         * @description Aperçu HTML d'un gabarit avec des données d'exemple (rien n'est envoyé).
+         */
+        get: operations["preview_template_v1_emails_preview__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/emails/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Email Status
+         * @description État de la configuration d'envoi. Ne renvoie jamais le mot de passe SMTP.
+         */
+        get: operations["email_status_v1_emails_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/emails/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Test Email
+         * @description Envoie un gabarit d'exemple (par défaut le test) à soi-même ou à l'adresse donnée.
+         */
+        post: operations["send_test_email_v1_emails_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/payments/easytransact/checkout": {
         parameters: {
             query?: never;
@@ -492,6 +574,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reservations/restaurants/{restaurant_id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Availability */
+        get: operations["get_availability_v1_reservations_restaurants__restaurant_id__availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reservations/restaurants/{restaurant_id}/customers/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Customers */
+        get: operations["search_customers_v1_reservations_restaurants__restaurant_id__customers_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reservations/restaurants/{restaurant_id}/customers/{customer_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer Summary */
+        get: operations["customer_summary_v1_reservations_restaurants__restaurant_id__customers__customer_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reservations/restaurants/{restaurant_id}/reservations": {
         parameters: {
             query?: never;
@@ -540,6 +673,23 @@ export interface paths {
         post?: never;
         /** Remove Waitlist Entry */
         delete: operations["remove_waitlist_entry_v1_reservations_waitlist__waitlist_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reservations/waitlist/{waitlist_id}/notify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Notify Waitlist Entry */
+        post: operations["notify_waitlist_entry_v1_reservations_waitlist__waitlist_id__notify_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -615,6 +765,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reservations/{reservation_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Reservation */
+        post: operations["complete_reservation_v1_reservations__reservation_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reservations/{reservation_id}/confirm": {
         parameters: {
             query?: never;
@@ -626,6 +793,23 @@ export interface paths {
         put?: never;
         /** Confirm Reservation */
         post: operations["confirm_reservation_v1_reservations__reservation_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reservations/{reservation_id}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** No Show Reservation */
+        post: operations["no_show_reservation_v1_reservations__reservation_id__no_show_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1078,7 +1262,12 @@ export interface paths {
          */
         put: operations["update_table_v1_restaurants_tables__table_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Supprimer une table
+         * @description Suppression logique d'une table (gérant ou propriétaire) : elle disparaît du plan de salle et son
+         *         numéro redevient disponible. Refusée (409) tant qu'une session est ouverte sur la table.
+         */
+        delete: operations["delete_table_v1_restaurants_tables__table_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2395,6 +2584,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ros/restaurants/{restaurant_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tableau de bord du jour : chiffre d'affaires, salle, cuisine, réservations, stock, alertes */
+        get: operations["restaurant_dashboard_v1_ros_restaurants__restaurant_id__dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ros/restaurants/{restaurant_id}/invoices/{invoice_id}": {
         parameters: {
             query?: never;
@@ -2498,6 +2704,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ros/restaurants/{restaurant_id}/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Modifier une session ouverte (couverts, zone) */
+        put: operations["update_session_v1_ros_restaurants__restaurant_id__sessions__session_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ros/restaurants/{restaurant_id}/sessions/{session_id}/close": {
         parameters: {
             query?: never;
@@ -2583,6 +2806,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ros/restaurants/{restaurant_id}/tickets/expire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Annuler les tickets encore à faire plus anciens que la fenêtre (gestion) */
+        post: operations["expire_stale_tickets_v1_ros_restaurants__restaurant_id__tickets_expire_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ros/restaurants/{restaurant_id}/tickets/{station}": {
         parameters: {
             query?: never;
@@ -2590,10 +2830,66 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Obtenir les tickets en attente pour une station (KITCHEN, BAR, DESSERT) */
-        get: operations["get_pending_tickets_v1_ros_restaurants__restaurant_id__tickets__station__get"];
+        /**
+         * Tickets affichés sur l'écran d'un poste (KITCHEN, BAR, DESSERT)
+         * @description À faire et en préparation créés dans la fenêtre `KDS_TICKET_WINDOW_HOURS`, « Prêt »
+         *         depuis moins de 30 minutes, « Servi » encore rappelables (2 minutes). Tri : priorité
+         *         décroissante, puis ancienneté. Plafonné à 500 tickets.
+         */
+        get: operations["get_station_board_v1_ros_restaurants__restaurant_id__tickets__station__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{station}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** « Tout le service » : quantités par article d'un poste */
+        get: operations["get_station_summary_v1_ros_restaurants__restaurant_id__tickets__station__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{ticket_id}/priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Marquer un ticket urgent (1) ou normal (0) : l'urgent passe en tête de file */
+        put: operations["set_ticket_priority_v1_ros_restaurants__restaurant_id__tickets__ticket_id__priority_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{ticket_id}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rappeler un ticket servi (il redevient « Prêt ») pendant 2 minutes */
+        post: operations["recall_ticket_v1_ros_restaurants__restaurant_id__tickets__ticket_id__recall_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2608,7 +2904,12 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Mettre à jour le statut d'un ticket de production (QUEUED, IN_PREPARATION, READY, SERVED) */
+        /**
+         * Faire avancer un ticket (QUEUED, IN_PREPARATION, READY, SERVED, CANCELLED)
+         * @description Transitions contrôlées : À préparer -> En préparation -> Prêt -> Servi, et annulation
+         *         avant « Prêt ». Le retour arrière (En préparation -> À préparer, Prêt -> En préparation)
+         *         est réservé à la gestion. Le rappel d'un ticket servi passe par `/recall`.
+         */
         put: operations["update_ticket_status_v1_ros_restaurants__restaurant_id__tickets__ticket_id__status_put"];
         post?: never;
         delete?: never;
@@ -3217,6 +3518,8 @@ export interface components {
             nom: string;
             /** Prix */
             prix: number | string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /**
              * Stock Par Vente
              * @default 1
@@ -3269,6 +3572,8 @@ export interface components {
              * Format: uuid
              */
             restaurant_id: string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /**
              * Stock Par Vente
              * @default 1
@@ -3302,6 +3607,8 @@ export interface components {
             nom?: string | null;
             /** Prix */
             prix?: number | string | null;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /** Stock Par Vente */
             stock_par_vente?: number | string | null;
         };
@@ -3375,6 +3682,42 @@ export interface components {
             /** Motif */
             motif?: string | null;
         };
+        /** ClientRecherche */
+        ClientRecherche: {
+            /** Email */
+            email?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** ClientResume */
+        ClientResume: {
+            /** Absences */
+            absences: number;
+            /** Derniere Visite */
+            derniere_visite?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Reservations */
+            reservations: number;
+            /** Visites */
+            visites: number;
+        };
         /** CombinaisonCreate */
         CombinaisonCreate: {
             /** Composant Ids */
@@ -3397,6 +3740,8 @@ export interface components {
             nom: string;
             /** Prix */
             prix: number | string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
         };
         /** CombinaisonResponse */
         CombinaisonResponse: {
@@ -3438,6 +3783,8 @@ export interface components {
              * Format: uuid
              */
             restaurant_id: string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /**
              * Updated At
              * Format: date-time
@@ -3460,6 +3807,8 @@ export interface components {
             nom?: string | null;
             /** Prix */
             prix?: number | string | null;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
         };
         /** CommandeCreate */
         CommandeCreate: {
@@ -3795,6 +4144,22 @@ export interface components {
             /** Type */
             type?: string | null;
         };
+        /** CreneauDisponibilite */
+        CreneauDisponibilite: {
+            /**
+             * Debut
+             * Format: date-time
+             */
+            debut: string;
+            /** Disponible */
+            disponible: boolean;
+            /** Heure */
+            heure: string;
+            /** Passe */
+            passe: boolean;
+            /** Tables Libres */
+            tables_libres: number;
+        };
         /** CustomerCreate */
         CustomerCreate: {
             /** @default GUEST */
@@ -3905,6 +4270,21 @@ export interface components {
             /** Programme */
             programme: string;
         };
+        /** DisponibiliteResponse */
+        DisponibiliteResponse: {
+            /** Creneaux */
+            creneaux: components["schemas"]["CreneauDisponibilite"][];
+            /** Date */
+            date: string;
+            /** Duree Minutes */
+            duree_minutes: number;
+            /** Fuseau */
+            fuseau: string;
+            /** Horaires Configures */
+            horaires_configures: boolean;
+            /** Party Size */
+            party_size: number;
+        };
         /** EasyTransactCheckoutCreate */
         EasyTransactCheckoutCreate: {
             /** Amount Fcfa */
@@ -3996,6 +4376,49 @@ export interface components {
             duplicate: boolean;
             /** Status */
             status?: string | null;
+        };
+        /** EmailStatus */
+        EmailStatus: {
+            /** Backend */
+            backend: string;
+            /** Sender */
+            sender: string;
+            /** Smtp Configured */
+            smtp_configured: boolean;
+            /** Smtp Host */
+            smtp_host: string;
+            /** Smtp Port */
+            smtp_port: number;
+            /** Smtp Security */
+            smtp_security: string;
+            /** Templates */
+            templates: string[];
+        };
+        /** EmailTestRequest */
+        EmailTestRequest: {
+            /**
+             * Lang
+             * @default fr
+             */
+            lang: string;
+            /**
+             * Template
+             * @default test
+             */
+            template: string;
+            /** To */
+            to?: string | null;
+        };
+        /** EmailTestResponse */
+        EmailTestResponse: {
+            /** Backend */
+            backend: string;
+            /** Error */
+            error?: string | null;
+            /** Success */
+            success: boolean;
+            /** To */
+            to: string;
         };
         /** EmailVerifyRequest */
         EmailVerifyRequest: {
@@ -5274,6 +5697,8 @@ export interface components {
             photo_url?: string | null;
             /** Prix */
             prix: number | string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /** Temps Preparation */
             temps_preparation?: number | null;
         };
@@ -5327,6 +5752,8 @@ export interface components {
              * Format: uuid
              */
             restaurant_id: string;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /** Temps Preparation */
             temps_preparation?: number | null;
             /**
@@ -5361,6 +5788,8 @@ export interface components {
             photo_url?: string | null;
             /** Prix */
             prix?: number | string | null;
+            /** Station */
+            station?: ("KITCHEN" | "BAR" | "DESSERT") | null;
             /** Temps Preparation */
             temps_preparation?: number | null;
         };
@@ -6542,6 +6971,8 @@ export interface components {
              * @default []
              */
             invites: components["schemas"]["ReservationGuestResponse"][];
+            /** No Show At */
+            no_show_at?: string | null;
             /** Notes */
             notes?: string | null;
             /** Party Size */
@@ -6576,7 +7007,11 @@ export interface components {
              */
             updated_at: string;
         };
-        /** ReservationUpdate */
+        /**
+         * ReservationUpdate
+         * @description Modification des données d'une réservation. L'état ne se change pas ici : il passe
+         *     par les routes de transition (confirmer, arrivée, absence, terminer, annuler).
+         */
         ReservationUpdate: {
             /** Arrival Notes */
             arrival_notes?: string | null;
@@ -6604,8 +7039,6 @@ export interface components {
             reservation_date?: string | null;
             /** Source */
             source?: string | null;
-            /** Status */
-            status?: string | null;
             /** Table Id */
             table_id?: string | null;
         };
@@ -6762,6 +7195,11 @@ export interface components {
              */
             taux_service: string;
             /**
+             * Timezone
+             * @default Africa/Douala
+             */
+            timezone: string;
+            /**
              * Type Etablissement
              * @description Type d'établissement, choisi à la création et jamais modifié ensuite.
              * @default restaurant
@@ -6810,10 +7248,208 @@ export interface components {
             /** Taux Service */
             taux_service?: number | string | null;
             /**
+             * Timezone
+             * @description Fuseau IANA du restaurant (dates de réservation, rappels, horaires).
+             */
+            timezone?: string | null;
+            /**
              * Type Etablissement
              * @description Lecture seule après la création : toute valeur différente est refusée (409).
              */
             type_etablissement?: ("restaurant" | "pressing") | null;
+        };
+        /** RestoDashAlerte */
+        RestoDashAlerte: {
+            /** Lien */
+            lien?: string | null;
+            /** Message */
+            message: string;
+            /** Niveau */
+            niveau: string;
+            /** Type */
+            type: string;
+        };
+        /** RestoDashCaisse */
+        RestoDashCaisse: {
+            /** Caissiers */
+            caissiers: string[];
+            /** Ouvertes */
+            ouvertes: number;
+        };
+        /** RestoDashCuisine */
+        RestoDashCuisine: {
+            /** Attente Max Min */
+            attente_max_min: number;
+            /** En Attente */
+            en_attente: number;
+            /** En Preparation */
+            en_preparation: number;
+            /** Postes */
+            postes: components["schemas"]["RestoDashPoste"][];
+            /** Pretes */
+            pretes: number;
+        };
+        /** RestoDashHeure */
+        RestoDashHeure: {
+            /** Ca */
+            ca: number;
+            /** Ca Reference */
+            ca_reference: number;
+            /** Commandes */
+            commandes: number;
+            /** Heure */
+            heure: number;
+        };
+        /** RestoDashJour */
+        RestoDashJour: {
+            /** Ca */
+            ca: number;
+            /** Commandes */
+            commandes: number;
+            /** Jour */
+            jour: string;
+        };
+        /** RestoDashKpi */
+        RestoDashKpi: {
+            /** Ca Jour */
+            ca_jour: number;
+            /** Ca Reference */
+            ca_reference: number;
+            /** Commandes */
+            commandes: number;
+            /** Commandes Reference */
+            commandes_reference: number;
+            /** En Cours */
+            en_cours: number;
+            /** Panier Moyen */
+            panier_moyen: number;
+            /** Reste A Encaisser */
+            reste_a_encaisser: number;
+            /** Tables Servies */
+            tables_servies: number;
+            /** Variation Pct */
+            variation_pct?: number | null;
+        };
+        /** RestoDashMoyen */
+        RestoDashMoyen: {
+            /** Montant */
+            montant: number;
+            /** Moyen */
+            moyen: string;
+            /** Paiements */
+            paiements: number;
+        };
+        /** RestoDashPoste */
+        RestoDashPoste: {
+            /** En Attente */
+            en_attente: number;
+            /** En Preparation */
+            en_preparation: number;
+            /** Poste */
+            poste: string;
+            /** Pretes */
+            pretes: number;
+        };
+        /** RestoDashProduit */
+        RestoDashProduit: {
+            /** Montant */
+            montant: number;
+            /** Nom */
+            nom: string;
+            /** Quantite */
+            quantite: number;
+        };
+        /** RestoDashReservation */
+        RestoDashReservation: {
+            /** Couverts */
+            couverts: number;
+            /**
+             * Heure
+             * Format: date-time
+             */
+            heure: string;
+            /** Id */
+            id: string;
+            /** Nom */
+            nom: string;
+            /** Statut */
+            statut: string;
+            /** Table */
+            table?: string | null;
+        };
+        /** RestoDashReservations */
+        RestoDashReservations: {
+            /** A Confirmer */
+            a_confirmer: number;
+            /** Couverts Jour */
+            couverts_jour: number;
+            /** Prochaines */
+            prochaines: components["schemas"]["RestoDashReservation"][];
+            /** Total Jour */
+            total_jour: number;
+        };
+        /** RestoDashSalle */
+        RestoDashSalle: {
+            /** Libres */
+            libres: number;
+            /** Maintenance */
+            maintenance: number;
+            /** Occupees */
+            occupees: number;
+            /** Reservees */
+            reservees: number;
+            /** Sessions Ouvertes */
+            sessions_ouvertes: number;
+            /** Total */
+            total: number;
+        };
+        /** RestoDashStock */
+        RestoDashStock: {
+            /** Articles */
+            articles: components["schemas"]["RestoDashStockBas"][];
+            /** Ruptures */
+            ruptures: number;
+            /** Sous Seuil */
+            sous_seuil: number;
+        };
+        /** RestoDashStockBas */
+        RestoDashStockBas: {
+            /** Nom */
+            nom: string;
+            /** Quantite */
+            quantite: number;
+            /** Seuil */
+            seuil: number;
+            /** Unite */
+            unite: string;
+        };
+        /** RestoDashboardResponse */
+        RestoDashboardResponse: {
+            /** Alertes */
+            alertes: components["schemas"]["RestoDashAlerte"][];
+            caisse: components["schemas"]["RestoDashCaisse"];
+            cuisine: components["schemas"]["RestoDashCuisine"];
+            /** Devise */
+            devise: string;
+            /** Fuseau */
+            fuseau: string;
+            /**
+             * Genere Le
+             * Format: date-time
+             */
+            genere_le: string;
+            /** Heures */
+            heures: components["schemas"]["RestoDashHeure"][];
+            kpi: components["schemas"]["RestoDashKpi"];
+            /** Moyens Paiement */
+            moyens_paiement: components["schemas"]["RestoDashMoyen"][];
+            reservations: components["schemas"]["RestoDashReservations"];
+            salle: components["schemas"]["RestoDashSalle"];
+            /** Semaine */
+            semaine: components["schemas"]["RestoDashJour"][];
+            stock: components["schemas"]["RestoDashStock"];
+            /** Top Produits */
+            top_produits: components["schemas"]["RestoDashProduit"][];
         };
         /**
          * RosOrderStatus
@@ -6866,6 +7502,15 @@ export interface components {
          * @enum {string}
          */
         SessionStatus: "OPEN" | "ACTIVE" | "PAYMENT_PENDING" | "PARTIALLY_PAID" | "SETTLED" | "CLOSED";
+        /**
+         * SessionUpdate
+         * @description Modification d'une session ouverte : pour l'instant son contexte (« 4 couverts · Terrasse »),
+         *     qui porte le nombre de couverts affiché sur le plan de salle.
+         */
+        SessionUpdate: {
+            /** Table Context */
+            table_context?: string | null;
+        };
         /** ShiftCloseRequest */
         ShiftCloseRequest: {
             /**
@@ -6979,8 +7624,23 @@ export interface components {
              */
             updated_at: string;
         };
-        /** StockMouvementCreate */
+        /**
+         * StockMouvementCreate
+         * @description Mouvement manuel. ``entree`` = réception ; ``sortie`` ou ``perte`` = sortie hors vente (motif requis) ;
+         *     ``ajustement`` = nouvelle quantité constatée (motif requis). La précision (3 décimales) et les motifs
+         *     sont contrôlés par le moteur (``stock_engine``) qui répond en 422 avec un code français.
+         */
         StockMouvementCreate: {
+            /** Cout Unitaire */
+            cout_unitaire?: number | string | null;
+            /** Date Peremption */
+            date_peremption?: string | null;
+            /** Fournisseur Id */
+            fournisseur_id?: string | null;
+            /** Lot Numero */
+            lot_numero?: string | null;
+            /** Motif */
+            motif?: string | null;
             /** Notes */
             notes?: string | null;
             /** Quantite */
@@ -7215,8 +7875,28 @@ export interface components {
             /** Statut */
             statut?: string | null;
         };
+        /** TicketExpireResponse */
+        TicketExpireResponse: {
+            /** Cancelled */
+            cancelled: number;
+        };
+        /**
+         * TicketPriorityUpdate
+         * @description 0 = normal, 1 = urgent (passe en tête de file).
+         */
+        TicketPriorityUpdate: {
+            /**
+             * Priority
+             * @enum {integer}
+             */
+            priority: 0 | 1;
+        };
         /** TicketResponse */
         TicketResponse: {
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Course */
+            course?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -7236,6 +7916,11 @@ export interface components {
              * Format: uuid
              */
             order_id: string;
+            /**
+             * Priority
+             * @default 0
+             */
+            priority: number;
             /** Ready At */
             ready_at?: string | null;
             /**
@@ -7243,8 +7928,16 @@ export interface components {
              * Format: uuid
              */
             restaurant_id: string;
+            /** Served At */
+            served_at?: string | null;
+            /** Started At */
+            started_at?: string | null;
             station: components["schemas"]["ProductionStation"];
             status: components["schemas"]["TicketStatus"];
+            /** Table Label */
+            table_label?: string | null;
+            /** Zone */
+            zone?: string | null;
         };
         /**
          * TicketStatus
@@ -7254,6 +7947,28 @@ export interface components {
         /** TicketStatusUpdate */
         TicketStatusUpdate: {
             status: components["schemas"]["TicketStatus"];
+        };
+        /** TicketSummaryItem */
+        TicketSummaryItem: {
+            /** Product Name */
+            product_name: string;
+            /** Quantity */
+            quantity: number;
+        };
+        /**
+         * TicketSummaryResponse
+         * @description « Tout le service » : quantités par article sur les tickets à faire de la fenêtre.
+         */
+        TicketSummaryResponse: {
+            /** Items */
+            items: components["schemas"]["TicketSummaryItem"][];
+            station: components["schemas"]["ProductionStation"];
+            /** Ticket Count */
+            ticket_count: number;
+            /** Total Quantity */
+            total_quantity: number;
+            /** Window Hours */
+            window_hours: number;
         };
         /** TokenResponse */
         TokenResponse: {
@@ -7441,6 +8156,8 @@ export interface components {
         WaitlistCreate: {
             /** Customer Email */
             customer_email?: string | null;
+            /** Customer Id */
+            customer_id?: string | null;
             /** Customer Name */
             customer_name: string;
             /** Customer Phone */
@@ -7474,6 +8191,8 @@ export interface components {
             created_at: string;
             /** Customer Email */
             customer_email?: string | null;
+            /** Customer Id */
+            customer_id?: string | null;
             /** Customer Name */
             customer_name: string;
             /** Customer Phone */
@@ -7631,6 +8350,33 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+        };
+    };
+    readiness_check_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description L'API et la base répondent, RLS effective. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Base injoignable ou RLS contournée. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -8130,6 +8876,92 @@ export interface operations {
             };
         };
     };
+    preview_template_v1_emails_preview__name__get: {
+        parameters: {
+            query?: {
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_status_v1_emails_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStatus"];
+                };
+            };
+        };
+    };
+    send_test_email_v1_emails_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_checkout_v1_payments_easytransact_checkout_post: {
         parameters: {
             query?: never;
@@ -8463,6 +9295,106 @@ export interface operations {
             };
         };
     };
+    get_availability_v1_reservations_restaurants__restaurant_id__availability_get: {
+        parameters: {
+            query: {
+                date: string;
+                party_size: number;
+                duration?: number;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisponibiliteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_customers_v1_reservations_restaurants__restaurant_id__customers_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientRecherche"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_summary_v1_reservations_restaurants__restaurant_id__customers__customer_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientResume"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reservations_v1_reservations_restaurants__restaurant_id__reservations_get: {
         parameters: {
             query?: {
@@ -8506,7 +9438,9 @@ export interface operations {
     };
     create_reservation_v1_reservations_restaurants__restaurant_id__reservations_post: {
         parameters: {
-            query?: never;
+            query?: {
+                force?: boolean;
+            };
             header?: never;
             path: {
                 restaurant_id: string;
@@ -8542,6 +9476,7 @@ export interface operations {
     list_waitlist_v1_reservations_restaurants__restaurant_id__waitlist_get: {
         parameters: {
             query?: {
+                status?: string | null;
                 /** @description Nombre de lignes à sauter */
                 skip?: number;
                 /** @description Nombre de lignes à renvoyer (maximum 500) */
@@ -8641,10 +9576,44 @@ export interface operations {
             };
         };
     };
+    notify_waitlist_entry_v1_reservations_waitlist__waitlist_id__notify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                waitlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     seat_waitlist_entry_v1_reservations_waitlist__waitlist_id__seat_post: {
         parameters: {
             query?: {
                 table_id?: string | null;
+                force?: boolean;
             };
             header?: never;
             path: {
@@ -8707,7 +9676,9 @@ export interface operations {
     };
     update_reservation_v1_reservations__reservation_id__put: {
         parameters: {
-            query?: never;
+            query?: {
+                force?: boolean;
+            };
             header?: never;
             path: {
                 reservation_id: string;
@@ -8837,6 +9808,37 @@ export interface operations {
             };
         };
     };
+    complete_reservation_v1_reservations__reservation_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     confirm_reservation_v1_reservations__reservation_id__confirm_post: {
         parameters: {
             query?: never;
@@ -8851,6 +9853,37 @@ export interface operations {
                 "application/json": components["schemas"]["ReservationConfirmRequest"] | null;
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    no_show_reservation_v1_reservations__reservation_id__no_show_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -10323,6 +11356,49 @@ export interface operations {
             };
             /** @description Table introuvable. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_table_v1_restaurants_tables__table_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Table supprimée. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Table introuvable. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Table occupée. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14050,6 +15126,37 @@ export interface operations {
             };
         };
     };
+    restaurant_dashboard_v1_ros_restaurants__restaurant_id__dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_invoice_v1_ros_restaurants__restaurant_id__invoices__invoice_id__get: {
         parameters: {
             query?: never;
@@ -14295,6 +15402,42 @@ export interface operations {
             };
         };
     };
+    update_session_v1_ros_restaurants__restaurant_id__sessions__session_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     close_session_v1_ros_restaurants__restaurant_id__sessions__session_id__close_post: {
         parameters: {
             query?: never;
@@ -14464,14 +15607,40 @@ export interface operations {
             };
         };
     };
-    get_pending_tickets_v1_ros_restaurants__restaurant_id__tickets__station__get: {
+    expire_stale_tickets_v1_ros_restaurants__restaurant_id__tickets_expire_post: {
         parameters: {
-            query?: {
-                /** @description Nombre de lignes à sauter */
-                skip?: number;
-                /** @description Nombre de lignes à renvoyer (maximum 500) */
-                limit?: number;
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketExpireResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_station_board_v1_ros_restaurants__restaurant_id__tickets__station__get: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 restaurant_id: string;
@@ -14489,6 +15658,120 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TicketResponse"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_station_summary_v1_ros_restaurants__restaurant_id__tickets__station__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                station: components["schemas"]["ProductionStation"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_ticket_priority_v1_ros_restaurants__restaurant_id__tickets__ticket_id__priority_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketPriorityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Le ticket n'est plus à faire. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recall_ticket_v1_ros_restaurants__restaurant_id__tickets__ticket_id__recall_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                restaurant_id: string;
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Ticket non servi ou délai de rappel dépassé. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -14525,6 +15808,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TicketResponse"];
                 };
+            };
+            /** @description Retour arrière réservé à la gestion. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transition interdite ou ticket déjà dans cet état. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

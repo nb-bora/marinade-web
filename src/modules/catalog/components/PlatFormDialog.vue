@@ -24,6 +24,14 @@ const temps = ref<string>('')
 const description = ref('')
 const photoUrl = ref('')
 const disponible = ref(true)
+const station = ref<'KITCHEN' | 'BAR' | 'DESSERT'>('KITCHEN')
+
+/** Où le plat est préparé : son ticket s'affiche sur l'écran de ce poste. */
+const stationItems = [
+  { value: 'KITCHEN', title: 'Cuisine' },
+  { value: 'DESSERT', title: 'Desserts' },
+  { value: 'BAR', title: 'Bar' },
+] as const
 
 const isEdit = computed(() => props.plat !== null)
 
@@ -42,6 +50,7 @@ const { submit, pending, message, apiError, reset } = useSubmit(async () => {
     description: description.value.trim() || null,
     photo_url: photoUrl.value.trim() || null,
     disponible: disponible.value,
+    station: station.value,
   }
 
   let saved: Plat | undefined
@@ -69,6 +78,7 @@ watch(open, isOpen => {
   description.value = props.plat?.description ?? ''
   photoUrl.value = props.plat?.photo_url ?? ''
   disponible.value = props.plat?.disponible ?? true
+  station.value = props.plat?.station ?? 'KITCHEN'
 })
 
 const nomRules = [(value: string) => value.trim().length > 0 || 'Donnez un nom au plat.']
@@ -149,6 +159,19 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
             />
           </template>
         </VSelect>
+      </VCol>
+      <VCol
+        cols="12"
+        sm="6"
+      >
+        <VSelect
+          v-model="station"
+          :items="stationItems"
+          label="Poste de production"
+          prepend-inner-icon="ri-restaurant-2-line"
+          hint="Le ticket part sur l'écran de ce poste."
+          persistent-hint
+        />
       </VCol>
       <VCol cols="12">
         <VTextarea

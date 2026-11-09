@@ -1,23 +1,35 @@
 <script setup lang="ts">
 import { useEventListener, useStorage } from '@vueuse/core'
+import { useTheme } from 'vuetify'
 import { floorApi } from '../api'
+import CoversDialog from '../components/CoversDialog.vue'
+import FloorDesigner from '../components/FloorDesigner.vue'
 import FloorPlan from '../components/FloorPlan.vue'
+import FloorStats from '../components/FloorStats.vue'
+import FloorWatchlist from '../components/FloorWatchlist.vue'
 import OpenSessionDialog from '../components/OpenSessionDialog.vue'
 import TableDetailPanel from '../components/TableDetailPanel.vue'
+import TableFormDialog from '../components/TableFormDialog.vue'
 import { useFloorData } from '../composables/useFloorData'
+import { useFloorDesigner } from '../composables/useFloorDesigner'
+import { STALE_MINUTES, compactMoney, floorStats, formatElapsed, minutesSince, watchlist } from '../composables/useFloorMetrics'
 import { planStateOf } from '../composables/useFloorPlan'
+import { buildScene3D } from '../three/scene3d'
 import { playChime } from '../composables/useFloorSound'
+import { levelIdOf, placementOf, viewsOfLevel, withPlacement } from '../layout'
 import { PLAN_STATE } from '../labels'
 import { locationOf, release } from '../service'
 import type { ServiceSession, Table, TableView } from '../types'
 import { useConfirm } from '@/composables/useConfirm'
 import { useLive } from '@/composables/useLive'
-import { formatMoney, formatRelative } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
-import type { StatStripItem } from '@/ui/AppStatStrip.vue'
 
 const router = useRouter()
+const theme = useTheme()
+
+// La vue 3D (three.js) ne se charge que si on la demande.
+const Floor3DView = defineAsyncComponent(() => import('../components/Floor3DView.vue'))
 const tenant = useTenantStore()
 const toast = useToast()
 const confirm = useConfirm()
@@ -39,8 +51,34 @@ const location = ref<string>(ALL)
 
 const views = computed(() => data.value?.views ?? [])
 const loose = computed(() => data.value?.looseSessions ?? [])
+const salle = computed(() => data.value?.salle ?? { version: 1 as const, niveaux: [{ id: 'rdc', nom: 'Rez-de-chaussée' }], zones: [] })
 
-const locations = computed(() => [...new Set(views.value.map(view => locationOf(view.table)))])
+// Niveaux (étages) : le plan montre un niveau à la fois ; le dernier choisi est retenu sur cet appareil.
+const storedLevel = useStorage('marinade.floor.level', '')
+
+const levelId = computed({
+  get: () => salle.value.niveaux.some(level => level.id === storedLevel.value) ? storedLevel.value : salle.value.niveaux[0].id,
+  set: value => {
+    storedLevel.value = value
+  },
+})
+
+const levelOptions = computed(() => salle.value.niveaux.map(level => ({
+  value: level.id,
+  title: level.nom,
+})))
+
+/** Les tables du niveau affiché : c'est ce que dessine le plan. */
+const levelViews = computed(() => viewsOfLevel(views.value, salle.value, levelId.value))
+
+const locations = computed(() => [...new Set(levelViews.value.map(view => locationOf(view.table)))])
+
+/** Toutes les zones du restaurant (déclarées ou utilisées), proposées dans le formulaire d'une table. */
+const allZones = computed(() => [...new Set([...salle.value.zones.map(zone => zone.nom), ...views.value.map(view => locationOf(view.table))])])
+
+watch(levelId, () => {
+  location.value = ALL
+})
 
 // Un emplacement qui disparaît (table supprimée ou renommée) ne doit pas laisser un plan vide.
 watch(locations, list => {
@@ -55,21 +93,14 @@ const locationOptions = computed(() => [
 
 const planZone = computed(() => location.value === ALL ? null : location.value)
 
-const stats = computed<StatStripItem[]>(() => {
-  const free = views.value.filter(view => planStateOf(view) === 'free').length
-  const occupied = views.value.filter(view => view.session).length
-  const covers = views.value.reduce((sum, view) => sum + (view.session ? view.covers ?? 0 : 0), 0)
+const stats = computed(() => floorStats(views.value, loose.value, now.value))
+const canManage = computed(() => tenant.can('management'))
+const watched = computed(() => watchlist(views.value, now.value))
 
-  const due = [...views.value, ...loose.value.map(item => ({ amountDue: item.amountDue }))]
-    .reduce((sum, item) => sum + (item.amountDue ?? 0), 0)
-
-  return [
-    { label: 'Tables libres', value: `${free} / ${views.value.length}`, icon: 'ri-checkbox-circle-line' },
-    { label: 'Tables occupées', value: String(occupied), icon: 'ri-restaurant-2-line' },
-    { label: 'Couverts en salle', value: String(covers), icon: 'ri-group-line' },
-    { label: 'Addition en cours', value: formatMoney(due), icon: 'ri-money-dollar-circle-line', hint: 'Reste à encaisser' },
-  ]
-})
+/** Sessions sans table : les récentes en cartes, celles ouvertes depuis plus de 12 h à part (oubliées ?). */
+const looseRecent = computed(() => loose.value.filter(item => minutesSince(item.session.opened_at, now.value) < STALE_MINUTES))
+const looseStale = computed(() => loose.value.filter(item => minutesSince(item.session.opened_at, now.value) >= STALE_MINUTES))
+const showStale = ref(false)
 
 // Sélection --------------------------------------------------------------------------------
 
@@ -93,6 +124,70 @@ watch(selectedId, async id => {
   // Sur téléphone, le détail est sous le plan : on y amène l'écran.
   if (window.innerWidth < 1280)
     panel.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+})
+
+// Vue 2D / 3D -----------------------------------------------------------------------------------
+
+const designing = ref(false)
+
+type ViewKey = '2d' | '3d-level' | '3d-building'
+
+const storedView = useStorage<ViewKey>('marinade.floor.view', '2d')
+
+const viewMode = computed<ViewKey>({
+  get: () => ['2d', '3d-level', '3d-building'].includes(storedView.value) ? storedView.value : '2d',
+  set: value => {
+    storedView.value = value
+  },
+})
+
+const is3d = computed(() => viewMode.value !== '2d' && !designing.value)
+const scene = computed(() => is3d.value ? buildScene3D(views.value, salle.value) : [])
+const dark = computed(() => theme.current.value.dark)
+
+const VIEW_OPTIONS = [
+  { value: '2d' as ViewKey, title: 'Plan 2D' },
+  { value: '3d-level' as ViewKey, title: '3D du niveau' },
+  { value: '3d-building' as ViewKey, title: 'Bâtiment 3D' },
+]
+
+function select3d(id: string) {
+  const view = views.value.find(item => item.table.id === id)
+
+  if (view)
+    select(view)
+}
+
+// Aménagement ---------------------------------------------------------------------------------
+
+const designer = useFloorDesigner(() => data.value, () => refresh())
+
+const editedTable = ref<Table | null>(null)
+const coversDialog = ref(false)
+const tableDialog = ref(false)
+
+function editTable(view: TableView) {
+  editedTable.value = view.table
+  tableDialog.value = true
+}
+
+/** Déplacement d'une table sur le plan : affiché tout de suite, puis enregistré côté serveur. */
+function onMove(point: { id: string; x: number; y: number }) {
+  const view = views.value.find(item => item.table.id === point.id)
+
+  if (!view)
+    return
+
+  const placed = placementOf(view.table)
+  const update = withPlacement(view.table, { niveau: levelId.value, x: point.x, y: point.y, forme: placed?.forme, rot: placed?.rot })
+
+  view.table = { ...view.table, attributs_jsonb: update.attributs_jsonb as typeof view.table.attributs_jsonb }
+  designer.placeTable(view.table, { niveau: levelId.value, x: point.x, y: point.y })
+}
+
+watch(designing, on => {
+  if (!on)
+    selectedId.value = null
 })
 
 // Ouverture d'une session ---------------------------------------------------------------
@@ -137,7 +232,10 @@ async function releaseTable(view: TableView) {
 function select(view: TableView) {
   selectedId.value = view.table.id
 
-  if (planStateOf(view) === 'free')
+  // Une table d'un autre niveau (liste « À surveiller ») : on affiche son niveau.
+  levelId.value = levelIdOf(view.table, salle.value)
+
+  if (!designing.value && planStateOf(view) === 'free')
     openSession(view.table)
 }
 
@@ -223,27 +321,45 @@ function toggleSound() {
 }
 
 const hasTables = computed(() => views.value.length > 0 || loose.value.length > 0)
+
+// Liens depuis la liste des tables : `?table=<id>` ouvre la fiche de la table, `?amenager=1` l'aménagement.
+const route = useRoute()
+let routed = false
+
+watch(data, snapshot => {
+  if (routed || !snapshot)
+    return
+
+  routed = true
+
+  const id = typeof route.query.table === 'string' ? route.query.table : null
+  const view = id ? snapshot.views.find(item => item.table.id === id) : null
+
+  if (view) {
+    levelId.value = levelIdOf(view.table, snapshot.salle)
+    selectedId.value = view.table.id
+  }
+
+  if (route.query.amenager === '1' && canManage.value)
+    designing.value = true
+
+  if (view || route.query.amenager)
+    router.replace({ path: route.path })
+}, { immediate: true })
 </script>
 
 <template>
-  <div>
-    <AppPageHeader
-      title="Plan de salle"
+  <div class="floor-page">
+    <AppHero
+      eyebrow="Plan de salle"
+      title="Votre salle en direct"
       subtitle="Touchez une table pour ouvrir une session ou reprendre une commande."
+      :live="isLive"
     >
+      <template #eyebrow-extra>
+        · {{ isLive ? 'actualisé en continu' : 'en pause' }}
+      </template>
       <template #actions>
-        <VChip
-          :color="isLive ? 'success' : 'secondary'"
-          variant="tonal"
-          size="small"
-          label
-        >
-          <span
-            class="live-dot me-2"
-            :class="{ 'live-dot--on': isLive }"
-          />
-          {{ isLive ? 'En direct' : 'En pause' }}
-        </VChip>
         <VBtn
           :icon="sound ? 'ri-volume-up-line' : 'ri-volume-mute-line'"
           :variant="sound ? 'tonal' : 'text'"
@@ -269,15 +385,25 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
           Actualiser
         </VBtn>
         <VBtn
-          v-if="tenant.can('management')"
-          variant="outlined"
+          v-if="canManage"
+          variant="text"
+          prepend-icon="ri-table-line"
           to="/salle/tables"
-          prepend-icon="ri-layout-grid-line"
         >
-          Gérer les tables
+          Liste des tables
+        </VBtn>
+        <VBtn
+          v-if="canManage"
+          :prepend-icon="designing ? 'ri-check-line' : 'ri-pencil-ruler-2-line'"
+          :color="designing ? 'success' : 'primary'"
+          :aria-pressed="designing"
+          data-tour="floor-design-btn"
+          @click="designing = !designing"
+        >
+          {{ designing ? 'Terminer' : 'Aménager' }}
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="error && !data"
@@ -286,14 +412,43 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
     />
 
     <template v-else>
-      <AppStatStrip
-        :items="stats"
+      <FloorStats
+        class="mt-5"
+        :stats="stats"
         :loading="loading && !data"
       />
 
       <div
-        v-if="locations.length > 1"
-        class="zones mt-6"
+        v-if="salle.niveaux.length > 1"
+        class="zones mt-5"
+        data-tour="floor-levels"
+      >
+        <AppSegmented
+          v-model="levelId"
+          :options="levelOptions"
+          label="Niveau du restaurant"
+        />
+      </div>
+
+      <div
+        v-if="data && hasTables"
+        class="view-switch mt-3"
+        data-tour="floor-views"
+      >
+        <AppSegmented
+          v-model="viewMode"
+          :options="VIEW_OPTIONS"
+          label="Affichage de la salle"
+        />
+        <span
+          v-if="designing"
+          class="text-caption text-medium-emphasis"
+        >L'aménagement se fait sur le plan 2D.</span>
+      </div>
+
+      <div
+        v-if="locations.length > 1 && !is3d"
+        class="zones mt-3"
       >
         <AppSegmented
           v-model="location"
@@ -305,100 +460,229 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
       <VSkeletonLoader
         v-if="!data"
         type="card, card"
-        class="mt-6"
+        class="mt-5"
       />
 
       <VCard
-        v-else-if="!hasTables"
+        v-else-if="!hasTables && !designing"
         class="mt-6"
       >
         <AppEmptyState
           icon="ri-layout-grid-line"
           title="Aucune table pour l'instant"
-          text="Ajoutez les tables de votre salle pour pouvoir y ouvrir des sessions."
+          text="Dessinez votre salle : ajoutez vos tables, vos terrasses et vos étages, puis placez-les sur le plan."
         >
           <VBtn
-            v-if="tenant.can('management')"
+            v-if="canManage"
             color="primary"
-            to="/salle/tables"
-            prepend-icon="ri-add-line"
+            prepend-icon="ri-pencil-ruler-2-line"
+            @click="designing = true"
           >
-            Ajouter une table
+            Aménager la salle
           </VBtn>
         </AppEmptyState>
       </VCard>
 
       <template v-else>
-        <div class="floor-layout mt-6">
-          <FloorPlan
-            v-if="views.length"
-            :views="views"
-            :now="now"
-            :selected-id="selectedId"
-            :zone="planZone"
-            :flashes="flashes"
-            @select="select"
-          />
+        <div class="floor-layout mt-5">
+          <template v-if="!is3d">
+            <FloorPlan
+              v-if="levelViews.length"
+              :views="levelViews"
+              :now="now"
+              :selected-id="selectedId"
+              :zone="planZone"
+              :flashes="flashes"
+              :editable="designing"
+              @select="select"
+              @move="onMove"
+            />
+            <VCard v-else>
+              <AppEmptyState
+                icon="ri-layout-grid-line"
+                title="Ce niveau est vide"
+                :text="designing ? 'Ajoutez des tables avec le panneau d\'aménagement.' : 'Aucune table n\'est placée à ce niveau.'"
+              />
+            </VCard>
+          </template>
+          <VCard
+            v-else
+            class="floor3d"
+            data-tour="floor-3d"
+          >
+            <VCardItem>
+              <template #prepend>
+                <VAvatar
+                  color="primary"
+                  variant="tonal"
+                  rounded="lg"
+                >
+                  <VIcon :icon="viewMode === '3d-building' ? 'ri-building-4-line' : 'ri-box-3-line'" />
+                </VAvatar>
+              </template>
+              <VCardTitle>{{ viewMode === '3d-building' ? 'Le bâtiment en 3D' : 'Le niveau en 3D' }}</VCardTitle>
+              <VCardSubtitle class="text-wrap">
+                {{ viewMode === '3d-building' ? 'Tous les niveaux empilés : touchez une table, tournez la vue avec la souris ou le doigt.' : 'Faites tourner la salle, zoomez, touchez une table. Les chaises grises sont libres.' }}
+              </VCardSubtitle>
+            </VCardItem>
+            <div class="floor3d__stage">
+              <Floor3DView
+                :levels="scene"
+                :mode="viewMode === '3d-building' ? 'building' : 'level'"
+                :level-id="levelId"
+                :selected-id="selectedId"
+                :dark="dark"
+                @select="select3d"
+              />
+            </div>
+          </VCard>
 
           <aside
             ref="panel"
             class="floor-layout__aside"
-            :class="{ 'floor-layout__aside--empty': !selected }"
+            :class="{ 'floor-layout__aside--empty': !selected && !designing }"
             aria-label="Détail de la table"
           >
+            <FloorDesigner
+              v-if="designing && data"
+              :snapshot="data"
+              :level-id="levelId"
+              :selected="selected"
+              :designer="designer"
+              @select-level="levelId = $event"
+              @edit-table="editTable"
+              @done="designing = false"
+            />
             <TableDetailPanel
-              v-if="selected"
+              v-else-if="selected"
               :view="selected"
               :state="planStateOf(selected)"
               :now="now"
+              :level-name="salle.niveaux.length > 1 ? salle.niveaux.find(item => item.id === levelIdOf(selected!.table, salle))?.nom : undefined"
               @close="closePanel"
               @open-session="openSession(selected.table)"
               @release="releaseTable(selected)"
+              @edit-covers="coversDialog = true"
             />
-            <VCard
+            <FloorWatchlist
               v-else
-              variant="outlined"
-            >
-              <AppEmptyState
-                icon="ri-cursor-line"
-                title="Choisissez une table"
-                text="Son état, ses couverts et son montant s'affichent ici."
-              />
-            </VCard>
+              :items="watched"
+              @select="select"
+            />
           </aside>
         </div>
 
         <section
           v-if="loose.length && location === ALL"
-          class="mt-6"
+          class="mt-8"
+          aria-labelledby="loose-title"
         >
-          <h2 class="text-h6 mb-3">
-            Sessions sans table
-          </h2>
-          <div class="loose">
-            <VCard
-              v-for="item in loose"
-              :key="item.session.id"
-              variant="outlined"
-              class="pa-4 cursor-pointer"
-              tabindex="0"
-              @click="goToSession(item.session)"
-              @keydown.enter="goToSession(item.session)"
+          <h2
+            id="loose-title"
+            class="section-title"
+          >
+            <span class="section-title__bar" />Sessions sans table
+            <VChip
+              size="x-small"
+              variant="tonal"
+              label
             >
-              <div class="text-h6">
-                {{ item.session.table_context || 'Session' }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ formatRelative(item.session.opened_at, now) }}
-              </div>
-              <div class="text-h6 mt-2">
-                <AppMoney :amount="item.total" />
-              </div>
-            </VCard>
+              {{ loose.length }}
+            </VChip>
+          </h2>
+
+          <div
+            v-if="looseRecent.length"
+            class="loose"
+          >
+            <button
+              v-for="item in looseRecent"
+              :key="item.session.id"
+              type="button"
+              class="loose-card"
+              @click="goToSession(item.session)"
+            >
+              <span class="loose-card__top">
+                <VIcon
+                  icon="ri-store-3-line"
+                  size="18"
+                  class="text-medium-emphasis"
+                />
+                <span class="loose-card__name">{{ item.session.table_context || 'Session' }}</span>
+              </span>
+              <span class="loose-card__meta">ouverte depuis {{ formatElapsed(minutesSince(item.session.opened_at, now)) }}</span>
+              <span class="loose-card__amount tabular-nums">{{ item.total === null ? '—' : compactMoney(item.total) }}<small v-if="item.total !== null"> FCFA</small></span>
+            </button>
           </div>
+
+          <VAlert
+            v-if="looseStale.length"
+            type="warning"
+            variant="tonal"
+            density="comfortable"
+            class="mt-3"
+            icon="ri-history-line"
+          >
+            <div class="d-flex flex-wrap align-center gap-3">
+              <span>
+                <strong>{{ looseStale.length }} session{{ looseStale.length > 1 ? 's' : '' }}</strong>
+                ouverte{{ looseStale.length > 1 ? 's' : '' }} depuis plus de 12 h : vérifiez si elle{{ looseStale.length > 1 ? 's sont' : ' est' }} encore utile{{ looseStale.length > 1 ? 's' : '' }}.
+              </span>
+              <VSpacer />
+              <VBtn
+                size="small"
+                variant="text"
+                :append-icon="showStale ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
+                @click="showStale = !showStale"
+              >
+                {{ showStale ? 'Masquer' : 'Afficher' }}
+              </VBtn>
+            </div>
+            <div
+              v-if="showStale"
+              class="loose mt-3"
+            >
+              <button
+                v-for="item in looseStale"
+                :key="item.session.id"
+                type="button"
+                class="loose-card loose-card--stale"
+                @click="goToSession(item.session)"
+              >
+                <span class="loose-card__top">
+                  <VIcon
+                    icon="ri-history-line"
+                    size="18"
+                  />
+                  <span class="loose-card__name">{{ item.session.table_context || 'Session' }}</span>
+                </span>
+                <span class="loose-card__meta">ouverte depuis {{ formatElapsed(minutesSince(item.session.opened_at, now)) }}</span>
+                <span class="loose-card__amount tabular-nums">{{ item.total === null ? '—' : compactMoney(item.total) }}<small v-if="item.total !== null"> FCFA</small></span>
+              </button>
+            </div>
+          </VAlert>
         </section>
       </template>
     </template>
+
+    <CoversDialog
+      v-model="coversDialog"
+      :session="selected?.session ?? null"
+      :table="selected?.table ?? null"
+      :covers="selected?.covers ?? null"
+      @saved="refresh"
+    />
+
+    <TableFormDialog
+      v-model="tableDialog"
+      :table="editedTable"
+      :locations="allZones"
+      :salle="salle"
+      :designer="designer"
+      :default-level="levelId"
+      can-edit-layout
+      @saved="refresh"
+    />
 
     <OpenSessionDialog
       v-model="openingDialog"
@@ -416,7 +700,7 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .floor-layout {
   display: grid;
   gap: 20px;
@@ -442,10 +726,113 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
   }
 }
 
+.view-switch {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.floor3d__stage {
+  block-size: clamp(420px, 62vh, 660px);
+  border-radius: 14px;
+  margin: 0 16px 16px;
+  overflow: hidden;
+}
+
 .loose {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 12px;
+}
+
+.loose-card {
+  align-items: flex-start;
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 14px;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  text-align: start;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    border-color: rgba(var(--v-theme-primary), 0.5);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
+  }
+
+  &--stale {
+    opacity: 0.85;
+  }
+}
+
+.loose-card__top {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.loose-card__name {
+  font-weight: 600;
+}
+
+.loose-card__meta {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.8rem;
+}
+
+.loose-card__amount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+
+  small {
+    font-size: 0.65em;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+}
+
+.section-title {
+  align-items: center;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 0.6rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.section-title__bar {
+  background: rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  height: 14px;
+  transform: skewX(-18deg);
+  width: 5px;
+}
+
+/* Cartes de la page : coins larges et filet fin, comme le tableau de bord. */
+.floor-page :deep(.v-card:not(.tile)) {
+  border: 1px solid rgba(var(--v-border-color), 0.14);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.floor-page :deep(.v-card-title) {
+  font-size: 1.02rem;
+  font-weight: 650;
 }
 
 .zones {
@@ -460,29 +847,5 @@ const hasTables = computed(() => views.value.length > 0 || loose.value.length > 
   block-size: 1px;
   inline-size: 1px;
   white-space: nowrap;
-}
-
-.live-dot {
-  display: inline-block;
-  inline-size: 8px;
-  block-size: 8px;
-  border-radius: 50%;
-  background: currentcolor;
-}
-
-.live-dot--on {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.3;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-dot--on {
-    animation: none;
-  }
 }
 </style>

@@ -84,3 +84,23 @@ export function sinceLabel(from: number, now: number): string {
 
   return `il y a ${Math.round(seconds / 60)} min`
 }
+
+/** Fuseaux proposés pour le restaurant : ceux de la zone d'activité, puis les grands repères. */
+export const TIMEZONES = [
+  { value: 'Africa/Douala', title: 'Douala, Yaoundé (UTC+1)' },
+  { value: 'Africa/Libreville', title: 'Libreville (UTC+1)' },
+  { value: 'Africa/Kinshasa', title: 'Kinshasa, Brazzaville (UTC+1)' },
+  { value: 'Africa/Ndjamena', title: 'N\'Djamena (UTC+1)' },
+  { value: 'Africa/Bangui', title: 'Bangui (UTC+1)' },
+  { value: 'Africa/Malabo', title: 'Malabo (UTC+1)' },
+  { value: 'Africa/Lagos', title: 'Lagos (UTC+1)' },
+  { value: 'Africa/Abidjan', title: 'Abidjan, Dakar (UTC+0)' },
+  { value: 'Africa/Casablanca', title: 'Casablanca (UTC+0/+1)' },
+  { value: 'Africa/Nairobi', title: 'Nairobi (UTC+3)' },
+  { value: 'Africa/Johannesburg', title: 'Johannesburg (UTC+2)' },
+  { value: 'Europe/Paris', title: 'Paris (UTC+1/+2)' },
+  { value: 'Europe/London', title: 'Londres (UTC+0/+1)' },
+  { value: 'America/New_York', title: 'New York (UTC-5/-4)' },
+  { value: 'Asia/Dubai', title: 'Dubaï (UTC+4)' },
+  { value: 'UTC', title: 'UTC' },
+]

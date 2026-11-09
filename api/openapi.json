@@ -253,6 +253,22 @@
             ],
             "title": "Prix"
           },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
+          },
           "stock_par_vente": {
             "anyOf": [
               {
@@ -365,6 +381,22 @@
             "format": "uuid",
             "title": "Restaurant Id",
             "type": "string"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           },
           "stock_par_vente": {
             "default": 1,
@@ -500,6 +532,22 @@
               }
             ],
             "title": "Prix"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           },
           "stock_par_vente": {
             "anyOf": [
@@ -680,6 +728,127 @@
         "title": "ChangementEtat",
         "type": "object"
       },
+      "ClientRecherche": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ClientRecherche",
+        "type": "object"
+      },
+      "ClientResume": {
+        "properties": {
+          "absences": {
+            "title": "Absences",
+            "type": "integer"
+          },
+          "derniere_visite": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derniere Visite"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "reservations": {
+            "title": "Reservations",
+            "type": "integer"
+          },
+          "visites": {
+            "title": "Visites",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "visites",
+          "absences",
+          "reservations"
+        ],
+        "title": "ClientResume",
+        "type": "object"
+      },
       "CombinaisonCreate": {
         "properties": {
           "composant_ids": {
@@ -743,6 +912,22 @@
               }
             ],
             "title": "Prix"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           }
         },
         "required": [
@@ -823,6 +1008,22 @@
             "format": "uuid",
             "title": "Restaurant Id",
             "type": "string"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           },
           "updated_at": {
             "format": "date-time",
@@ -933,6 +1134,22 @@
               }
             ],
             "title": "Prix"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           }
         },
         "title": "CombinaisonUpdate",
@@ -1926,6 +2143,40 @@
         "title": "ComposantUpdate",
         "type": "object"
       },
+      "CreneauDisponibilite": {
+        "properties": {
+          "debut": {
+            "format": "date-time",
+            "title": "Debut",
+            "type": "string"
+          },
+          "disponible": {
+            "title": "Disponible",
+            "type": "boolean"
+          },
+          "heure": {
+            "title": "Heure",
+            "type": "string"
+          },
+          "passe": {
+            "title": "Passe",
+            "type": "boolean"
+          },
+          "tables_libres": {
+            "title": "Tables Libres",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "debut",
+          "heure",
+          "tables_libres",
+          "disponible",
+          "passe"
+        ],
+        "title": "CreneauDisponibilite",
+        "type": "object"
+      },
       "CustomerCreate": {
         "properties": {
           "customer_type": {
@@ -2185,6 +2436,47 @@
           "programme"
         ],
         "title": "DemarrageIn",
+        "type": "object"
+      },
+      "DisponibiliteResponse": {
+        "properties": {
+          "creneaux": {
+            "items": {
+              "$ref": "#/components/schemas/CreneauDisponibilite"
+            },
+            "title": "Creneaux",
+            "type": "array"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "duree_minutes": {
+            "title": "Duree Minutes",
+            "type": "integer"
+          },
+          "fuseau": {
+            "title": "Fuseau",
+            "type": "string"
+          },
+          "horaires_configures": {
+            "title": "Horaires Configures",
+            "type": "boolean"
+          },
+          "party_size": {
+            "title": "Party Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "fuseau",
+          "duree_minutes",
+          "party_size",
+          "horaires_configures",
+          "creneaux"
+        ],
+        "title": "DisponibiliteResponse",
         "type": "object"
       },
       "EasyTransactCheckoutCreate": {
@@ -2454,6 +2746,114 @@
           "accepted"
         ],
         "title": "EasyTransactWebhookResponse",
+        "type": "object"
+      },
+      "EmailStatus": {
+        "properties": {
+          "backend": {
+            "title": "Backend",
+            "type": "string"
+          },
+          "sender": {
+            "title": "Sender",
+            "type": "string"
+          },
+          "smtp_configured": {
+            "title": "Smtp Configured",
+            "type": "boolean"
+          },
+          "smtp_host": {
+            "title": "Smtp Host",
+            "type": "string"
+          },
+          "smtp_port": {
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_security": {
+            "title": "Smtp Security",
+            "type": "string"
+          },
+          "templates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "backend",
+          "smtp_configured",
+          "smtp_host",
+          "smtp_port",
+          "smtp_security",
+          "sender",
+          "templates"
+        ],
+        "title": "EmailStatus",
+        "type": "object"
+      },
+      "EmailTestRequest": {
+        "properties": {
+          "lang": {
+            "default": "fr",
+            "title": "Lang",
+            "type": "string"
+          },
+          "template": {
+            "default": "test",
+            "title": "Template",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "title": "EmailTestRequest",
+        "type": "object"
+      },
+      "EmailTestResponse": {
+        "properties": {
+          "backend": {
+            "title": "Backend",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "backend",
+          "to"
+        ],
+        "title": "EmailTestResponse",
         "type": "object"
       },
       "EmailVerifyRequest": {
@@ -5807,6 +6207,22 @@
             ],
             "title": "Prix"
           },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
+          },
           "temps_preparation": {
             "anyOf": [
               {
@@ -5931,6 +6347,22 @@
             "format": "uuid",
             "title": "Restaurant Id",
             "type": "string"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           },
           "temps_preparation": {
             "anyOf": [
@@ -6089,6 +6521,22 @@
               }
             ],
             "title": "Prix"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "enum": [
+                  "KITCHEN",
+                  "BAR",
+                  "DESSERT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
           },
           "temps_preparation": {
             "anyOf": [
@@ -8785,6 +9233,7 @@
           "duration_minutes": {
             "default": 90,
             "exclusiveMinimum": 0.0,
+            "maximum": 1440.0,
             "title": "Duration Minutes",
             "type": "integer"
           },
@@ -8810,6 +9259,7 @@
           },
           "party_size": {
             "exclusiveMinimum": 0.0,
+            "maximum": 500.0,
             "title": "Party Size",
             "type": "integer"
           },
@@ -9158,6 +9608,18 @@
             "title": "Invites",
             "type": "array"
           },
+          "no_show_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show At"
+          },
           "notes": {
             "anyOf": [
               {
@@ -9255,6 +9717,7 @@
       },
       "ReservationUpdate": {
         "additionalProperties": false,
+        "description": "Modification des données d'une réservation. L'état ne se change pas ici : il passe\npar les routes de transition (confirmer, arrivée, absence, terminer, annuler).",
         "properties": {
           "arrival_notes": {
             "anyOf": [
@@ -9321,6 +9784,7 @@
             "anyOf": [
               {
                 "exclusiveMinimum": 0.0,
+                "maximum": 1440.0,
                 "type": "integer"
               },
               {
@@ -9345,6 +9809,7 @@
             "anyOf": [
               {
                 "exclusiveMinimum": 0.0,
+                "maximum": 500.0,
                 "type": "integer"
               },
               {
@@ -9399,18 +9864,6 @@
               }
             ],
             "title": "Source"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "maxLength": 30,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
           },
           "table_id": {
             "anyOf": [
@@ -9838,6 +10291,11 @@
             "title": "Taux Service",
             "type": "string"
           },
+          "timezone": {
+            "default": "Africa/Douala",
+            "title": "Timezone",
+            "type": "string"
+          },
           "type_etablissement": {
             "default": "restaurant",
             "description": "Type d'établissement, choisi à la création et jamais modifié ensuite.",
@@ -10017,6 +10475,19 @@
             ],
             "title": "Taux Service"
           },
+          "timezone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fuseau IANA du restaurant (dates de réservation, rappels, horaires).",
+            "title": "Timezone"
+          },
           "type_etablissement": {
             "anyOf": [
               {
@@ -10035,6 +10506,537 @@
           }
         },
         "title": "RestaurantUpdate",
+        "type": "object"
+      },
+      "RestoDashAlerte": {
+        "properties": {
+          "lien": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lien"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "niveau": {
+            "title": "Niveau",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "niveau",
+          "type",
+          "message"
+        ],
+        "title": "RestoDashAlerte",
+        "type": "object"
+      },
+      "RestoDashCaisse": {
+        "properties": {
+          "caissiers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Caissiers",
+            "type": "array"
+          },
+          "ouvertes": {
+            "title": "Ouvertes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ouvertes",
+          "caissiers"
+        ],
+        "title": "RestoDashCaisse",
+        "type": "object"
+      },
+      "RestoDashCuisine": {
+        "properties": {
+          "attente_max_min": {
+            "title": "Attente Max Min",
+            "type": "integer"
+          },
+          "en_attente": {
+            "title": "En Attente",
+            "type": "integer"
+          },
+          "en_preparation": {
+            "title": "En Preparation",
+            "type": "integer"
+          },
+          "postes": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashPoste"
+            },
+            "title": "Postes",
+            "type": "array"
+          },
+          "pretes": {
+            "title": "Pretes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "en_attente",
+          "en_preparation",
+          "pretes",
+          "attente_max_min",
+          "postes"
+        ],
+        "title": "RestoDashCuisine",
+        "type": "object"
+      },
+      "RestoDashHeure": {
+        "properties": {
+          "ca": {
+            "title": "Ca",
+            "type": "number"
+          },
+          "ca_reference": {
+            "title": "Ca Reference",
+            "type": "number"
+          },
+          "commandes": {
+            "title": "Commandes",
+            "type": "integer"
+          },
+          "heure": {
+            "title": "Heure",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "heure",
+          "ca",
+          "commandes",
+          "ca_reference"
+        ],
+        "title": "RestoDashHeure",
+        "type": "object"
+      },
+      "RestoDashJour": {
+        "properties": {
+          "ca": {
+            "title": "Ca",
+            "type": "number"
+          },
+          "commandes": {
+            "title": "Commandes",
+            "type": "integer"
+          },
+          "jour": {
+            "title": "Jour",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jour",
+          "ca",
+          "commandes"
+        ],
+        "title": "RestoDashJour",
+        "type": "object"
+      },
+      "RestoDashKpi": {
+        "properties": {
+          "ca_jour": {
+            "title": "Ca Jour",
+            "type": "number"
+          },
+          "ca_reference": {
+            "title": "Ca Reference",
+            "type": "number"
+          },
+          "commandes": {
+            "title": "Commandes",
+            "type": "integer"
+          },
+          "commandes_reference": {
+            "title": "Commandes Reference",
+            "type": "integer"
+          },
+          "en_cours": {
+            "title": "En Cours",
+            "type": "integer"
+          },
+          "panier_moyen": {
+            "title": "Panier Moyen",
+            "type": "number"
+          },
+          "reste_a_encaisser": {
+            "title": "Reste A Encaisser",
+            "type": "number"
+          },
+          "tables_servies": {
+            "title": "Tables Servies",
+            "type": "integer"
+          },
+          "variation_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variation Pct"
+          }
+        },
+        "required": [
+          "ca_jour",
+          "ca_reference",
+          "commandes",
+          "commandes_reference",
+          "panier_moyen",
+          "tables_servies",
+          "en_cours",
+          "reste_a_encaisser"
+        ],
+        "title": "RestoDashKpi",
+        "type": "object"
+      },
+      "RestoDashMoyen": {
+        "properties": {
+          "montant": {
+            "title": "Montant",
+            "type": "number"
+          },
+          "moyen": {
+            "title": "Moyen",
+            "type": "string"
+          },
+          "paiements": {
+            "title": "Paiements",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "moyen",
+          "montant",
+          "paiements"
+        ],
+        "title": "RestoDashMoyen",
+        "type": "object"
+      },
+      "RestoDashPoste": {
+        "properties": {
+          "en_attente": {
+            "title": "En Attente",
+            "type": "integer"
+          },
+          "en_preparation": {
+            "title": "En Preparation",
+            "type": "integer"
+          },
+          "poste": {
+            "title": "Poste",
+            "type": "string"
+          },
+          "pretes": {
+            "title": "Pretes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "poste",
+          "en_attente",
+          "en_preparation",
+          "pretes"
+        ],
+        "title": "RestoDashPoste",
+        "type": "object"
+      },
+      "RestoDashProduit": {
+        "properties": {
+          "montant": {
+            "title": "Montant",
+            "type": "number"
+          },
+          "nom": {
+            "title": "Nom",
+            "type": "string"
+          },
+          "quantite": {
+            "title": "Quantite",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "nom",
+          "quantite",
+          "montant"
+        ],
+        "title": "RestoDashProduit",
+        "type": "object"
+      },
+      "RestoDashReservation": {
+        "properties": {
+          "couverts": {
+            "title": "Couverts",
+            "type": "integer"
+          },
+          "heure": {
+            "format": "date-time",
+            "title": "Heure",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nom": {
+            "title": "Nom",
+            "type": "string"
+          },
+          "statut": {
+            "title": "Statut",
+            "type": "string"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
+          }
+        },
+        "required": [
+          "id",
+          "heure",
+          "nom",
+          "couverts",
+          "statut"
+        ],
+        "title": "RestoDashReservation",
+        "type": "object"
+      },
+      "RestoDashReservations": {
+        "properties": {
+          "a_confirmer": {
+            "title": "A Confirmer",
+            "type": "integer"
+          },
+          "couverts_jour": {
+            "title": "Couverts Jour",
+            "type": "integer"
+          },
+          "prochaines": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashReservation"
+            },
+            "title": "Prochaines",
+            "type": "array"
+          },
+          "total_jour": {
+            "title": "Total Jour",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_jour",
+          "couverts_jour",
+          "a_confirmer",
+          "prochaines"
+        ],
+        "title": "RestoDashReservations",
+        "type": "object"
+      },
+      "RestoDashSalle": {
+        "properties": {
+          "libres": {
+            "title": "Libres",
+            "type": "integer"
+          },
+          "maintenance": {
+            "title": "Maintenance",
+            "type": "integer"
+          },
+          "occupees": {
+            "title": "Occupees",
+            "type": "integer"
+          },
+          "reservees": {
+            "title": "Reservees",
+            "type": "integer"
+          },
+          "sessions_ouvertes": {
+            "title": "Sessions Ouvertes",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "libres",
+          "occupees",
+          "reservees",
+          "maintenance",
+          "sessions_ouvertes"
+        ],
+        "title": "RestoDashSalle",
+        "type": "object"
+      },
+      "RestoDashStock": {
+        "properties": {
+          "articles": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashStockBas"
+            },
+            "title": "Articles",
+            "type": "array"
+          },
+          "ruptures": {
+            "title": "Ruptures",
+            "type": "integer"
+          },
+          "sous_seuil": {
+            "title": "Sous Seuil",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sous_seuil",
+          "ruptures",
+          "articles"
+        ],
+        "title": "RestoDashStock",
+        "type": "object"
+      },
+      "RestoDashStockBas": {
+        "properties": {
+          "nom": {
+            "title": "Nom",
+            "type": "string"
+          },
+          "quantite": {
+            "title": "Quantite",
+            "type": "number"
+          },
+          "seuil": {
+            "title": "Seuil",
+            "type": "number"
+          },
+          "unite": {
+            "title": "Unite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "quantite",
+          "seuil",
+          "unite"
+        ],
+        "title": "RestoDashStockBas",
+        "type": "object"
+      },
+      "RestoDashboardResponse": {
+        "properties": {
+          "alertes": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashAlerte"
+            },
+            "title": "Alertes",
+            "type": "array"
+          },
+          "caisse": {
+            "$ref": "#/components/schemas/RestoDashCaisse"
+          },
+          "cuisine": {
+            "$ref": "#/components/schemas/RestoDashCuisine"
+          },
+          "devise": {
+            "title": "Devise",
+            "type": "string"
+          },
+          "fuseau": {
+            "title": "Fuseau",
+            "type": "string"
+          },
+          "genere_le": {
+            "format": "date-time",
+            "title": "Genere Le",
+            "type": "string"
+          },
+          "heures": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashHeure"
+            },
+            "title": "Heures",
+            "type": "array"
+          },
+          "kpi": {
+            "$ref": "#/components/schemas/RestoDashKpi"
+          },
+          "moyens_paiement": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashMoyen"
+            },
+            "title": "Moyens Paiement",
+            "type": "array"
+          },
+          "reservations": {
+            "$ref": "#/components/schemas/RestoDashReservations"
+          },
+          "salle": {
+            "$ref": "#/components/schemas/RestoDashSalle"
+          },
+          "semaine": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashJour"
+            },
+            "title": "Semaine",
+            "type": "array"
+          },
+          "stock": {
+            "$ref": "#/components/schemas/RestoDashStock"
+          },
+          "top_produits": {
+            "items": {
+              "$ref": "#/components/schemas/RestoDashProduit"
+            },
+            "title": "Top Produits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "genere_le",
+          "fuseau",
+          "devise",
+          "kpi",
+          "heures",
+          "semaine",
+          "top_produits",
+          "moyens_paiement",
+          "salle",
+          "cuisine",
+          "reservations",
+          "stock",
+          "caisse",
+          "alertes"
+        ],
+        "title": "RestoDashboardResponse",
         "type": "object"
       },
       "RosOrderStatus": {
@@ -10193,6 +11195,25 @@
         ],
         "title": "SessionStatus",
         "type": "string"
+      },
+      "SessionUpdate": {
+        "description": "Modification d'une session ouverte : pour l'instant son contexte (« 4 couverts · Terrasse »),\nqui porte le nombre de couverts affiché sur le plan de salle.",
+        "properties": {
+          "table_context": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Context"
+          }
+        },
+        "title": "SessionUpdate",
+        "type": "object"
       },
       "ShiftCloseRequest": {
         "properties": {
@@ -10491,10 +11512,75 @@
         "type": "object"
       },
       "StockMouvementCreate": {
+        "description": "Mouvement manuel. ``entree`` = réception ; ``sortie`` ou ``perte`` = sortie hors vente (motif requis) ;\n``ajustement`` = nouvelle quantité constatée (motif requis). La précision (3 décimales) et les motifs\nsont contrôlés par le moteur (``stock_engine``) qui répond en 422 avec un code français.",
         "properties": {
+          "cout_unitaire": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cout Unitaire"
+          },
+          "date_peremption": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Peremption"
+          },
+          "fournisseur_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fournisseur Id"
+          },
+          "lot_numero": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Numero"
+          },
+          "motif": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motif"
+          },
           "notes": {
             "anyOf": [
               {
+                "maxLength": 1000,
                 "type": "string"
               },
               {
@@ -10506,7 +11592,6 @@
           "quantite": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -10517,7 +11602,7 @@
             "title": "Quantite"
           },
           "type": {
-            "pattern": "^(entree|ajustement|perte)$",
+            "pattern": "^(entree|sortie|perte|ajustement)$",
             "title": "Type",
             "type": "string"
           }
@@ -11091,8 +12176,62 @@
         "title": "TableUpdate",
         "type": "object"
       },
+      "TicketExpireResponse": {
+        "properties": {
+          "cancelled": {
+            "title": "Cancelled",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cancelled"
+        ],
+        "title": "TicketExpireResponse",
+        "type": "object"
+      },
+      "TicketPriorityUpdate": {
+        "description": "0 = normal, 1 = urgent (passe en tête de file).",
+        "properties": {
+          "priority": {
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Priority",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "priority"
+        ],
+        "title": "TicketPriorityUpdate",
+        "type": "object"
+      },
       "TicketResponse": {
         "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "course": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -11123,6 +12262,11 @@
             "title": "Order Id",
             "type": "string"
           },
+          "priority": {
+            "default": 0,
+            "title": "Priority",
+            "type": "integer"
+          },
           "ready_at": {
             "anyOf": [
               {
@@ -11140,11 +12284,57 @@
             "title": "Restaurant Id",
             "type": "string"
           },
+          "served_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Served At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
           "station": {
             "$ref": "#/components/schemas/ProductionStation"
           },
           "status": {
             "$ref": "#/components/schemas/TicketStatus"
+          },
+          "table_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Label"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
           }
         },
         "required": [
@@ -11179,6 +12369,60 @@
           "status"
         ],
         "title": "TicketStatusUpdate",
+        "type": "object"
+      },
+      "TicketSummaryItem": {
+        "properties": {
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_name",
+          "quantity"
+        ],
+        "title": "TicketSummaryItem",
+        "type": "object"
+      },
+      "TicketSummaryResponse": {
+        "description": "« Tout le service » : quantités par article sur les tickets à faire de la fenêtre.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TicketSummaryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "station": {
+            "$ref": "#/components/schemas/ProductionStation"
+          },
+          "ticket_count": {
+            "title": "Ticket Count",
+            "type": "integer"
+          },
+          "total_quantity": {
+            "title": "Total Quantity",
+            "type": "integer"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "station",
+          "window_hours",
+          "ticket_count",
+          "total_quantity",
+          "items"
+        ],
+        "title": "TicketSummaryResponse",
         "type": "object"
       },
       "TokenResponse": {
@@ -11725,6 +12969,18 @@
             ],
             "title": "Customer Email"
           },
+          "customer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
           "customer_name": {
             "maxLength": 255,
             "minLength": 1,
@@ -11746,6 +13002,7 @@
           "estimated_wait_minutes": {
             "anyOf": [
               {
+                "maximum": 600.0,
                 "minimum": 0.0,
                 "type": "integer"
               },
@@ -11769,6 +13026,7 @@
           },
           "party_size": {
             "exclusiveMinimum": 0.0,
+            "maximum": 500.0,
             "title": "Party Size",
             "type": "integer"
           },
@@ -11839,6 +13097,18 @@
               }
             ],
             "title": "Customer Email"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
           },
           "customer_name": {
             "title": "Customer Name",
@@ -12164,6 +13434,29 @@
           }
         },
         "summary": "Vérifier la santé de l’application",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Interroge réellement PostgreSQL et vérifie que le rôle de l'API respecte la RLS.\n    Répond 503 si la base est injoignable ou si le rôle contourne la RLS.\n    Utilisé par le pipeline de déploiement pour valider l'API et la base ensemble.",
+        "operationId": "readiness_check_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "L'API et la base répondent, RLS effective."
+          },
+          "503": {
+            "description": "Base injoignable ou RLS contournée."
+          }
+        },
+        "summary": "Vérifier la connexion à la base de données",
         "tags": [
           "health"
         ]
@@ -12834,6 +14127,139 @@
         ]
       }
     },
+    "/v1/emails/preview/{name}": {
+      "get": {
+        "description": "Aperçu HTML d'un gabarit avec des données d'exemple (rien n'est envoyé).",
+        "operationId": "preview_template_v1_emails_preview__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "fr",
+              "pattern": "^(fr|en)$",
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Template",
+        "tags": [
+          "emails"
+        ]
+      }
+    },
+    "/v1/emails/status": {
+      "get": {
+        "description": "État de la configuration d'envoi. Ne renvoie jamais le mot de passe SMTP.",
+        "operationId": "email_status_v1_emails_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Email Status",
+        "tags": [
+          "emails"
+        ]
+      }
+    },
+    "/v1/emails/test": {
+      "post": {
+        "description": "Envoie un gabarit d'exemple (par défaut le test) à soi-même ou à l'adresse donnée.",
+        "operationId": "send_test_email_v1_emails_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Test Email",
+        "tags": [
+          "emails"
+        ]
+      }
+    },
     "/v1/payments/easytransact/checkout": {
       "post": {
         "operationId": "create_checkout_v1_payments_easytransact_checkout_post",
@@ -13471,6 +14897,208 @@
         ]
       }
     },
+    "/v1/reservations/restaurants/{restaurant_id}/availability": {
+      "get": {
+        "operationId": "get_availability_v1_reservations_restaurants__restaurant_id__availability_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "party_size",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 500,
+              "title": "Party Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "duration",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "exclusiveMinimum": 0,
+              "maximum": 1440,
+              "title": "Duration",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibiliteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Availability",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/v1/reservations/restaurants/{restaurant_id}/customers/search": {
+      "get": {
+        "operationId": "search_customers_v1_reservations_restaurants__restaurant_id__customers_search_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientRecherche"
+                  },
+                  "title": "Response Search Customers V1 Reservations Restaurants  Restaurant Id  Customers Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Customers",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/v1/reservations/restaurants/{restaurant_id}/customers/{customer_id}/summary": {
+      "get": {
+        "operationId": "customer_summary_v1_reservations_restaurants__restaurant_id__customers__customer_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Customer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResume"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Customer Summary",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
     "/v1/reservations/restaurants/{restaurant_id}/reservations": {
       "get": {
         "operationId": "list_reservations_v1_reservations_restaurants__restaurant_id__reservations_get",
@@ -13647,6 +15275,16 @@
               "title": "Restaurant Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Force",
+              "type": "boolean"
+            }
           }
         ],
         "requestBody": {
@@ -13704,6 +15342,23 @@
               "format": "uuid",
               "title": "Restaurant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 30,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
@@ -13849,6 +15504,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 500,
                   "type": "string"
                 },
                 {
@@ -13885,6 +15541,56 @@
         ]
       }
     },
+    "/v1/reservations/waitlist/{waitlist_id}/notify": {
+      "post": {
+        "operationId": "notify_waitlist_entry_v1_reservations_waitlist__waitlist_id__notify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "waitlist_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Waitlist Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Notify Waitlist Entry V1 Reservations Waitlist  Waitlist Id  Notify Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Notify Waitlist Entry",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
     "/v1/reservations/waitlist/{waitlist_id}/seat": {
       "post": {
         "operationId": "seat_waitlist_entry_v1_reservations_waitlist__waitlist_id__seat_post",
@@ -13914,6 +15620,16 @@
                 }
               ],
               "title": "Table Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Force",
+              "type": "boolean"
             }
           }
         ],
@@ -13971,6 +15687,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 500,
                   "type": "string"
                 },
                 {
@@ -14063,6 +15780,16 @@
               "format": "uuid",
               "title": "Reservation Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Force",
+              "type": "boolean"
             }
           }
         ],
@@ -14215,6 +15942,54 @@
         ]
       }
     },
+    "/v1/reservations/{reservation_id}/complete": {
+      "post": {
+        "operationId": "complete_reservation_v1_reservations__reservation_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Complete Reservation",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
     "/v1/reservations/{reservation_id}/confirm": {
       "post": {
         "operationId": "confirm_reservation_v1_reservations__reservation_id__confirm_post",
@@ -14275,6 +16050,54 @@
           }
         ],
         "summary": "Confirm Reservation",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/v1/reservations/{reservation_id}/no-show": {
+      "post": {
+        "operationId": "no_show_reservation_v1_reservations__reservation_id__no_show_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "No Show Reservation",
         "tags": [
           "reservations"
         ]
@@ -16055,6 +17878,52 @@
       }
     },
     "/v1/restaurants/tables/{table_id}": {
+      "delete": {
+        "description": "Suppression logique d'une table (gérant ou propriétaire) : elle disparaît du plan de salle et son\n    numéro redevient disponible. Refusée (409) tant qu'une session est ouverte sur la table.",
+        "operationId": "delete_table_v1_restaurants_tables__table_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Table supprimée."
+          },
+          "404": {
+            "description": "Table introuvable."
+          },
+          "409": {
+            "description": "Table occupée."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Supprimer une table",
+        "tags": [
+          "restaurant-tables"
+        ]
+      },
       "get": {
         "description": "Retourne les informations d’une table donnée.\n\n    Cette route est utile pour consulter l’état, la capacité et le statut d’occupation d’une table de restaurant.",
         "operationId": "get_table_v1_restaurants_tables__table_id__get",
@@ -22062,6 +23931,54 @@
         ]
       }
     },
+    "/v1/ros/restaurants/{restaurant_id}/dashboard": {
+      "get": {
+        "operationId": "restaurant_dashboard_v1_ros_restaurants__restaurant_id__dashboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tableau de bord du jour : chiffre d'affaires, salle, cuisine, réservations, stock, alertes",
+        "tags": [
+          "restaurant-dashboard"
+        ]
+      }
+    },
     "/v1/ros/restaurants/{restaurant_id}/invoices/{invoice_id}": {
       "get": {
         "operationId": "get_invoice_v1_ros_restaurants__restaurant_id__invoices__invoice_id__get",
@@ -22533,6 +24450,74 @@
         ]
       }
     },
+    "/v1/ros/restaurants/{restaurant_id}/sessions/{session_id}": {
+      "put": {
+        "operationId": "update_session_v1_ros_restaurants__restaurant_id__sessions__session_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Modifier une session ouverte (couverts, zone)",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
     "/v1/ros/restaurants/{restaurant_id}/sessions/{session_id}/close": {
       "post": {
         "operationId": "close_session_v1_ros_restaurants__restaurant_id__sessions__session_id__close_post",
@@ -22823,9 +24808,58 @@
         ]
       }
     },
+    "/v1/ros/restaurants/{restaurant_id}/tickets/expire": {
+      "post": {
+        "operationId": "expire_stale_tickets_v1_ros_restaurants__restaurant_id__tickets_expire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketExpireResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Annuler les tickets encore à faire plus anciens que la fenêtre (gestion)",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
     "/v1/ros/restaurants/{restaurant_id}/tickets/{station}": {
       "get": {
-        "operationId": "get_pending_tickets_v1_ros_restaurants__restaurant_id__tickets__station__get",
+        "description": "À faire et en préparation créés dans la fenêtre `KDS_TICKET_WINDOW_HOURS`, « Prêt »\n    depuis moins de 30 minutes, « Servi » encore rappelables (2 minutes). Tri : priorité\n    décroissante, puis ancienneté. Plafonné à 500 tickets.",
+        "operationId": "get_station_board_v1_ros_restaurants__restaurant_id__tickets__station__get",
         "parameters": [
           {
             "in": "path",
@@ -22844,34 +24878,6 @@
             "schema": {
               "$ref": "#/components/schemas/ProductionStation"
             }
-          },
-          {
-            "description": "Nombre de lignes à sauter",
-            "in": "query",
-            "name": "skip",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "description": "Nombre de lignes à sauter",
-              "maximum": 100000,
-              "minimum": 0,
-              "title": "Skip",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Nombre de lignes à renvoyer (maximum 500)",
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 100,
-              "description": "Nombre de lignes à renvoyer (maximum 500)",
-              "maximum": 500,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
           }
         ],
         "responses": {
@@ -22882,7 +24888,7 @@
                   "items": {
                     "$ref": "#/components/schemas/TicketResponse"
                   },
-                  "title": "Response Get Pending Tickets V1 Ros Restaurants  Restaurant Id  Tickets  Station  Get",
+                  "title": "Response Get Station Board V1 Ros Restaurants  Restaurant Id  Tickets  Station  Get",
                   "type": "array"
                 }
               }
@@ -22905,7 +24911,195 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Obtenir les tickets en attente pour une station (KITCHEN, BAR, DESSERT)",
+        "summary": "Tickets affichés sur l'écran d'un poste (KITCHEN, BAR, DESSERT)",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{station}/summary": {
+      "get": {
+        "operationId": "get_station_summary_v1_ros_restaurants__restaurant_id__tickets__station__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "station",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProductionStation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "« Tout le service » : quantités par article d'un poste",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{ticket_id}/priority": {
+      "put": {
+        "operationId": "set_ticket_priority_v1_ros_restaurants__restaurant_id__tickets__ticket_id__priority_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPriorityUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Le ticket n'est plus à faire."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Marquer un ticket urgent (1) ou normal (0) : l'urgent passe en tête de file",
+        "tags": [
+          "restaurant-operating-system"
+        ]
+      }
+    },
+    "/v1/ros/restaurants/{restaurant_id}/tickets/{ticket_id}/recall": {
+      "post": {
+        "operationId": "recall_ticket_v1_ros_restaurants__restaurant_id__tickets__ticket_id__recall_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "restaurant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Restaurant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Ticket non servi ou délai de rappel dépassé."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rappeler un ticket servi (il redevient « Prêt ») pendant 2 minutes",
         "tags": [
           "restaurant-operating-system"
         ]
@@ -22913,6 +25107,7 @@
     },
     "/v1/ros/restaurants/{restaurant_id}/tickets/{ticket_id}/status": {
       "put": {
+        "description": "Transitions contrôlées : À préparer -> En préparation -> Prêt -> Servi, et annulation\n    avant « Prêt ». Le retour arrière (En préparation -> À préparer, Prêt -> En préparation)\n    est réservé à la gestion. Le rappel d'un ticket servi passe par `/recall`.",
         "operationId": "update_ticket_status_v1_ros_restaurants__restaurant_id__tickets__ticket_id__status_put",
         "parameters": [
           {
@@ -22957,6 +25152,12 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Retour arrière réservé à la gestion."
+          },
+          "409": {
+            "description": "Transition interdite ou ticket déjà dans cet état."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -22973,7 +25174,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Mettre à jour le statut d'un ticket de production (QUEUED, IN_PREPARATION, READY, SERVED)",
+        "summary": "Faire avancer un ticket (QUEUED, IN_PREPARATION, READY, SERVED, CANCELLED)",
         "tags": [
           "restaurant-operating-system"
         ]

@@ -1,6 +1,6 @@
 <!-- La commande en cours de saisie : quantités, notes, poste de préparation, envoi. -->
 <script setup lang="ts">
-import { STATION_LABEL, STATION_OPTIONS, plural } from '../labels'
+import { STATION_LABEL, plural } from '../labels'
 import type { CartLine } from '../types'
 import { formatMoney } from '@/lib/format'
 
@@ -105,7 +105,7 @@ const toggle = (line: CartLine) => {
               :prepend-icon="editing === line.item.id ? 'ri-arrow-up-s-line' : 'ri-edit-line'"
               @click="toggle(line)"
             >
-              {{ line.notes ? `Note : ${line.notes}` : 'Note et poste' }}
+              {{ line.notes ? `Note : ${line.notes}` : 'Ajouter une note' }}
             </VBtn>
             <span class="font-weight-semibold tabular-nums text-no-wrap">{{ formatMoney(line.quantity * line.item.price, line.item.currency) }}</span>
           </div>
@@ -125,14 +125,13 @@ const toggle = (line: CartLine) => {
               hide-details
               class="mb-3"
             />
-            <VSelect
-              v-model="line.station"
-              :items="STATION_OPTIONS"
-              label="À préparer à"
-              prepend-inner-icon="ri-restaurant-2-line"
-              density="compact"
-              hide-details
-            />
+            <p class="text-body-2 text-medium-emphasis mb-0 d-flex align-center gap-2">
+              <VIcon
+                icon="ri-restaurant-2-line"
+                size="18"
+              />
+              <span>Préparé à : <strong>{{ STATION_LABEL[line.station] }}</strong> (défini par le catalogue)</span>
+            </p>
           </div>
         </li>
       </ul>

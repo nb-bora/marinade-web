@@ -33,6 +33,16 @@ export function formatMoney(amount: number | string | null | undefined, currency
   return Number.isFinite(value) ? currencyFormatter(currency).format(value) : '—'
 }
 
+/** « 482 500 FCFA » → { amount: '482 500', unit: 'FCFA' } : le montant en grand, la devise en petit. */
+export function moneyParts(amount: number | string | null | undefined, currency = 'XAF'): { amount: string; unit: string } {
+  const text = formatMoney(amount, currency)
+
+  // L'espace avant la devise est insécable (U+00A0 ou U+202F) : `\s` les couvre.
+  const cut = text.search(/\s\S+$/)
+
+  return cut === -1 ? { amount: text, unit: '' } : { amount: text.slice(0, cut), unit: text.slice(cut + 1) }
+}
+
 const dateTime = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium', timeStyle: 'short' })
 const dateOnly = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium' })
 const timeOnly = new Intl.DateTimeFormat(LOCALE, { timeStyle: 'short' })

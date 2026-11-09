@@ -37,9 +37,24 @@ const BY_KIND: Record<ApiError['kind'], string> = {
   client: 'La demande n\'a pas pu aboutir.',
 }
 
+/**
+ * Un code métier (`stock.insufficient`, `pressing.machine.transition_interdite`…) vient du catalogue
+ * français du serveur : son message est fait pour être lu. Les codes génériques (`http.*`, `common.*`)
+ * peuvent encore porter un texte brut en anglais : ils restent traduits par type d'erreur.
+ */
+function hasReadableServerMessage(error: ApiError): boolean {
+  if (!error.code || /^(?:http|common)\./.test(error.code))
+    return false
+
+  return error.status >= 400 && error.status < 500 && error.status !== 401
+}
+
 export function describeError(error: unknown): string {
   if (!isApiError(error))
     return 'Une erreur inattendue est survenue.'
+
+  if (hasReadableServerMessage(error))
+    return error.message
 
   return KNOWN_MESSAGES[error.message] ?? BY_KIND[error.kind]
 }

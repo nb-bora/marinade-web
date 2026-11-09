@@ -9,21 +9,21 @@ export interface MovementOption {
   help: string
 }
 
-/** Les trois mouvements acceptés par le serveur ; la « sortie » est une perte (casse, péremption...). */
+/** Les mouvements acceptés par le serveur (`StockMouvementCreate.type`). */
 export const MOVEMENTS: MovementOption[] = [
   {
     value: 'entree',
     title: 'Entrée',
     icon: 'ri-arrow-down-circle-line',
     quantityLabel: 'Quantité reçue',
-    help: 'Livraison ou achat : la quantité est ajoutée au stock.',
+    help: 'Livraison ou achat : la quantité est ajoutée au stock, avec son coût, son lot et sa date limite si besoin.',
   },
   {
-    value: 'perte',
+    value: 'sortie',
     title: 'Sortie',
     icon: 'ri-arrow-up-circle-line',
     quantityLabel: 'Quantité sortie',
-    help: 'Casse, péremption ou usage hors vente : la quantité est retirée du stock disponible.',
+    help: 'Casse, péremption ou usage hors vente : la quantité est retirée du stock disponible. Un motif est obligatoire.',
   },
   {
     value: 'ajustement',
@@ -35,6 +35,34 @@ export const MOVEMENTS: MovementOption[] = [
 ]
 
 export const movementLabel = (type: string) => MOVEMENTS.find(option => option.value === type)?.title ?? type
+
+/** Motifs normalisés : mêmes codes que `app/services/stock_motifs.py` et `MOTIFS_SORTIE_MANUELLE`. */
+export const MOTIF_LABELS: Record<string, string> = {
+  perte: 'Perte',
+  casse: 'Casse',
+  peremption: 'Péremption',
+  usage_interne: 'Usage interne',
+  offert: 'Offert',
+  erreur_saisie: 'Erreur de saisie',
+  vol: 'Vol',
+  inventaire: 'Inventaire',
+  autre: 'Autre',
+}
+
+/** Motifs proposés selon le mouvement (le serveur refuse tout autre code). */
+export const MOTIFS_BY_MOVEMENT: Record<'sortie' | 'ajustement', string[]> = {
+  sortie: ['casse', 'peremption', 'perte', 'usage_interne', 'offert', 'vol', 'erreur_saisie', 'autre'],
+  ajustement: ['inventaire', 'erreur_saisie', 'autre'],
+}
+
+export const motifOptions = (type: string) => {
+  const codes = type === 'sortie' || type === 'ajustement' ? MOTIFS_BY_MOVEMENT[type] : []
+
+  return codes.map(value => ({ value, title: MOTIF_LABELS[value] }))
+}
+
+/** Un motif est obligatoire pour une sortie et un ajustement ; « autre » exige un commentaire. */
+export const motifRequired = (type: string) => type === 'sortie' || type === 'ajustement'
 
 /** Suggestions seulement : le type d'un composant reste libre côté serveur. */
 export const COMPONENT_TYPES = ['base', 'sauce', 'proteine', 'legume', 'boisson', 'garniture', 'epice']
@@ -68,14 +96,19 @@ export const STATE_INFO: Record<StockState, StateInfo> = {
   ok: { label: 'Suffisant', tone: 'success', color: 'success', icon: 'ri-checkbox-circle-line' },
 }
 
-/** Rupture : plus rien de vendable. Alerte : sous le seuil fixé (un seuil à 0 ne déclenche rien). */
+/**
+ * Même règle que le serveur (`stock_engine.etat_stock`) : rupture si le disponible (quantité - réservé)
+ * est nul ou négatif ; alerte si le seuil est fixé (> 0) et que le disponible l'atteint.
+ */
 export function stockState(stock: StockLevel): StockState {
-  if (Number(stock.disponible) <= 0)
+  const available = Number(stock.disponible)
+
+  if (available <= 0)
     return 'rupture'
 
   const threshold = Number(stock.seuil_alerte)
 
-  return threshold > 0 && Number(stock.quantite) <= threshold ? 'alerte' : 'ok'
+  return threshold > 0 && available <= threshold ? 'alerte' : 'ok'
 }
 
 export function buildRows(composants: Composant[], levels: StockLevel[]): StockRow[] {

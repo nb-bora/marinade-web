@@ -8,8 +8,11 @@ import type {
   Order,
   OrderCreate,
   Plat,
+  Restaurant,
+  RestaurantUpdate,
   ServiceSession,
   SessionCreate,
+  SessionUpdate,
   Table,
   TableCreate,
   TableUpdate,
@@ -38,6 +41,16 @@ export class FloorApi {
     }
   }
 
+  // Restaurant (aménagement de la salle : niveaux et zones dans `config_jsonb.salle`) ---------
+
+  restaurant(restaurantId: string, signal?: AbortSignal) {
+    return this.http.get<Restaurant>(`/v1/restaurants/${restaurantId}`, { signal })
+  }
+
+  updateRestaurant(restaurantId: string, body: RestaurantUpdate) {
+    return this.http.put<Restaurant>(`/v1/restaurants/${restaurantId}`, body)
+  }
+
   // Tables --------------------------------------------------------------------------
 
   tables(restaurantId: string, signal?: AbortSignal) {
@@ -60,6 +73,11 @@ export class FloorApi {
     return this.http.put<Table>(`/v1/restaurants/tables/${tableId}`, body)
   }
 
+  /** Suppression logique ; refusée (409) tant qu'une session est ouverte sur la table. */
+  deleteTable(tableId: string) {
+    return this.http.delete<void>(`/v1/restaurants/tables/${tableId}`)
+  }
+
   // Clients et sessions ------------------------------------------------------------------
 
   createCustomer(restaurantId: string, body: CustomerCreate) {
@@ -68,6 +86,11 @@ export class FloorApi {
 
   openSession(restaurantId: string, body: SessionCreate) {
     return this.http.post<ServiceSession>(`/v1/ros/restaurants/${restaurantId}/sessions`, body)
+  }
+
+  /** Modifie une session ouverte (le contexte porte le nombre de couverts). */
+  updateSession(restaurantId: string, sessionId: string, body: SessionUpdate) {
+    return this.http.put<ServiceSession>(`/v1/ros/restaurants/${restaurantId}/sessions/${sessionId}`, body)
   }
 
   /** Sessions encore ouvertes (ni soldées ni clôturées). */

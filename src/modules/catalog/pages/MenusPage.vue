@@ -21,7 +21,7 @@ const toast = useToast()
 const router = useRouter()
 const canWrite = computed(() => tenant.can('management'))
 
-const { menus, categoriesOf, loading, error, loaded, reload, refresh } = useMenus()
+const { menus, categories, categoriesOf, loading, error, loaded, reload, refresh } = useMenus()
 
 // Nombre de plats par catégorie : il donne le nombre de plats de chaque menu.
 const { data: plats, refresh: refreshPlats } = useAsyncData(
@@ -41,6 +41,10 @@ const platCount = computed(() => {
 })
 
 const platsOf = (menu: Menu) => categoriesOf(menu.id).reduce((sum, category) => sum + (platCount.value.get(category.id) ?? 0), 0)
+
+// Indicateurs de tête : calculés à partir des données déjà chargées, sans requête de plus.
+const activeCount = computed(() => menus.value.filter(menu => menu.actif).length)
+const platTotal = computed(() => (plats.value ?? []).filter(plat => plat.category_id).length)
 
 // Filtres ------------------------------------------------------------------------------------
 
@@ -162,30 +166,31 @@ const afterChange = () => {
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Carte"
       title="Nos menus"
-      subtitle="Organisez votre carte : chaque menu regroupe des catégories dans l'ordre où vos clients les découvrent."
+      subtitle="Chaque menu regroupe ses catégories, dans l'ordre où vos clients les découvrent."
     >
       <template
         v-if="canWrite"
         #actions
       >
         <VBtn
-          variant="outlined"
-          color="secondary"
+          variant="tonal"
           prepend-icon="ri-upload-2-line"
           @click="importDialog = true"
         >
           Importer
         </VBtn>
         <VBtn
+          color="primary"
           prepend-icon="ri-add-line"
           @click="newMenu"
         >
           Créer un menu
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="error && !loaded"
@@ -241,6 +246,48 @@ const afterChange = () => {
     </VCard>
 
     <template v-else>
+      <AppMetricGrid class="mt-5 mb-6">
+        <AppMetricTile
+          hero
+          label="Menus actifs"
+          icon="ri-book-open-line"
+          :hint="activeCount === menus.length ? 'Tous vos menus sont proposés' : `${menus.length - activeCount} menu${menus.length - activeCount > 1 ? 's' : ''} masqué${menus.length - activeCount > 1 ? 's' : ''}`"
+        >
+          <AppAnimatedNumber
+            v-slot="{ current }"
+            :value="activeCount"
+          >
+            {{ Math.round(current) }}
+          </AppAnimatedNumber>
+        </AppMetricTile>
+        <AppMetricTile
+          label="Catégories"
+          icon="ri-price-tag-3-line"
+          color="info"
+          :hint="`Réparties dans ${menus.length} menu${menus.length > 1 ? 's' : ''}`"
+        >
+          <AppAnimatedNumber
+            v-slot="{ current }"
+            :value="categories.length"
+          >
+            {{ Math.round(current) }}
+          </AppAnimatedNumber>
+        </AppMetricTile>
+        <AppMetricTile
+          label="Plats à la carte"
+          icon="ri-restaurant-2-line"
+          color="success"
+          :hint="platTotal ? 'Rangés dans une catégorie' : 'Aucun plat rangé pour l\'instant'"
+        >
+          <AppAnimatedNumber
+            v-slot="{ current }"
+            :value="platTotal"
+          >
+            {{ Math.round(current) }}
+          </AppAnimatedNumber>
+        </AppMetricTile>
+      </AppMetricGrid>
+
       <div class="menus-toolbar mb-6">
         <AppSegmented
           v-model="status"

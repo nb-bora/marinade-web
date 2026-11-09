@@ -118,17 +118,18 @@ onKeyStroke('Escape', () => {
         density="comfortable"
       >
         <VListItem
-          v-for="category in categories"
+          v-for="(category, index) in categories"
           :key="category.id"
         >
           <template #prepend>
+            <!-- Le rang à l'écran (1, 2, 3…) : le champ enregistré « ordre » n'est pas montré. -->
             <VAvatar
               size="30"
               variant="tonal"
               color="secondary"
               class="me-3 tabular-nums"
             >
-              {{ category.ordre }}
+              {{ index + 1 }}
             </VAvatar>
           </template>
           <VListItemTitle class="font-weight-medium">

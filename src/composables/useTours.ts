@@ -59,13 +59,31 @@ export const useTours = createSharedComposable(() => {
       steps: [
         {
           title: 'Bienvenue dans Marinade',
-          text: 'Cette page résume l\'activité de votre restaurant d\'un coup d\'œil. Faisons le tour en trois étapes.',
+          text: 'Cette page résume l\'activité de votre restaurant d\'un coup d\'œil. Faisons le tour en quelques étapes.',
           action: go('/dashboard'),
         },
         {
-          title: 'Vos indicateurs principaux',
-          text: 'Les six blocs principaux montrent les encaissements, l\'état de la salle, le stock à surveiller et la production en cours. Ils se mettent à jour tout seuls.',
-          target: '.layout-page-content .v-row',
+          title: 'Les chiffres du jour',
+          text: 'Chiffre d\'affaires, commandes, panier moyen, tables servies et reste à encaisser. Les pastilles vertes ou rouges comparent à la même heure le même jour de la semaine dernière.',
+          target: '[data-tour="dash-kpi"]',
+          position: 'bottom',
+        },
+        {
+          title: 'La courbe heure par heure',
+          text: 'Votre chiffre d\'affaires d\'aujourd\'hui (trait plein) face à la semaine dernière (pointillés) : repérez vos coups de feu et vos creux.',
+          target: '[data-tour="dash-revenue"]',
+          position: 'top',
+        },
+        {
+          title: 'Ce qui demande une action',
+          text: 'Cuisine qui attend, rupture de stock, réservations à confirmer… Cliquez sur une ligne pour aller directement traiter le problème.',
+          target: '[data-tour="dash-alerts"]',
+          position: 'left',
+        },
+        {
+          title: 'Salle, production et réservations',
+          text: 'L\'occupation de la salle, les tickets en cuisine et au bar, puis les prochaines arrivées. L\'écran se met à jour tout seul toutes les 30 secondes.',
+          target: '[data-tour="dash-hall"]',
           position: 'top',
         },
         {
@@ -161,11 +179,23 @@ export const useTours = createSharedComposable(() => {
       paths: ['/salle'],
       steps: [
         {
+          title: 'Votre salle en direct',
+          text: 'L\'occupation, les tables libres, les couverts, l\'addition en cours et la durée moyenne se mettent à jour tout seuls, toutes les 5 secondes.',
+          target: '[data-tour="floor-stats"]',
+          position: 'bottom',
+          action: go('/salle'),
+        },
+        {
           title: 'Voici le plan de votre salle',
-          text: 'Chaque table est dessinée à sa place, vue du dessus, et change de couleur en direct. Ctrl + molette ou deux doigts pour zoomer ; « Réorganiser » pour déplacer les tables.',
+          text: 'Chaque table est dessinée à sa place, vue du dessus, dans le cadre de sa zone. Ctrl + molette ou deux doigts pour zoomer ; « Réorganiser » pour déplacer les tables.',
           target: '.floor-plan',
           position: 'top',
-          action: go('/salle'),
+        },
+        {
+          title: 'La pastille de durée',
+          text: 'Sur une table occupée, la pastille indique depuis combien de temps elle est servie : neutre, orange après 1 h 15, rouge après 2 h.',
+          target: '.floor-badge',
+          position: 'bottom',
         },
         {
           title: 'Table libre : vert',
@@ -183,6 +213,63 @@ export const useTours = createSharedComposable(() => {
           title: 'Table en paiement : rouge',
           text: 'Table en paiement = rouge. Les clients ont demandé l\'addition : réglez-la via la caisse.',
           target: '.floor-table--paying',
+          position: 'bottom',
+        },
+        {
+          title: 'Plan 2D ou 3D',
+          text: 'Passez du plan 2D à la vue 3D du niveau, ou au bâtiment entier avec tous ses étages empilés. Sur une table occupée, les chaises grises sont les places encore libres.',
+          target: '[data-tour="floor-views"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Aménager votre salle',
+          text: 'Propriétaire ou gérant : « Aménager » ouvre le panneau pour créer des niveaux (étages), des zones (salle, terrasses, bar, salon VIP) et ajouter autant de tables que vous voulez, puis les glisser, les tourner et changer leur forme sur le plan.',
+          target: '[data-tour="floor-design-btn"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Filtrer par état',
+          text: 'Touchez un état dans la légende pour mettre en évidence ces tables seulement ; touchez-le encore pour tout réafficher.',
+          target: '.floor-plan__legend',
+          position: 'top',
+        },
+        {
+          title: 'À surveiller',
+          text: 'Les tables qui demandent un geste : addition à encaisser, table à libérer, table occupée depuis longtemps. Touchez-en une pour l\'ouvrir.',
+          target: '[data-tour="floor-watch"]',
+          position: 'left',
+        },
+      ],
+    },
+
+    'tables': {
+      title: 'Les tables',
+      capability: 'front_of_house',
+      paths: ['/salle/tables'],
+      steps: [
+        {
+          title: 'Votre salle en chiffres',
+          text: 'Le nombre de tables, de places, de zones, les tables libres et celles qui demandent un geste (à libérer, hors service). Les places « disponibles maintenant » comptent aussi les chaises encore libres autour des tables servies.',
+          target: '[data-tour="tables-stats"]',
+          position: 'bottom',
+          action: go('/salle/tables'),
+        },
+        {
+          title: 'Chercher et filtrer',
+          text: 'Cherchez par numéro, zone ou niveau, filtrez par zone et par niveau, ou touchez un état (libre, occupée, en paiement…) pour ne voir que ces tables. Les couleurs sont celles du plan de salle.',
+          target: '[data-tour="tables-filters"]',
+          position: 'bottom',
+        },
+        {
+          title: 'La liste des tables',
+          text: 'Chaque ligne montre la zone, l\'état, les places (pleines si un convive y est assis, avec les places libres restantes) et la durée du service. Cliquez sur un en-tête pour trier. Le pictogramme de localisation ouvre la table sur le plan.',
+          target: '[data-tour="tables-list"]',
+          position: 'top',
+        },
+        {
+          title: 'Ajouter des tables',
+          text: 'Une table à la fois avec son numéro, plusieurs d\'un coup numérotées à la suite (« Ajouter en série »), ou depuis un fichier Excel avec « Importer » (le modèle est téléchargeable). Chaque nouvelle table se pose sur une place libre du plan.',
+          target: '[data-tour="tables-add"]',
           position: 'bottom',
         },
       ],
@@ -223,23 +310,35 @@ export const useTours = createSharedComposable(() => {
       paths: ['/cuisine'],
       steps: [
         {
-          title: 'Les tickets en attente',
-          text: 'Chaque commande envoyée par la salle arrive ici sous forme de ticket. Choisissez votre poste (cuisine ou bar) en haut.',
-          target: HEADER,
-          position: 'bottom',
+          title: 'Trois colonnes',
+          text: 'Chaque commande envoyée par la salle arrive ici sous forme de ticket : « À préparer », « En préparation », puis « Prêt à servir ». Choisissez votre poste (cuisine, bar ou desserts) en haut.',
+          target: '.kitchen-lanes',
+          position: 'top',
           action: go('/cuisine'),
         },
         {
-          title: 'Passer en préparation',
-          text: 'Touchez le gros bouton d\'un ticket quand vous commencez à le préparer : la salle voit qu\'il est pris en charge.',
-          target: `${CARD} .v-btn, ${CARD}`,
+          title: 'Faire avancer un ticket',
+          text: 'Touchez le gros bouton du ticket : « Commencer », puis « Prêt », puis « Servi ». Le serveur le sait tout de suite, et les autres écrans se mettent à jour.',
+          target: '.kitchen-lanes .ticket__action',
           position: 'top',
         },
         {
-          title: 'Marquer comme prêt',
-          text: 'Quand le plat est terminé, touchez de nouveau le bouton : le serveur est prévenu qu\'il peut venir le chercher.',
-          target: `${CARD} .v-btn, ${CARD}`,
+          title: 'Urgent et rappel',
+          text: '« Urgent » fait passer un ticket en tête de file. Après « Servi », « Rappeler » remet le plat à prêt pendant 2 minutes, si on l\'a servi par erreur.',
+          target: '.kitchen-lanes .ticket__urgent',
           position: 'top',
+        },
+        {
+          title: 'Tout le service',
+          text: 'Le total de chaque plat, tous tickets confondus : utile pour la mise en place et les coups de feu.',
+          target: '.kitchen-all-day-toggle',
+          position: 'bottom',
+        },
+        {
+          title: 'Le son',
+          text: 'Activez le son pour être prévenu des nouvelles commandes. Si le navigateur le bloque, un bandeau vous le signale.',
+          target: '.kitchen-sound',
+          position: 'bottom',
         },
       ],
     },
@@ -250,30 +349,62 @@ export const useTours = createSharedComposable(() => {
       paths: ['/reservations'],
       steps: [
         {
-          title: 'Le calendrier',
-          text: 'Parcourez les jours pour voir les tables réservées, avec l\'heure et le nombre de personnes.',
-          target: '.layout-page-content .v-row',
-          position: 'top',
-          action: go('/reservations'),
-        },
-        {
-          title: 'Créer une réservation',
-          text: 'Utilisez le bouton de création pour noter le nom du client, son téléphone, l\'heure et le nombre de couverts.',
-          target: MAIN_ACTION,
+          title: 'Choisir le jour et la vue',
+          text: 'Cliquez sur la date pour ouvrir le calendrier, ou avancez jour par jour avec les flèches. Dessous, une ligne résume la journée : réservations, couverts, demandes à confirmer.',
+          target: '[data-tour="resa-toolbar"]',
           position: 'bottom',
           action: go('/reservations'),
         },
         {
+          title: 'La journée, heure par heure',
+          text: 'Chaque bloc est une réservation, coloré selon son état. Cliquez sur une heure libre pour en créer une.',
+          target: '[data-tour="resa-grid"]',
+          position: 'top',
+        },
+        {
+          title: 'Créer une réservation',
+          text: 'Indiquez le client, le jour, l\'heure et le nombre de couverts. Les créneaux libres vous sont proposés.',
+          target: '[data-tour="resa-new"]',
+          position: 'bottom',
+        },
+        {
+          title: 'Confirmer, noter l\'arrivée',
+          text: 'Ouvrez une réservation : confirmez-la, puis notez l\'arrivée. La table passe alors en service.',
+          action: go('/reservations'),
+        },
+        {
           title: 'La liste d\'attente',
-          text: 'Les clients sans réservation qui attendent une table sont notés ici dans l\'ordre d\'arrivée.',
+          text: 'Les groupes sans réservation qui attendent une table sont notés dans l\'ordre d\'arrivée.',
+          target: '[data-tour="resa-waitlist-link"]',
+          position: 'bottom',
+          action: go('/reservations/attente'),
+        },
+      ],
+    },
+
+    'waitlist': {
+      title: 'La liste d\'attente',
+      capability: 'reservations',
+      paths: ['/reservations/attente'],
+      steps: [
+        {
+          title: 'Ajouter un groupe',
+          text: 'Notez le nom et le nombre de personnes. Le téléphone et l\'e-mail sont facultatifs.',
           target: HEADER,
           position: 'bottom',
           action: go('/reservations/attente'),
         },
         {
-          title: 'Accueillir le client',
-          text: 'À son arrivée, faites le check-in : vous lui attribuez une table et la session s\'ouvre en salle.',
-          action: go('/reservations'),
+          title: 'Installer',
+          text: 'Choisissez une table libre adaptée au groupe. La table passe en service et la session s\'ouvre.',
+        },
+        {
+          title: 'Prévenir',
+          text: 'Si le groupe a une adresse e-mail, prévenez-le quand sa table est prête.',
+        },
+        {
+          title: 'Retirer',
+          text: 'Un groupe qui part est retiré de la file, et les suivants avancent d\'un rang.',
         },
       ],
     },
@@ -696,10 +827,20 @@ export const useTours = createSharedComposable(() => {
 
   /** Visite de l'écran donné (chemin de la route), si elle existe et est permise. */
   function tourForPath(path: string): string | null {
-    const found = Object.entries(tours.value).find(([id, tour]) =>
-      isAvailable(id) && tour.paths?.some(prefix => path === prefix || path.startsWith(`${prefix}/`)))
+    let best: { id: string; length: number } | null = null
 
-    return found?.[0] ?? null
+    // Plusieurs visites peuvent couvrir un écran (« /salle » et « /salle/tables ») : la plus précise l'emporte.
+    for (const [id, tour] of Object.entries(tours.value)) {
+      if (!isAvailable(id))
+        continue
+
+      for (const prefix of tour.paths ?? []) {
+        if ((path === prefix || path.startsWith(`${prefix}/`)) && (!best || prefix.length > best.length))
+          best = { id, length: prefix.length }
+      }
+    }
+
+    return best?.id ?? null
   }
 
   function isDismissed(id: string): boolean {

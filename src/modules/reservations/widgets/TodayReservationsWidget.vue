@@ -1,14 +1,16 @@
 <!-- Tableau de bord : les réservations d'aujourd'hui, les prochaines en premier. -->
 <script setup lang="ts">
 import { reservationsApi } from '../api'
+import { addDaysIn, formatClock, startOfDayIn } from '../calendar'
+import { useRestaurantZone } from '../composables/useRestaurantZone'
 import { coversLabel, isDead, presentStatus } from '../labels'
 import type { Reservation } from '../types'
 import ReservationStatusChip from '../components/ReservationStatusChip.vue'
-import { addDays, formatTime, startOfDay } from '@/lib/format'
 import { useLive } from '@/composables/useLive'
 import { useTenantStore } from '@/stores/tenant.store'
 
 const tenant = useTenantStore()
+const { zone } = useRestaurantZone()
 const items = ref<Reservation[] | null>(null)
 const error = ref<unknown>(null)
 
@@ -19,9 +21,10 @@ async function load() {
     return
 
   try {
-    const from = startOfDay()
+    // « Aujourd'hui » est le jour civil du restaurant, pas celui du poste.
+    const from = startOfDayIn(new Date(), zone.value)
 
-    items.value = await reservationsApi.list(tenant.currentId, { from, to: new Date(addDays(from, 1).getTime() - 1) })
+    items.value = await reservationsApi.list(tenant.currentId, { from, to: new Date(addDaysIn(from, 1, zone.value).getTime() - 1) })
     error.value = null
   }
   catch (cause) {
@@ -34,7 +37,7 @@ useLive(load)
 
 const today = computed(() => (items.value ?? [])
   .filter(item => !isDead(item.status))
-  .sort((a, b) => a.reservation_date.localeCompare(b.reservation_date)))
+  .sort((a, b) => new Date(a.reservation_date).getTime() - new Date(b.reservation_date).getTime()))
 
 const covers = computed(() => today.value.reduce((sum, item) => sum + item.party_size, 0))
 const visible = computed(() => today.value.slice(0, 5))
@@ -100,7 +103,7 @@ const visible = computed(() => today.value.slice(0, 5))
             rounded
             size="40"
           >
-            <span class="text-body-2 font-weight-semibold">{{ formatTime(item.reservation_date) }}</span>
+            <span class="text-body-2 font-weight-semibold">{{ formatClock(new Date(item.reservation_date), zone) }}</span>
           </VAvatar>
           <div class="min-w-0">
             <div class="text-body-1 font-weight-medium text-truncate">

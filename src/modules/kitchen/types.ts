@@ -15,11 +15,11 @@ export interface TicketLine {
   notes: string | null
 }
 
-/** Les trois colonnes de l'écran. « Servi » fait quitter le ticket de l'écran. */
+/** Les colonnes de travail de l'écran. Le « servi » n'est pas une colonne : c'est un rappel possible. */
 export type Lane = 'QUEUED' | 'IN_PREPARATION' | 'READY'
 
-/** Événement poussé par le serveur : on ne s'en sert que comme signal « quelque chose a changé ». */
-export interface KdsEvent {
-  type?: string
-  [key: string]: unknown
+/** « Tout le service » : total d'un article, tous tickets à faire confondus. */
+export interface ArticleTotal {
+  name: string
+  quantity: number
 }

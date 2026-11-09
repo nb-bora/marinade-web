@@ -1,78 +1,82 @@
+<!--
+  Liste d'attente : les groupes qui attendent une table, dans l'ordre d'arrivée. Installer choisit une table
+  libre (le serveur contrôle), prévenir envoie un e-mail si le groupe en a une adresse, retirer demande
+  confirmation. Les changements de la file sont annoncés aux lecteurs d'écran.
+-->
 <script setup lang="ts">
+import { useNow } from '@vueuse/core'
 import { reservationsApi } from '../api'
+import { exportWaitlist, waitlistImport } from '../imports'
+import { coversLabel, formatWait, groupsLabel, messageOf } from '../labels'
 import SeatDialog from '../components/SeatDialog.vue'
 import WaitlistQuickAdd from '../components/WaitlistQuickAdd.vue'
-import { coversLabel, formatWait } from '../labels'
+import { useRestaurantZone } from '../composables/useRestaurantZone'
+import { useTables } from '../composables/useTables'
 import type { WaitlistEntry } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useConfirm } from '@/composables/useConfirm'
 import { useLive } from '@/composables/useLive'
-import { useSubmit } from '@/composables/useSubmit'
-import { formatNational, nationalDigits } from '@/lib/phone'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
-import type { StatStripItem } from '@/ui/AppStatStrip.vue'
+import type { ImportResult } from '@/lib/sheetImport'
 
 const tenant = useTenantStore()
 const toast = useToast()
-const confirm = useConfirm()
-
-const { data, loading, error, reload, refresh } = useAsyncData(
-  signal => tenant.currentId ? reservationsApi.waitlist(tenant.currentId, signal) : Promise.resolve([] as WaitlistEntry[]),
-  { watch: [() => tenant.currentId] },
-)
-
-const { isLive } = useLive(refresh)
+const askConfirm = useConfirm()
 const now = useNow({ interval: 30_000 })
+const { zone } = useRestaurantZone()
+const { tables, refresh: refreshTables } = useTables()
 
-// Le serveur garde aussi les groupes déjà installés ou retirés : seule la file active compte.
-const waiting = computed(() => (data.value ?? [])
-  .filter(entry => entry.status === 'WAITING')
-  .sort((a, b) => a.position - b.position))
+const canManage = computed(() => tenant.can('management'))
 
-const minutesSince = (entry: WaitlistEntry) => (now.value.getTime() - new Date(entry.joined_at).getTime()) / 60_000
+const { data, loading, error, reload, refresh } = useAsyncData<WaitlistEntry[]>(signal => (tenant.currentId
+  ? reservationsApi.waitlist(tenant.currentId, 'WAITING', signal)
+  : Promise.resolve([])), { watch: [() => tenant.currentId] })
 
-const stats = computed<StatStripItem[]>(() => {
-  const list = waiting.value
-  const covers = list.reduce((sum, entry) => sum + entry.party_size, 0)
-  const longest = list.length ? Math.max(...list.map(minutesSince)) : 0
-
-  return [
-    { label: 'Groupes en attente', value: String(list.length), icon: 'ri-group-line' },
-    { label: 'Couverts en attente', value: String(covers), icon: 'ri-restaurant-line' },
-    { label: 'Plus longue attente', value: list.length ? formatWait(longest) : '—', icon: 'ri-hourglass-line' },
-  ]
+const { isLive } = useLive(() => {
+  refresh()
+  refreshTables()
 })
 
-/** « Attend depuis 12 min » ; « Vient d'arriver » sous la minute. */
-function sinceText(entry: WaitlistEntry) {
-  const minutes = minutesSince(entry)
+const entries = computed(() => [...(data.value ?? [])].sort((a, b) => a.position - b.position))
 
-  return minutes < 1 ? 'Vient d\'arriver' : `Attend depuis ${formatWait(minutes)}`
-}
+const minutesWaiting = (entry: WaitlistEntry) => (now.value.getTime() - new Date(entry.joined_at).getTime()) / 60_000
 
-function phoneText(value: string | null | undefined) {
-  if (!value)
-    return ''
+// Indicateurs -------------------------------------------------------------------------------------
 
-  const digits = nationalDigits(value)
+const totals = computed(() => ({
+  groups: entries.value.length,
+  covers: entries.value.reduce((sum, entry) => sum + entry.party_size, 0),
+  longest: entries.value.length ? Math.max(...entries.value.map(minutesWaiting)) : null,
+}))
 
-  return digits.length === 9 ? `+237 ${formatNational(digits)}` : value
-}
+const seatedToday = ref<WaitlistEntry[]>([])
 
-/** Où en est l'attente par rapport à l'estimation donnée au client. */
-function estimateOf(entry: WaitlistEntry) {
-  if (entry.estimated_wait_minutes === null || entry.estimated_wait_minutes === undefined)
+const averageWait = computed(() => {
+  if (!seatedToday.value.length)
     return null
 
-  const left = entry.estimated_wait_minutes - minutesSince(entry)
+  const minutes = seatedToday.value.map(entry => (new Date(entry.seated_at ?? entry.joined_at).getTime() - new Date(entry.joined_at).getTime()) / 60_000)
 
-  return left >= 1
-    ? { text: `Encore ${formatWait(left)}`, late: false }
-    : { text: `Dépassée de ${formatWait(-left)}`, late: true }
+  return minutes.reduce((sum, value) => sum + value, 0) / minutes.length
+})
+
+async function loadSeated() {
+  if (!tenant.currentId)
+    return
+
+  const list = await reservationsApi.waitlist(tenant.currentId, 'SEATED').catch(() => [])
+  const startOfToday = new Date()
+
+  startOfToday.setHours(0, 0, 0, 0)
+  seatedToday.value = list.filter(entry => entry.seated_at && new Date(entry.seated_at) >= startOfToday)
 }
 
-// Installer --------------------------------------------------------------------------------
+watch(() => tenant.currentId, () => {
+  loadSeated()
+}, { immediate: true })
+
+// Actions -------------------------------------------------------------------------------------------
 
 const seatOpen = ref(false)
 const seating = ref<WaitlistEntry | null>(null)
@@ -82,222 +86,338 @@ function openSeat(entry: WaitlistEntry) {
   seatOpen.value = true
 }
 
-// Retirer ----------------------------------------------------------------------------------
+async function onSeated() {
+  await Promise.all([refresh(), loadSeated()])
+}
 
-const { submit: remove, pending: removing, message: removeError } = useSubmit(async (entry: WaitlistEntry) => {
-  const accepted = await confirm({
-    title: 'Retirer de la liste d\'attente ?',
-    text: `${entry.customer_name} (${coversLabel(entry.party_size)}) quittera la file. Les autres gardent leur rang.`,
-    confirmLabel: 'Supprimer',
+const notifying = ref<string | null>(null)
+
+async function notify(entry: WaitlistEntry) {
+  notifying.value = entry.id
+
+  try {
+    const result = await reservationsApi.notify(entry.id)
+
+    toast.success(`${entry.customer_name} a été prévenu à ${result.destinataire}.`)
+  }
+  catch (cause) {
+    toast.error(messageOf(cause))
+  }
+  finally {
+    notifying.value = null
+  }
+}
+
+async function remove(entry: WaitlistEntry) {
+  const accepted = await askConfirm({
+    title: `Retirer ${entry.customer_name} de la liste ?`,
+    text: 'Le groupe quitte la file. Les groupes suivants avancent d\'un rang.',
+    confirmLabel: 'Retirer de la liste',
     danger: true,
   })
 
   if (!accepted)
     return
 
-  await reservationsApi.removeFromWaitlist(entry.id)
-  toast.success(`${entry.customer_name} a été retiré de la liste.`)
-  await refresh()
-})
+  try {
+    await reservationsApi.removeFromWaitlist(entry.id, 'Retiré de la liste')
+    toast.success(`${entry.customer_name} retiré de la liste.`)
+    await refresh()
+  }
+  catch (cause) {
+    toast.error(messageOf(cause))
+  }
+}
+
+// Import et export -------------------------------------------------------------------------------
+
+const importOpen = ref(false)
+const importDefinition = computed(() => waitlistImport(tenant.currentId ?? ''))
+
+function onImported(result: ImportResult) {
+  toast.success(`Import terminé : ${result.created} ajouté${result.created > 1 ? 's' : ''}${result.issues.length ? `, ${result.issues.length} ligne${result.issues.length > 1 ? 's' : ''} refusée${result.issues.length > 1 ? 's' : ''}` : ''}.`)
+  refresh()
+}
+
+function exportList() {
+  exportWaitlist(entries.value, zone.value, new Date().toISOString().slice(0, 10))
+}
+
+const summary = computed(() => (totals.value.groups
+  ? `${groupsLabel(totals.value.groups)} en attente, ${coversLabel(totals.value.covers)}`
+  : 'Personne n\'attend pour le moment'))
 </script>
 
 <template>
-  <div>
-    <AppPageHeader
+  <div class="waitlist-page">
+    <AppHero
+      eyebrow="Salle"
       title="Liste d'attente"
-      subtitle="Les clients sans réservation qui attendent une table, dans l'ordre d'arrivée."
+      subtitle="Les groupes qui attendent une table, dans l'ordre d'arrivée."
+      :live="isLive"
     >
       <template #actions>
-        <VChip
-          :color="isLive ? 'success' : 'secondary'"
-          variant="tonal"
-          size="small"
-          label
-        >
-          <span
-            class="live-dot me-2"
-            :class="{ 'live-dot--on': isLive }"
-          />
-          {{ isLive ? 'En direct' : 'En pause' }}
-        </VChip>
         <VBtn
-          variant="tonal"
-          color="secondary"
-          prepend-icon="ri-calendar-line"
+          variant="text"
+          prepend-icon="ri-calendar-event-line"
           to="/reservations"
         >
           Réservations
         </VBtn>
+        <VBtn
+          variant="text"
+          prepend-icon="ri-download-2-line"
+          :disabled="!entries.length"
+          @click="exportList"
+        >
+          Exporter
+        </VBtn>
+        <VBtn
+          v-if="canManage"
+          variant="text"
+          prepend-icon="ri-upload-2-line"
+          @click="importOpen = true"
+        >
+          Importer
+        </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
-    <AppStatStrip
-      :items="stats"
-      :loading="loading && !data"
-    />
-
-    <WaitlistQuickAdd
-      class="mt-6"
-      @added="refresh"
-    />
-
-    <VCard class="mt-6">
-      <VCardItem>
-        <VCardTitle>File d'attente</VCardTitle>
-      </VCardItem>
-
-      <VAlert
-        v-if="removeError"
-        type="error"
-        variant="tonal"
-        density="compact"
-        class="mx-4 mb-4"
-      >
-        {{ removeError }}
-      </VAlert>
-
-      <AppErrorState
-        v-if="error && !data"
-        class="ma-4"
-        :error="error"
-        @retry="reload"
-      />
-
-      <VSkeletonLoader
-        v-else-if="!data"
-        type="table-thead, table-tbody"
-      />
-
-      <AppEmptyState
-        v-else-if="waiting.length === 0"
+    <AppMetricGrid class="mt-5">
+      <AppMetricTile
+        hero
+        label="Groupes en attente"
         icon="ri-time-line"
-        title="Personne n'attend"
-        text="Quand la salle est complète, ajoutez les clients ici : ils seront installés dans l'ordre."
-      />
-
-      <VTable
-        v-else
-        hover
+        color="warning"
+        :hint="summary"
       >
-        <thead>
-          <tr>
-            <th>Client</th>
-            <th class="d-none d-sm-table-cell">
-              Couverts
-            </th>
-            <th class="d-none d-md-table-cell">
-              Attente
-            </th>
-            <th class="text-end">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(entry, index) in waiting"
-            :key="entry.id"
+        <AppAnimatedNumber
+          v-slot="{ current }"
+          :value="totals.groups"
+        >
+          {{ Math.round(current) }}
+        </AppAnimatedNumber>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Couverts en attente"
+        icon="ri-group-line"
+        color="info"
+      >
+        <AppAnimatedNumber
+          v-slot="{ current }"
+          :value="totals.covers"
+        >
+          {{ Math.round(current) }}
+        </AppAnimatedNumber>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Plus longue attente"
+        icon="ri-hourglass-line"
+        :hint="totals.longest === null ? 'Aucun groupe en attente' : 'Depuis son arrivée'"
+      >
+        <span class="text-h4">{{ totals.longest === null ? '—' : formatWait(totals.longest) }}</span>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Attente moyenne"
+        icon="ri-speed-line"
+        color="success"
+        :hint="averageWait === null ? 'Aucune installation aujourd\'hui' : 'Constatée sur les groupes installés aujourd\'hui'"
+      >
+        <span class="text-h4">{{ averageWait === null ? '—' : formatWait(averageWait) }}</span>
+      </AppMetricTile>
+    </AppMetricGrid>
+
+    <div class="mt-5">
+      <WaitlistQuickAdd @added="refresh" />
+    </div>
+
+    <div class="d-flex align-center justify-space-between mt-6 mb-2">
+      <h2 class="text-h6 ma-0">
+        File d'attente
+      </h2>
+      <span
+        class="text-body-2 text-medium-emphasis"
+        aria-live="polite"
+        role="status"
+      >{{ summary }}</span>
+    </div>
+
+    <AppErrorState
+      v-if="error && !data"
+      :error="error"
+      @retry="reload"
+    />
+
+    <div
+      v-else-if="loading && !data"
+      class="pa-6 text-center text-medium-emphasis"
+      role="status"
+    >
+      Chargement de la file…
+    </div>
+
+    <AppEmptyState
+      v-else-if="!entries.length"
+      icon="ri-time-line"
+      title="Personne n'attend"
+      text="Les groupes ajoutés apparaissent ici, dans l'ordre d'arrivée."
+    />
+
+    <ol
+      v-else
+      class="queue"
+      aria-label="Groupes en attente, par position"
+    >
+      <li
+        v-for="entry in entries"
+        :key="entry.id"
+        class="queue__item"
+      >
+        <div
+          class="queue__rank"
+          :aria-label="`Position ${entry.position}`"
+        >
+          {{ entry.position }}
+        </div>
+        <div class="queue__main">
+          <div class="queue__name">
+            {{ entry.customer_name }}
+          </div>
+          <div class="queue__meta">
+            {{ coversLabel(entry.party_size) }}
+            · attend depuis {{ formatWait(minutesWaiting(entry)) }}
+            <template v-if="entry.customer_phone">
+              · {{ entry.customer_phone }}
+            </template>
+          </div>
+          <div
+            v-if="entry.notes"
+            class="queue__notes"
           >
-            <td class="fill-cell">
-              <div class="d-flex align-center gap-3 py-2">
-                <VAvatar
-                  color="primary"
-                  :variant="index === 0 ? 'flat' : 'tonal'"
-                  rounded
-                  size="38"
-                >
-                  <span class="text-body-1 font-weight-semibold">{{ index + 1 }}</span>
-                </VAvatar>
-                <div class="min-w-0">
-                  <div class="text-body-1 font-weight-medium text-high-emphasis text-truncate">
-                    {{ entry.customer_name }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis text-truncate">
-                    <span class="d-sm-none">{{ coversLabel(entry.party_size) }} · </span>{{ phoneText(entry.customer_phone) || 'Sans téléphone' }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis d-md-none">
-                    {{ sinceText(entry) }}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td class="d-none d-sm-table-cell">
-              {{ coversLabel(entry.party_size) }}
-            </td>
-            <td class="d-none d-md-table-cell">
-              <div class="text-body-1">
-                {{ sinceText(entry) }}
-              </div>
-              <div
-                v-if="estimateOf(entry)"
-                class="text-body-2"
-                :class="estimateOf(entry)?.late ? 'text-error' : 'text-medium-emphasis'"
-              >
-                {{ estimateOf(entry)?.text }}
-              </div>
-            </td>
-            <td class="text-end">
-              <div class="d-flex flex-column flex-sm-row justify-end gap-2">
-                <VBtn
-                  size="small"
-                  prepend-icon="ri-layout-grid-line"
-                  :aria-label="`Installer ${entry.customer_name}`"
-                  @click="openSeat(entry)"
-                >
-                  Installer
-                </VBtn>
-                <VBtn
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  :loading="removing"
-                  :aria-label="`Retirer ${entry.customer_name}`"
-                  @click="remove(entry)"
-                >
-                  Retirer
-                </VBtn>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </VTable>
-    </VCard>
+            {{ entry.notes }}
+          </div>
+        </div>
+        <div class="queue__actions">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-restaurant-line"
+            size="large"
+            @click="openSeat(entry)"
+          >
+            Installer
+          </VBtn>
+          <VBtn
+            v-if="entry.customer_email"
+            variant="outlined"
+            prepend-icon="ri-notification-3-line"
+            :loading="notifying === entry.id"
+            size="large"
+            @click="notify(entry)"
+          >
+            Prévenir
+          </VBtn>
+          <VBtn
+            variant="text"
+            color="error"
+            prepend-icon="ri-user-unfollow-line"
+            size="large"
+            @click="remove(entry)"
+          >
+            Retirer
+          </VBtn>
+        </div>
+      </li>
+    </ol>
 
     <SeatDialog
       v-model="seatOpen"
       :entry="seating"
-      @seated="refresh"
+      :tables="tables"
+      :can-force="canManage"
+      @seated="onSeated"
+    />
+
+    <AppImportDialog
+      v-if="canManage"
+      v-model="importOpen"
+      v-bind="importDefinition"
+      @imported="onImported"
     />
   </div>
 </template>
 
 <style scoped>
-.fill-cell {
-  inline-size: 100%;
-  max-inline-size: 0;
+.queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
 }
 
-.live-dot {
-  display: inline-block;
-  inline-size: 8px;
-  block-size: 8px;
+.queue__item {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.25);
+  border-radius: 16px;
+  background: rgb(var(--v-theme-surface));
+}
+
+.queue__rank {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: currentcolor;
+  background: rgb(var(--v-theme-warning) / 0.16);
+  color: rgb(var(--v-theme-on-surface));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.live-dot--on {
-  animation: pulse 2s ease-in-out infinite;
+.queue__main {
+  min-width: 0;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.3;
+.queue__name {
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.queue__meta,
+.queue__notes {
+  font-size: 0.875rem;
+  color: rgb(var(--v-theme-on-surface) / 0.75);
+}
+
+.queue__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.queue__actions :deep(.v-btn) {
+  min-height: 44px;
+}
+
+@media (max-width: 600px) {
+  .queue__item {
+    grid-template-columns: 44px minmax(0, 1fr);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .live-dot--on {
-    animation: none;
+  .queue__actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .queue__actions :deep(.v-btn) {
+    flex: 1 1 auto;
   }
 }
 </style>

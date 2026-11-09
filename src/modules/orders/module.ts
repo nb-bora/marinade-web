@@ -19,7 +19,7 @@ export default defineFeature({
   nav: [
     {
       id: 'orders-import',
-      title: 'Importer',
+      title: 'Importer des commandes',
       icon: 'ri-file-excel-2-line',
       to: '/commandes/import',
       section: 'finance',

@@ -5,13 +5,15 @@
 -->
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
+import { compactMoney, elapsedTone, formatElapsed, minutesSince } from '../composables/useFloorMetrics'
+import { freeSeats, seatsLabel } from '../layout'
 import { useFloorPlan } from '../composables/useFloorPlan'
 import type { PlanNode } from '../composables/useFloorPlan'
 import { MAX_ZOOM, usePlanViewport } from '../composables/usePlanViewport'
 import { PLAN_STATE, plural } from '../labels'
 import type { PlanState } from '../labels'
 import type { TableView } from '../types'
-import { useConfirm } from '@/composables/useConfirm'
+import FloorStatePills from './FloorStatePills.vue'
 import { formatMoney, formatRelative } from '@/lib/format'
 
 const props = defineProps<{
@@ -26,11 +28,18 @@ const props = defineProps<{
 
   /** Tables dont l'état vient de changer : `in` (prise), `out` (libérée). */
   flashes?: Record<string, 'in' | 'out'>
+
+  /** Mode aménagement : les tables se déplacent (à la souris ou au doigt) et le déplacement est signalé par `move`. */
+  editable?: boolean
 }>()
 
-const emit = defineEmits<{ select: [view: TableView] }>()
+const emit = defineEmits<{
+  select: [view: TableView]
 
-const confirm = useConfirm()
+  /** Une table a été déplacée : nouvelle position en % du plan. */
+  move: [point: { id: string; x: number; y: number }]
+}>()
+
 const uid = useId()
 
 const frame = ref<HTMLElement | null>(null)
@@ -46,11 +55,10 @@ const views = toRef(props, 'views')
 const plan = useFloorPlan(views, compact)
 const { nodes, world, scale, dragging } = plan
 
-const editing = ref(false)
 const hovered = ref<string | null>(null)
 
 const viewport = usePlanViewport(svg, world, {
-  canDragTable: () => editing.value,
+  canDragTable: () => !!props.editable,
   centerOf: id => {
     const node = nodes.value.find(item => item.id === id)
 
@@ -58,7 +66,12 @@ const viewport = usePlanViewport(svg, world, {
   },
   startDrag: plan.startDrag,
   dragTo: plan.dragTo,
-  endDrag: plan.endDrag,
+  endDrag: () => {
+    const moved = plan.endDrag()
+
+    if (moved)
+      emit('move', moved)
+  },
 })
 
 const { handlers } = viewport
@@ -71,7 +84,7 @@ const unitPx = computed(() => svgWidth.value / world.value.width * viewport.zoom
 
 const showDetails = computed(() => unitPx.value * scale.value * 2.1 >= 6.5)
 
-const touchAction = computed(() => editing.value || viewport.zoomed.value ? 'none' : 'pan-y')
+const touchAction = computed(() => props.editable || viewport.zoomed.value ? 'none' : 'pan-y')
 
 /** Un numéro long (E2538, ZZ61970) rétrécit pour rester dans sa table. */
 const numberSize = (node: PlanNode) =>
@@ -79,19 +92,31 @@ const numberSize = (node: PlanNode) =>
 
 // Libellés ---------------------------------------------------------------------------
 
-const money = (amount: number | null) => amount === null ? '' : Math.round(amount).toLocaleString('fr-FR')
+const money = compactMoney
 
 function labelOf(node: PlanNode): string {
   const { table, session, covers, total } = node.view
   const parts = [`Table ${table.numero}`, PLAN_STATE[node.state].label.toLowerCase()]
 
-  if (session && covers)
-    parts.push(plural(covers, 'couvert'))
+  if (session)
+    parts.push(covers ? `${plural(covers, 'couvert')}, ${seatsLabel(node.view)}` : seatsLabel(node.view))
 
   if (session && total !== null)
     parts.push(formatMoney(total))
 
   return parts.join(', ')
+}
+
+/** « 2 libres » / « complète » : les places restantes d'une table servie, toujours visibles sur le plan. */
+function seatShort(node: PlanNode): string {
+  const { view } = node
+
+  if (view.covers === null)
+    return `${view.table.capacite} places`
+
+  const free = freeSeats(view)
+
+  return free === 0 ? 'complète' : `${free} libre${free > 1 ? 's' : ''}`
 }
 
 function lines(node: PlanNode): string[] {
@@ -101,7 +126,7 @@ function lines(node: PlanNode): string[] {
     return ['Paiement…', money(view.amountDue ?? view.total)].filter(Boolean)
 
   if (state === 'busy')
-    return [view.covers ? `${view.covers} couv.` : '', money(view.total)].filter(Boolean)
+    return [seatShort(node), money(view.total)].filter(Boolean)
 
   if (state === 'free')
     return [`${view.table.capacite} places`]
@@ -109,9 +134,60 @@ function lines(node: PlanNode): string[] {
   return [PLAN_STATE[state].label]
 }
 
+/** Pastille de durée en haut à droite d'une table occupée : calme, à surveiller, trop longue. */
+function badgeOf(node: PlanNode): { text: string; tone: string; x: number; y: number; w: number } | null {
+  const { session } = node.view
+
+  if (!session || (node.state !== 'busy' && node.state !== 'paying'))
+    return null
+
+  const minutes = minutesSince(session.opened_at, props.now)
+  const text = formatElapsed(minutes)
+  const w = (text.length * 1.15 + 2.2) * scale.value
+
+  return { text, tone: elapsedTone(minutes), x: node.width / 2 - w * 0.62, y: -node.height / 2 - 1.1 * scale.value, w }
+}
+
+// Zones : un cadre discret autour des tables d'une même zone, avec son nom --------------------
+
+interface ZoneBox { name: string; x: number; y: number; width: number; height: number }
+
+const zones = computed<ZoneBox[]>(() => {
+  const groups = new Map<string, PlanNode[]>()
+
+  for (const node of nodes.value)
+    groups.set(node.zone, [...(groups.get(node.zone) ?? []), node])
+
+  // Une seule zone : le cadre n'apprendrait rien.
+  if (groups.size < 2)
+    return []
+
+  const k = scale.value
+  const chair = 1.45 * k
+
+  return [...groups].map(([name, list]) => {
+    // Le cadre épouse les tables ET leurs chaises, avec une marge fine.
+    const left = (n: PlanNode) => Math.min(n.cx - n.width / 2, ...n.chairs.map(c => n.cx + c.x - chair))
+    const right = (n: PlanNode) => Math.max(n.cx + n.width / 2, ...n.chairs.map(c => n.cx + c.x + chair))
+    const top = (n: PlanNode) => Math.min(n.cy - n.height / 2, ...n.chairs.map(c => n.cy + c.y - chair))
+    const bottom = (n: PlanNode) => Math.max(n.cy + n.height / 2, ...n.chairs.map(c => n.cy + c.y + chair))
+
+    const x1 = Math.max(0.8, Math.min(...list.map(left)) - 2 * k)
+    const y1 = Math.max(0.8, Math.min(...list.map(top)) - 1.8 * k)
+    const x2 = Math.min(world.value.width - 0.8, Math.max(...list.map(right)) + 2 * k)
+    const y2 = Math.min(world.value.height - 0.8, Math.max(...list.map(bottom)) + 1.8 * k)
+
+    return { name, x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
+  })
+})
+
 // Interactions -----------------------------------------------------------------------
 
 const isDimmed = (node: PlanNode) => !!props.zone && node.zone !== props.zone
+
+/** Filtre posé depuis la légende : les autres états s'estompent mais restent cliquables. */
+const stateFilter = ref<PlanState | null>(null)
+const isMuted = (node: PlanNode) => !!stateFilter.value && node.state !== stateFilter.value
 
 function select(node: PlanNode) {
   if (isDimmed(node) || !viewport.acceptClick())
@@ -129,15 +205,6 @@ function onKey(event: KeyboardEvent, node: PlanNode) {
   emit('select', node.view)
 }
 
-async function resetLayout() {
-  if (await confirm({
-    title: 'Remettre les tables en ordre ?',
-    text: 'Les tables retrouvent la disposition automatique. Votre disposition actuelle sera perdue.',
-    confirmLabel: 'Remettre en ordre',
-  }))
-    plan.resetLayout()
-}
-
 // Infobulle (souris et clavier) --------------------------------------------------------
 
 const tip = computed(() => {
@@ -152,7 +219,9 @@ const tip = computed(() => {
 
   if (view.session) {
     if (view.covers)
-      details.push(plural(view.covers, 'couvert'))
+      details.push(`${plural(view.covers, 'couvert')} sur ${view.table.capacite}`)
+
+    details.push(seatsLabel(view))
 
     if (view.total !== null)
       details.push(formatMoney(view.total))
@@ -204,31 +273,8 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
     <VCardItem class="pb-2">
       <VCardTitle>Salle</VCardTitle>
       <VCardSubtitle class="text-wrap">
-        {{ editing ? 'Glissez les tables : la disposition est gardée sur cet appareil.' : compact ? 'Touchez une table, pincez pour zoomer.' : 'Touchez une table. Ctrl + molette ou pincement pour zoomer.' }}
+        {{ editable ? 'Glissez les tables pour les placer : chaque déplacement est enregistré.' : compact ? 'Touchez une table, pincez pour zoomer.' : 'Touchez une table. Ctrl + molette ou pincement pour zoomer.' }}
       </VCardSubtitle>
-      <template #append>
-        <div class="d-flex align-center gap-2">
-          <VBtn
-            v-if="editing"
-            variant="text"
-            size="small"
-            prepend-icon="ri-restart-line"
-            @click="resetLayout"
-          >
-            Remettre en ordre
-          </VBtn>
-          <VBtn
-            :variant="editing ? 'flat' : 'tonal'"
-            :color="editing ? 'primary' : undefined"
-            size="small"
-            :prepend-icon="editing ? 'ri-check-line' : 'ri-drag-move-2-line'"
-            :aria-pressed="editing"
-            @click="editing = !editing"
-          >
-            {{ editing ? 'Terminer' : 'Réorganiser' }}
-          </VBtn>
-        </div>
-      </template>
     </VCardItem>
 
     <div
@@ -237,7 +283,7 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
     >
       <div
         class="floor-plan__canvas"
-        :class="{ 'floor-plan__canvas--editing': editing, 'floor-plan__canvas--busy': viewport.gesturing.value }"
+        :class="{ 'floor-plan__canvas--editing': editable, 'floor-plan__canvas--busy': viewport.gesturing.value }"
         :style="{ aspectRatio: aspect }"
       >
         <svg
@@ -254,6 +300,23 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
           @pointercancel="handlers.onPointerCancel"
         >
           <defs>
+            <radialGradient
+              :id="`floor-${uid}`"
+              cx="50%"
+              cy="45%"
+              r="75%"
+            >
+              <stop
+                offset="0%"
+                stop-color="rgb(var(--v-theme-on-surface))"
+                stop-opacity="0.02"
+              />
+              <stop
+                offset="100%"
+                stop-color="rgb(var(--v-theme-on-surface))"
+                stop-opacity="0.08"
+              />
+            </radialGradient>
             <pattern
               :id="`grid-${uid}`"
               width="8"
@@ -279,7 +342,7 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
               y="0"
               :width="world.width"
               :height="world.height"
-              class="floor-plan__floor"
+              :fill="`url(#floor-${uid})`"
             />
             <rect
               x="0"
@@ -290,6 +353,36 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
             />
 
             <g
+              v-for="box in zones"
+              :key="`zone-${box.name}`"
+              class="floor-zone"
+              :class="{ 'floor-zone--active': box.name === props.zone }"
+              aria-hidden="true"
+            >
+              <rect
+                :x="box.x"
+                :y="box.y"
+                :width="box.width"
+                :height="box.height"
+                rx="3.5"
+                class="floor-zone__box"
+              />
+              <rect
+                :x="box.x + 2.4"
+                :y="box.y - 1.9"
+                :width="box.name.length * 1.75 + 3.6"
+                height="3.8"
+                rx="1.9"
+                class="floor-zone__pill"
+              />
+              <text
+                :x="box.x + 4.2"
+                :y="box.y + 0.75"
+                class="floor-zone__label"
+              >{{ box.name }}</text>
+            </g>
+
+            <g
               v-for="node in nodes"
               :key="node.id"
               class="floor-table"
@@ -298,6 +391,7 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
                 {
                   'floor-table--selected': selectedId === node.id,
                   'floor-table--dim': isDimmed(node),
+                  'floor-table--muted': isMuted(node),
                   'floor-table--moving': dragging?.id === node.id,
                   [`floor-table--flash-${flashes?.[node.id]}`]: !!flashes?.[node.id],
                 },
@@ -335,23 +429,25 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
                     : { x: -node.width / 2 - 1.6, y: -node.height / 2 - 1.6, width: node.width + 3.2, height: node.height + 3.2, rx: 3.6 }"
                 />
 
-                <circle
-                  v-for="(chair, index) in node.chairs"
-                  :key="index"
-                  :cx="chair.x"
-                  :cy="chair.y"
-                  :r="1.45 * scale"
-                  class="floor-table__chair"
-                  :class="{ 'floor-table__chair--taken': chair.taken }"
-                />
+                <g :transform="node.rot ? `rotate(${node.rot})` : undefined">
+                  <circle
+                    v-for="(chair, index) in node.chairs"
+                    :key="index"
+                    :cx="chair.x"
+                    :cy="chair.y"
+                    :r="1.45 * scale"
+                    class="floor-table__chair"
+                    :class="{ 'floor-table__chair--taken': chair.taken }"
+                  />
 
-                <component
-                  :is="node.shape === 'round' ? 'circle' : 'rect'"
-                  class="floor-table__top"
-                  v-bind="node.shape === 'round'
-                    ? { r: node.width / 2 }
-                    : { x: -node.width / 2, y: -node.height / 2, width: node.width, height: node.height, rx: 2.2 }"
-                />
+                  <component
+                    :is="node.shape === 'round' ? 'circle' : 'rect'"
+                    class="floor-table__top"
+                    v-bind="node.shape === 'round'
+                      ? { r: node.width / 2 }
+                      : { x: -node.width / 2, y: -node.height / 2, width: node.width, height: node.height, rx: 2.2 }"
+                  />
+                </g>
 
                 <text
                   class="floor-table__number"
@@ -367,6 +463,25 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
                     :font-size="2.1 * scale"
                   >{{ line }}</text>
                 </template>
+                <g
+                  v-if="showDetails && badgeOf(node)"
+                  class="floor-badge"
+                  :class="`floor-badge--${badgeOf(node)!.tone}`"
+                  :transform="`translate(${badgeOf(node)!.x} ${badgeOf(node)!.y})`"
+                >
+                  <rect
+                    :width="badgeOf(node)!.w"
+                    :height="3.1 * scale"
+                    :rx="1.55 * scale"
+                    class="floor-badge__bg"
+                  />
+                  <text
+                    :x="badgeOf(node)!.w / 2"
+                    :y="2.2 * scale"
+                    :font-size="1.75 * scale"
+                    class="floor-badge__text"
+                  >{{ badgeOf(node)!.text }}</text>
+                </g>
               </g>
             </g>
           </g>
@@ -429,27 +544,16 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
 
     <VDivider />
 
-    <ul
+    <FloorStatePills
+      v-model="stateFilter"
       class="floor-plan__legend"
-      aria-label="Légende"
-    >
-      <li
-        v-for="item in legend"
-        :key="item.state"
-        class="d-flex align-center gap-2"
-      >
-        <span
-          class="floor-plan__swatch"
-          :style="{ background: `rgb(var(--v-theme-${item.color}))` }"
-        />
-        <span class="text-body-2">{{ item.label }}</span>
-        <span class="text-body-2 text-medium-emphasis tabular-nums">{{ item.count }}</span>
-      </li>
-    </ul>
+      :items="legend"
+      label="Légende, touchez un état pour mettre ces tables en évidence"
+    />
   </VCard>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .floor-plan__frame {
   padding-inline: 16px;
   padding-block-end: 16px;
@@ -460,7 +564,7 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
   inline-size: 100%;
   overflow: hidden;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
+  border-radius: 14px;
   user-select: none;
 }
 
@@ -480,8 +584,75 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
   transition: transform 0.25s ease;
 }
 
-.floor-plan__floor {
-  fill: rgba(var(--v-theme-on-surface), 0.035);
+.floor-zone {
+  pointer-events: none;
+}
+
+.floor-zone__box {
+  fill: rgba(var(--v-theme-primary), 0.035);
+  stroke: rgba(var(--v-theme-on-surface), 0.22);
+  stroke-dasharray: 1.6 1.2;
+  stroke-width: 0.35;
+}
+
+.floor-zone__pill {
+  fill: rgb(var(--v-theme-surface));
+  stroke: rgba(var(--v-theme-on-surface), 0.22);
+  stroke-width: 0.3;
+}
+
+.floor-zone__label {
+  fill: rgba(var(--v-theme-on-surface), 0.62);
+  font-size: 2.1px;
+  font-weight: 700;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+}
+
+.floor-zone--active .floor-zone__box {
+  fill: rgba(var(--v-theme-primary), 0.08);
+  stroke: rgb(var(--v-theme-primary));
+  stroke-dasharray: none;
+  stroke-width: 0.5;
+}
+
+.floor-zone--active .floor-zone__label {
+  fill: rgb(var(--v-theme-primary));
+}
+
+.floor-table--muted {
+  opacity: 0.28;
+}
+
+.floor-badge {
+  pointer-events: none;
+}
+
+.floor-badge__bg {
+  fill: rgb(var(--v-theme-surface));
+  stroke: rgba(var(--v-theme-on-surface), 0.3);
+  stroke-width: 0.25;
+}
+
+.floor-badge__text {
+  fill: rgb(var(--v-theme-on-surface));
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.floor-badge--warn .floor-badge__bg {
+  fill: rgb(var(--v-theme-warning));
+  stroke: none;
+}
+
+.floor-badge--late .floor-badge__bg {
+  fill: rgb(var(--v-theme-error));
+  stroke: none;
+}
+
+.floor-badge--warn .floor-badge__text,
+.floor-badge--late .floor-badge__text {
+  fill: #fff;
 }
 
 .floor-plan__dot {
@@ -733,13 +904,6 @@ const zoomPercent = computed(() => Math.round(viewport.zoom.value * 100))
   margin: 0;
   padding: 12px 16px;
   list-style: none;
-}
-
-.floor-plan__swatch {
-  display: inline-block;
-  inline-size: 14px;
-  block-size: 14px;
-  border-radius: 50%;
 }
 
 @media (prefers-reduced-motion: reduce) {

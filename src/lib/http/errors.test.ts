@@ -75,3 +75,52 @@ describe('describeError', () => {
     expect(isApiError(new Error('boom'))).toBe(false)
   })
 })
+
+describe('erreurs de problème Marinade', () => {
+  it('range chaque erreur de champ sous son champ et garde le code stable', () => {
+    const error = apiErrorFromResponse(422, {
+      type: 'https://marinade.app/problems/stock.motif_obligatoire',
+      code: 'stock.motif_obligatoire',
+      detail: 'Indiquez le motif de ce mouvement.',
+      errors: [{ field: 'motif', code: 'stock.motif_obligatoire', detail: 'Indiquez le motif de ce mouvement.' }],
+    })
+
+    expect(error.code).toBe('stock.motif_obligatoire')
+    expect(error.fieldMessage('motif')).toBe('Indiquez le motif de ce mouvement.')
+    expect(error.message).toBe('Indiquez le motif de ce mouvement.')
+  })
+
+  it('sans erreur de champ, garde le message et le code', () => {
+    const error = apiErrorFromResponse(400, { code: 'stock.insufficient', detail: 'Stock insuffisant.' })
+
+    expect(error.code).toBe('stock.insufficient')
+    expect(error.fieldErrors).toEqual([])
+    expect(error.message).toBe('Stock insuffisant.')
+  })
+})
+
+describe('describeError avec un code métier', () => {
+  it('affiche le message français d\'un code métier', () => {
+    const error = apiErrorFromResponse(409, { code: 'stock.insufficient', detail: 'Stock insuffisant : il reste 3 kg.' })
+
+    expect(describeError(error)).toBe('Stock insuffisant : il reste 3 kg.')
+  })
+
+  it('n\'affiche pas le texte brut d\'un code générique', () => {
+    const error = apiErrorFromResponse(409, { code: 'http.conflict', detail: 'Conflict while saving' })
+
+    expect(describeError(error)).toBe('Cette opération entre en conflit avec des données existantes.')
+  })
+
+  it('une session expirée reste traduite par le type d\'erreur', () => {
+    const error = apiErrorFromResponse(401, { code: 'auth.session_expired', detail: 'Session expirée' })
+
+    expect(describeError(error)).toBe('Votre session a expiré. Reconnectez-vous.')
+  })
+
+  it('une erreur serveur n\'expose jamais son message', () => {
+    const error = apiErrorFromResponse(500, { code: 'stock.boom', detail: 'Traceback…' })
+
+    expect(describeError(error)).toBe('Le serveur a rencontré un problème. Réessayez dans un instant.')
+  })
+})

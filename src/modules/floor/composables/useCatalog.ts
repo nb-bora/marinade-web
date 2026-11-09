@@ -6,9 +6,6 @@ import { useTenantStore } from '@/stores/tenant.store'
 const PLAT_FALLBACK = 'Plats'
 const BOISSON_FALLBACK = 'Boissons'
 
-/** Un dessert part au poste « dessert » ; le reste de la cuisine en cuisine. */
-const isDessert = (category: string) => /dessert|glace|patisserie|pâtisserie/i.test(category)
-
 /** Catégories des plats : un menu peut en avoir, et la liste des menus peut être refusée à un rôle. */
 async function platCategories(restaurantId: string, signal: AbortSignal) {
   const names = new Map<string, MenuCategory>()
@@ -54,7 +51,9 @@ export function useCatalog() {
         currency: plat.devise,
         category,
         kind: 'plat',
-        station: isDessert(category) ? 'DESSERT' : 'KITCHEN',
+
+        // Poste décidé par le catalogue : le serveur s'y tient, la caisse ne le choisit pas.
+        station: plat.station ?? 'KITCHEN',
         available: plat.disponible,
         alcohol: false,
       }
@@ -68,7 +67,7 @@ export function useCatalog() {
       currency: boisson.devise,
       category: boisson.category?.trim() || BOISSON_FALLBACK,
       kind: 'boisson',
-      station: 'BAR',
+      station: boisson.station ?? 'BAR',
       available: boisson.disponible,
       alcohol: boisson.alcool,
     }))

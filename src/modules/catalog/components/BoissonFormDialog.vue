@@ -25,6 +25,14 @@ const prix = ref('')
 const description = ref('')
 const alcool = ref(false)
 const disponible = ref(true)
+const station = ref<'KITCHEN' | 'BAR' | 'DESSERT'>('BAR')
+
+/** Où la boisson est servie ou préparée : son ticket s'affiche sur l'écran de ce poste. */
+const stationItems = [
+  { value: 'BAR', title: 'Bar' },
+  { value: 'KITCHEN', title: 'Cuisine' },
+  { value: 'DESSERT', title: 'Desserts' },
+] as const
 
 const isEdit = computed(() => props.boisson !== null)
 
@@ -36,6 +44,7 @@ const { submit, pending, message, apiError, reset } = useSubmit(async () => {
     description: description.value.trim() || null,
     alcool: alcool.value,
     disponible: disponible.value,
+    station: station.value,
   }
 
   let saved: Boisson | undefined
@@ -62,6 +71,7 @@ watch(open, isOpen => {
   description.value = props.boisson?.description ?? ''
   alcool.value = props.boisson?.alcool ?? false
   disponible.value = props.boisson?.disponible ?? true
+  station.value = props.boisson?.station ?? 'BAR'
 })
 
 const nomRules = [(value: string) => value.trim().length > 0 || 'Donnez un nom à la boisson.']
@@ -129,6 +139,19 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
           prepend-inner-icon="ri-file-text-line"
           rows="2"
           auto-grow
+        />
+      </VCol>
+      <VCol
+        cols="12"
+        sm="6"
+      >
+        <VSelect
+          v-model="station"
+          :items="stationItems"
+          label="Poste de production"
+          prepend-inner-icon="ri-goblet-line"
+          hint="Le ticket part sur l'écran de ce poste."
+          persistent-hint
         />
       </VCol>
       <VCol

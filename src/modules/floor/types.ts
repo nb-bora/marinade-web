@@ -2,12 +2,16 @@ import type { components } from '@/lib/api/schema'
 
 type Schemas = components['schemas']
 
+export type Restaurant = Schemas['RestaurantResponse']
+export type RestaurantUpdate = Schemas['RestaurantUpdate']
+
 export type Table = Schemas['TableResponse']
 export type TableCreate = Schemas['TableCreate']
 export type TableUpdate = Schemas['TableUpdate']
 
 export type ServiceSession = Schemas['SessionResponse']
 export type SessionCreate = Schemas['SessionCreate']
+export type SessionUpdate = Schemas['SessionUpdate']
 export type SessionStatus = Schemas['SessionStatus']
 
 export type Customer = Schemas['CustomerResponse']

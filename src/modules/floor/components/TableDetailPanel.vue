@@ -1,9 +1,15 @@
-<!-- Détail de la table choisie sur le plan : session, durée, montant et actions possibles. -->
+<!--
+  Détail de la table choisie sur le plan : état, places (assises et libres), durée avec son niveau
+  d'attention, addition et avancement du paiement, puis les actions possibles.
+-->
 <script setup lang="ts">
+import { elapsedTone, formatElapsed, minutesSince } from '../composables/useFloorMetrics'
 import type { PlanState } from '../labels'
 import { PLAN_STATE, SESSION_STATUS, plural, present } from '../labels'
+import { freeSeats } from '../layout'
 import { locationOf, serviceOf } from '../service'
 import type { TableView } from '../types'
+import SeatRow from './SeatRow.vue'
 import { formatDateTime } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 
@@ -11,53 +17,69 @@ const props = defineProps<{
   view: TableView
   state: PlanState
   now: Date
+
+  /** Nom du niveau, affiché seulement quand le restaurant en a plusieurs. */
+  levelName?: string
 }>()
 
 defineEmits<{
   close: []
   openSession: []
   release: []
+  editCovers: []
 }>()
 
 const tenant = useTenantStore()
 
 const session = computed(() => props.view.session)
 const look = computed(() => PLAN_STATE[props.state])
+const tone = computed(() => `rgb(var(--v-theme-${look.value.color}))`)
 
 /** Session soldée mais pas clôturée : la table en garde l'identifiant. */
 const settledSessionId = computed(() => props.state === 'settled' ? serviceOf(props.view.table).session_id ?? null : null)
 const sessionLink = computed(() => session.value?.id ?? settledSessionId.value)
 
 const canCashDesk = computed(() => tenant.can('cash_desk'))
-
-/** « 25 min », « 1 h 05 » : depuis combien de temps la table est occupée. */
-const duration = computed(() => {
-  if (!session.value)
-    return null
-
-  const minutes = Math.max(0, Math.floor((props.now.getTime() - new Date(session.value.opened_at).getTime()) / 60_000))
-
-  if (minutes < 60)
-    return `${minutes} min`
-
-  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`
-})
-
 const sessionLook = computed(() => session.value ? present(SESSION_STATUS, session.value.status) : null)
 
-const rows = computed(() => {
-  const { view } = props
+// Places ------------------------------------------------------------------------------------
 
+const capacity = computed(() => props.view.table.capacite)
+const covers = computed(() => session.value ? props.view.covers : null)
+const free = computed(() => freeSeats(props.view))
+
+const seatSentence = computed(() => {
   if (!session.value)
-    return []
+    return plural(capacity.value, 'place')
 
-  return [
-    { label: 'Couverts', icon: 'ri-group-line', text: view.covers ? String(view.covers) : 'Non précisé' },
-    { label: 'Durée', icon: 'ri-time-line', text: duration.value ?? '', hint: `Ouverte à ${formatDateTime(session.value.opened_at)}` },
-  ]
+  if (covers.value === null)
+    return `${plural(capacity.value, 'place')} · couverts non précisés`
+
+  if (covers.value > capacity.value)
+    return `${plural(covers.value, 'couvert')} pour ${plural(capacity.value, 'place')} : table dépassée`
+
+  return free.value === 0
+    ? `${plural(covers.value, 'couvert')} · table complète`
+    : `${plural(covers.value, 'couvert')} · ${plural(free.value, 'place libre', 'places libres')}`
 })
 
-const tone = computed(() => `rgb(var(--v-theme-${look.value.color}))`)
+// Durée ---------------------------------------------------------------------------------------
+
+const minutes = computed(() => session.value ? minutesSince(session.value.opened_at, props.now) : null)
+const durationTone = computed(() => minutes.value === null ? 'ok' : elapsedTone(minutes.value))
+
+/** La barre se remplit jusqu'à 2 h : au-delà la table est « trop longue ». */
+const durationPercent = computed(() => minutes.value === null ? 0 : Math.min(100, Math.round(100 * minutes.value / 120)))
+
+const DURATION_COLOR = { ok: 'success', warn: 'warning', late: 'error' } as const
+const DURATION_HINT = { ok: 'Dans les temps', warn: 'À surveiller', late: 'Occupée depuis longtemps' } as const
+
+// Addition ------------------------------------------------------------------------------------
+
+const total = computed(() => props.view.total)
+const due = computed(() => props.view.amountDue)
+const paid = computed(() => total.value !== null && due.value !== null ? Math.max(0, total.value - due.value) : 0)
+const paidPercent = computed(() => total.value ? Math.min(100, Math.round(100 * paid.value / total.value)) : 0)
 </script>
 
 <template>
@@ -70,7 +92,11 @@ const tone = computed(() => `rgb(var(--v-theme-${look.value.color}))`)
         <span class="table-panel__badge">{{ view.table.numero }}</span>
       </template>
       <VCardTitle>Table {{ view.table.numero }}</VCardTitle>
-      <VCardSubtitle>{{ locationOf(view.table) }} · {{ plural(view.table.capacite, 'place') }}</VCardSubtitle>
+      <VCardSubtitle class="text-wrap">
+        {{ locationOf(view.table) }}<template v-if="levelName">
+          · {{ levelName }}
+        </template>
+      </VCardSubtitle>
       <template #append>
         <VBtn
           icon="ri-close-line"
@@ -98,61 +124,107 @@ const tone = computed(() => `rgb(var(--v-theme-${look.value.color}))`)
         />
       </div>
 
-      <template v-if="session">
-        <dl class="table-panel__rows">
-          <div
-            v-for="row in rows"
-            :key="row.label"
-            class="table-panel__row"
-            :title="row.hint"
+      <!-- Places : une pastille par chaise, pleine si prise, vide si libre -->
+      <section
+        class="block"
+        aria-label="Places de la table"
+      >
+        <div class="block__head">
+          <span class="block__title">Places</span>
+          <span
+            v-if="session && covers !== null"
+            class="block__value tabular-nums"
+          ><strong>{{ free }}</strong> libre{{ free > 1 ? 's' : '' }} sur {{ capacity }}</span>
+          <span
+            v-else
+            class="block__value tabular-nums"
+          ><strong>{{ capacity }}</strong> place{{ capacity > 1 ? 's' : '' }}</span>
+        </div>
+        <SeatRow
+          role="img"
+          :aria-label="seatSentence"
+          :capacity="capacity"
+          :taken="covers"
+          :color="tone"
+          :max="20"
+        />
+        <div class="d-flex align-center justify-space-between gap-2 mt-2">
+          <p
+            class="text-body-2 text-medium-emphasis mb-0"
+            :class="{ 'text-success': session && covers !== null && free > 0 }"
           >
-            <dt class="d-flex align-center gap-2 text-medium-emphasis">
-              <VIcon
-                :icon="row.icon"
-                size="18"
-              />{{ row.label }}
-            </dt>
-            <dd class="tabular-nums font-weight-medium">
-              {{ row.text }}
-            </dd>
+            {{ seatSentence }}
+          </p>
+          <VBtn
+            v-if="session"
+            size="x-small"
+            variant="tonal"
+            prepend-icon="ri-user-add-line"
+            @click="$emit('editCovers')"
+          >
+            Couverts
+          </VBtn>
+        </div>
+      </section>
+
+      <template v-if="session">
+        <!-- Durée -->
+        <section class="block">
+          <div class="block__head">
+            <span class="block__title">Durée</span>
+            <span
+              class="block__value tabular-nums"
+              :title="`Ouverte à ${formatDateTime(session.opened_at)}`"
+            ><strong>{{ formatElapsed(minutes ?? 0) }}</strong></span>
           </div>
-          <div class="table-panel__row">
-            <dt class="d-flex align-center gap-2 text-medium-emphasis">
-              <VIcon
-                icon="ri-receipt-line"
-                size="18"
-              />Montant partiel
-            </dt>
-            <dd class="tabular-nums font-weight-medium">
+          <VProgressLinear
+            :model-value="durationPercent"
+            :color="DURATION_COLOR[durationTone]"
+            height="6"
+            rounded
+            bg-opacity="0.16"
+          />
+          <p class="text-caption text-medium-emphasis mt-1 mb-0">
+            {{ DURATION_HINT[durationTone] }} · ouverte à {{ formatDateTime(session.opened_at) }}
+          </p>
+        </section>
+
+        <!-- Addition -->
+        <section class="block">
+          <div class="block__head">
+            <span class="block__title">Addition</span>
+            <span class="block__value tabular-nums">
               <AppMoney
-                v-if="view.total !== null"
-                :amount="view.total"
+                v-if="total !== null"
+                :amount="total"
               />
               <span
                 v-else
                 class="text-medium-emphasis"
               >Aucune commande</span>
-            </dd>
+            </span>
           </div>
-          <div
-            v-if="view.amountDue !== null && view.amountDue !== view.total"
-            class="table-panel__row"
-          >
-            <dt class="d-flex align-center gap-2 text-medium-emphasis">
-              <VIcon
-                icon="ri-hand-coin-line"
-                size="18"
-              />Reste à payer
-            </dt>
-            <dd class="tabular-nums font-weight-bold">
-              <AppMoney :amount="view.amountDue" />
-            </dd>
-          </div>
-        </dl>
+          <template v-if="total !== null && due !== null">
+            <VProgressLinear
+              :model-value="paidPercent"
+              color="success"
+              height="6"
+              rounded
+              bg-opacity="0.16"
+            />
+            <div class="d-flex justify-space-between text-caption mt-1">
+              <span class="text-medium-emphasis">Réglé : <AppMoney :amount="paid" /></span>
+              <span :class="due > 0 ? 'font-weight-bold' : 'text-success'">
+                <template v-if="due > 0">Reste : <AppMoney :amount="due" /></template>
+                <template v-else>Soldée</template>
+              </span>
+            </div>
+          </template>
+        </section>
 
         <p
           v-if="state === 'paying'"
-          class="text-body-2 text-medium-emphasis mt-4 mb-0"
+          class="text-body-2 text-medium-emphasis mb-0"
         >
           Le client a demandé l'addition : elle se règle à la caisse.
         </p>
@@ -249,49 +321,56 @@ const tone = computed(() => `rgb(var(--v-theme-${look.value.color}))`)
   </VCard>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .table-panel {
   border-block-start: 4px solid var(--tone);
 }
 
 .table-panel__badge {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-inline-size: 52px;
-  max-inline-size: 96px;
-  block-size: 52px;
-  padding-inline: 8px;
-  border-radius: 8px;
   background: var(--tone);
+  border-radius: 12px;
   color: #fff;
+  display: inline-flex;
   font-size: 1.25rem;
   font-weight: 700;
+  block-size: 52px;
+  inline-size: auto;
+  justify-content: center;
   margin-inline-end: 12px;
+  max-inline-size: 96px;
+  min-inline-size: 52px;
   overflow: hidden;
+  padding-inline: 8px;
 }
 
-.table-panel__rows {
-  display: grid;
-  margin: 0;
-  gap: 2px;
+.block {
+  border-block-start: 1px solid rgba(var(--v-border-color), 0.12);
+  padding-block: 0.9rem;
+
+  &:first-of-type {
+    border-block-start: 0;
+    padding-block-start: 0;
+  }
 }
 
-.table-panel__row {
+.block__head {
+  align-items: baseline;
   display: flex;
-  align-items: center;
+  gap: 0.75rem;
   justify-content: space-between;
-  gap: 12px;
-  padding-block: 10px;
-  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  margin-block-end: 0.5rem;
 }
 
-.table-panel__row:last-child {
-  border-block-end: none;
+.block__title {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.table-panel__row dd {
-  margin: 0;
-  text-align: end;
+.block__value {
+  font-size: 0.95rem;
 }
 </style>

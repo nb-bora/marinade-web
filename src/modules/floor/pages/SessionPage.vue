@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { useNow } from '@vueuse/core'
 import { floorApi } from '../api'
+import CoversDialog from '../components/CoversDialog.vue'
 import MenuPicker from '../components/MenuPicker.vue'
 import OrderCart from '../components/OrderCart.vue'
 import SessionBill from '../components/SessionBill.vue'
 import SessionOrders from '../components/SessionOrders.vue'
 import { markOrdered, sessionInvoice } from '../composables/invoices'
+import { compactMoney, elapsedTone, formatElapsed, minutesSince } from '../composables/useFloorMetrics'
 import { useCatalog } from '../composables/useCatalog'
 import { useSessionOrders } from '../composables/useSessionOrders'
 import { newUuid } from '../composables/uuid'
@@ -71,7 +74,38 @@ const settled = computed(() => !session.value && table.value !== null)
 const ended = computed(() => data.value !== null && !session.value && !table.value)
 
 const covers = computed(() => coversOf(session.value, table.value))
+const coversDialog = ref(false)
+
+// Places : la capacité de la table moins les couverts assis.
+const capacity = computed(() => table.value?.capacite ?? null)
+const seatsFree = computed(() => capacity.value !== null && covers.value !== null ? Math.max(0, capacity.value - covers.value) : null)
+
+const seatHint = computed(() => {
+  if (capacity.value === null)
+    return 'Session sans table'
+
+  if (covers.value === null)
+    return `${plural(capacity.value, 'place')} · couverts non précisés`
+
+  if (covers.value > capacity.value)
+    return `Table dépassée de ${covers.value - capacity.value}`
+
+  return seatsFree.value === 0 ? 'Table complète' : `${plural(seatsFree.value!, 'place libre', 'places libres')} sur ${capacity.value}`
+})
+
+const seatGauge = computed(() => capacity.value && covers.value !== null ? Math.min(100, Math.round(100 * covers.value / capacity.value)) : undefined)
+
+// Durée de la session, mise à jour chaque 30 s sans requête.
+const now = useNow({ interval: 30_000 })
+const minutes = computed(() => session.value ? minutesSince(session.value.opened_at, now.value) : null)
+const tone = computed(() => minutes.value === null ? 'ok' : elapsedTone(minutes.value))
+const TONE_COLOR = { ok: 'success', warn: 'warning', late: 'error' } as const
+
 const amountDue = computed(() => invoice.value ? Number(invoice.value.amount_due) : 0)
+
+const billTotal = computed(() => invoice.value ? Number(invoice.value.total_amount) : null)
+const billPaid = computed(() => billTotal.value !== null ? Math.max(0, billTotal.value - amountDue.value) : 0)
+const paidGauge = computed(() => billTotal.value ? Math.min(100, Math.round(100 * billPaid.value / billTotal.value)) : undefined)
 
 const title = computed(() => {
   if (table.value)
@@ -240,11 +274,19 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
 </script>
 
 <template>
-  <div>
-    <AppPageHeader
+  <div class="session-page">
+    <AppHero
+      :eyebrow="session ? 'Session en cours' : settled ? 'Addition réglée' : 'Session'"
       :title="title"
       :subtitle="subtitle"
+      :live="!!session"
     >
+      <template #eyebrow-extra>
+        <AppStatusChip
+          v-if="session"
+          v-bind="present(SESSION_STATUS, session.status)"
+        />
+      </template>
       <template #actions>
         <VBtn
           variant="text"
@@ -253,10 +295,14 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
         >
           Plan de salle
         </VBtn>
-        <AppStatusChip
+        <VBtn
           v-if="session"
-          v-bind="present(SESSION_STATUS, session.status)"
-        />
+          variant="tonal"
+          prepend-icon="ri-user-add-line"
+          @click="coversDialog = true"
+        >
+          Couverts
+        </VBtn>
         <VBtn
           v-if="canCash"
           color="primary"
@@ -278,10 +324,58 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
           Clôturer
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
+
+    <AppMetricGrid
+      v-if="data && !ended"
+      class="mt-5"
+    >
+      <AppMetricTile
+        hero
+        label="Couverts"
+        icon="ri-group-line"
+        :gauge="seatGauge"
+        :gauge-label="seatHint"
+        :hint="seatHint"
+      >
+        {{ covers ?? '—' }}<span
+          v-if="capacity"
+          class="unit"
+        >/ {{ capacity }}</span>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Durée"
+        icon="ri-timer-line"
+        :color="TONE_COLOR[tone]"
+        :hint="session ? 'Depuis l\'ouverture' : 'Session terminée'"
+      >
+        {{ minutes === null ? '—' : formatElapsed(minutes) }}
+      </AppMetricTile>
+      <AppMetricTile
+        label="Commandé"
+        icon="ri-receipt-line"
+        color="info"
+        :hint="orders.length ? plural(orders.length, 'commande envoyée', 'commandes envoyées') : 'Aucune commande envoyée'"
+      >
+        {{ billTotal === null ? '—' : compactMoney(billTotal) }}<span
+          v-if="billTotal !== null"
+          class="unit"
+        >FCFA</span>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Reste à payer"
+        icon="ri-wallet-3-line"
+        :color="amountDue > 0 ? 'warning' : 'success'"
+        :gauge="paidGauge"
+        :hint="amountDue > 0 ? `Déjà réglé : ${compactMoney(billPaid)} FCFA` : billTotal ? 'Tout est réglé' : 'Rien à payer'"
+      >
+        {{ compactMoney(amountDue) || '0' }}<span class="unit">FCFA</span>
+      </AppMetricTile>
+    </AppMetricGrid>
 
     <AppErrorState
       v-if="error && !data"
+      class="mt-5"
       :error="error"
       @retry="reload"
     />
@@ -289,9 +383,13 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
     <VSkeletonLoader
       v-else-if="!data"
       type="card, card"
+      class="mt-5"
     />
 
-    <VCard v-else-if="ended">
+    <VCard
+      v-else-if="ended"
+      class="mt-5"
+    >
       <AppEmptyState
         icon="ri-lock-line"
         title="Cette session est terminée"
@@ -311,7 +409,7 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
         v-if="settled"
         type="success"
         variant="tonal"
-        class="mb-6"
+        class="mt-5 mb-6"
       >
         L'addition est réglée. Clôturez la session pour libérer la table.
       </VAlert>
@@ -321,12 +419,12 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
         type="info"
         variant="tonal"
         density="compact"
-        class="mb-6"
+        class="mt-5 mb-6"
       >
         Il reste {{ formatMoney(amountDue) }} à payer : la session ne peut être clôturée qu'une fois l'addition réglée.
       </VAlert>
 
-      <VRow>
+      <VRow :class="{ 'mt-1': !settled && !closeBlocked }">
         <VCol
           v-if="!settled"
           cols="12"
@@ -367,6 +465,14 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
         </VCol>
       </VRow>
 
+      <CoversDialog
+        v-model="coversDialog"
+        :session="session"
+        :table="table"
+        :covers="covers"
+        @saved="refresh"
+      />
+
       <Teleport to="body">
         <button
           v-if="cartCount && !settled"
@@ -383,7 +489,19 @@ const scrollToCart = () => cartCard.value?.scrollIntoView({ behavior: 'smooth', 
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+/* Cartes de la page : coins larges et filet fin, comme le plan de salle. */
+.session-page :deep(.v-card:not(.tile)) {
+  border: 1px solid rgba(var(--v-border-color), 0.14);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.session-page :deep(.v-card-title) {
+  font-size: 1.02rem;
+  font-weight: 650;
+}
+
 .cart-bar {
   position: fixed;
   inset-block-end: 12px;

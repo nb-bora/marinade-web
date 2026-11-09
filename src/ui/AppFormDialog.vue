@@ -39,7 +39,7 @@ const confirmLabel = computed(() => {
   if (props.danger)
     return 'Supprimer'
 
-  return /^(créer|ajouter)/i.test(props.submitLabel) ? 'Créer' : 'Enregistrer'
+  return /^(?:créer|ajouter)/i.test(props.submitLabel) ? 'Créer' : 'Enregistrer'
 })
 
 async function onSubmit() {

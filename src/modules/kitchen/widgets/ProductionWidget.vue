@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { kitchenApi } from '../api'
-import { STATIONS } from '../labels'
+import { STATIONS, isOpen } from '../labels'
 import type { Station } from '../types'
 import { useLive } from '@/composables/useLive'
 import { useTenantStore } from '@/stores/tenant.store'
@@ -10,6 +10,7 @@ const tenant = useTenantStore()
 const counts = ref<Record<Station, number> | null>(null)
 const error = ref<unknown>(null)
 
+// Compte ce qui reste à faire (à préparer et en préparation) ; le « prêt » n'est plus du travail.
 async function load() {
   const id = tenant.currentId
 
@@ -17,10 +18,10 @@ async function load() {
     return
 
   try {
-    const results = await Promise.all(STATIONS.map(item => kitchenApi.pending(id, item.value)))
+    const results = await Promise.all(STATIONS.map(item => kitchenApi.board(id, item.value)))
 
     counts.value = Object.fromEntries(
-      STATIONS.map((item, index) => [item.value, results[index].length]),
+      STATIONS.map((item, index) => [item.value, results[index].filter(isOpen).length]),
     ) as Record<Station, number>
     error.value = null
   }

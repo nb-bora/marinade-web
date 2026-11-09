@@ -41,7 +41,7 @@ export default defineFeature({
     },
   ],
   nav: [
-    { id: 'stock-import', title: 'Importer', icon: 'ri-file-excel-2-line', to: '/stock/import', section: 'catalog', order: 39, capability: 'management' },
+    { id: 'stock-import', title: 'Importer le stock', icon: 'ri-file-excel-2-line', to: '/stock/import', section: 'catalog', order: 39, capability: 'management' },
     { id: 'stock', title: 'Stock', icon: 'ri-stack-line', to: '/stock', section: 'catalog', order: 40, capability: 'stock' },
     { id: 'stock-composants', title: 'Composants', icon: 'ri-leaf-line', to: '/stock/composants', section: 'catalog', order: 50, capability: 'stock' },
     { id: 'stock-recettes', title: 'Fiches techniques', icon: 'ri-list-check-2', to: '/stock/recettes', section: 'catalog', order: 60, capability: 'stock' },

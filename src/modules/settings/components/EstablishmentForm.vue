@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRestaurantUpdate } from '../composables/useRestaurantUpdate'
 import { useSettingsDraft } from '../composables/useSettingsDraft'
-import { COUNTRIES, CURRENCIES, DEFAULT_COUNTRY, descriptionRule, emptyToNull, logoUrlRule, nameRules } from '../labels'
+import { COUNTRIES, CURRENCIES, DEFAULT_COUNTRY, TIMEZONES, descriptionRule, emptyToNull, logoUrlRule, nameRules } from '../labels'
 import type { Restaurant, RestaurantUpdate } from '../types'
 import SettingsActions from './SettingsActions.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -26,6 +26,7 @@ const draftOf = (restaurant: Restaurant) => ({
   city: restaurant.city ?? '',
   country: restaurant.country ?? DEFAULT_COUNTRY,
   currency: restaurant.currency,
+  timezone: restaurant.timezone ?? 'Africa/Douala',
 })
 
 type Draft = ReturnType<typeof draftOf>
@@ -49,6 +50,7 @@ const FIELD_LABELS: Record<keyof Draft, string> = {
   city: 'ville',
   country: 'pays',
   currency: 'devise',
+  timezone: 'fuseau horaire',
 }
 
 const changes = computed(() => changedKeys.value.map(key => FIELD_LABELS[key]))
@@ -139,6 +141,7 @@ async function submit() {
     city: emptyToNull(draft.value.city),
     country: emptyToNull(draft.value.country),
     currency: draft.value.currency.trim().toUpperCase(),
+    timezone: draft.value.timezone,
   }
 
   // Seuls les champs modifiés partent : on n'écrase jamais ce qu'un autre onglet vient d'enregistrer.
@@ -364,6 +367,21 @@ defineExpose({
               prepend-inner-icon="ri-global-line"
               :readonly="!canEdit"
               :class="{ 'settings-changed': changed('country') }"
+            />
+          </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <VSelect
+              v-model="draft.timezone"
+              :items="TIMEZONES"
+              label="Fuseau horaire"
+              prepend-inner-icon="ri-time-zone-line"
+              hint="Les réservations et les horaires d'ouverture s'affichent dans ce fuseau."
+              persistent-hint
+              :readonly="!canEdit"
+              :class="{ 'settings-changed': changed('timezone') }"
             />
           </VCol>
           <VCol

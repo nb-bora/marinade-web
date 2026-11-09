@@ -1,8 +1,12 @@
-<!-- Ajout rapide d'un groupe à la liste d'attente, sans ouvrir de fenêtre. -->
+<!--
+  Ajout rapide à la liste d'attente, au comptoir : nom, couverts, téléphone et e-mail facultatifs.
+  Pas de confirmation à chaque ajout (ce serait une friction au comptoir) ; la file se met à jour
+  tout de suite.
+-->
 <script setup lang="ts">
 import { reservationsApi } from '../api'
+import { messageOf } from '../labels'
 import type { WaitlistEntry } from '../types'
-import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
@@ -12,156 +16,131 @@ const emit = defineEmits<{ added: [entry: WaitlistEntry] }>()
 const tenant = useTenantStore()
 const toast = useToast()
 
-const form = ref()
 const name = ref('')
-const partySize = ref<number | string>(2)
+const size = ref<number | string>(2)
 const phone = ref('')
-const estimate = ref<number | string>('')
+const email = ref('')
 const phoneKey = ref(0)
 
-const { submit, pending, message, apiError, reset } = useSubmit(async () => {
+const { submit, pending, apiError, reset } = useSubmit(async () => {
   if (!tenant.currentId)
-    return
-
-  const accepted = await useConfirm()({
-    title: 'Ajouter à la liste d\'attente ?',
-    text: `${name.value.trim()} (${Number(partySize.value)} couvert${Number(partySize.value) > 1 ? 's' : ''}) rejoindra la liste d'attente.`,
-    confirmLabel: 'Créer',
-  })
-
-  if (!accepted)
     return
 
   const entry = await reservationsApi.addToWaitlist(tenant.currentId, {
     customer_name: name.value.trim(),
+    party_size: Number(size.value),
     customer_phone: phone.value || null,
-    party_size: Number(partySize.value),
-    estimated_wait_minutes: estimate.value === '' ? null : Number(estimate.value),
+    customer_email: email.value.trim() || null,
     source: 'POS',
   })
 
-  toast.success(`${entry.customer_name} est sur la liste d'attente.`)
+  toast.success(`${entry.customer_name} ajouté à la file (position ${entry.position}).`)
   name.value = ''
+  size.value = 2
   phone.value = ''
-  estimate.value = ''
-  partySize.value = 2
+  email.value = ''
   phoneKey.value++
-  await nextTick()
-  form.value?.resetValidation()
-  reset()
   emit('added', entry)
 })
 
-async function onSubmit() {
-  if ((await form.value?.validate())?.valid)
-    submit()
-}
+const errorMessage = computed(() => (apiError.value ? messageOf(apiError.value) : ''))
 
-const rules = {
-  name: [(value: string) => value.trim().length > 0 || 'Indiquez un nom.'],
-  party: [(value: number | string) => (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 200) || 'Entre 1 et 200.'],
-  estimate: [(value: number | string) => value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0) || 'Un nombre de minutes.'],
+async function onSubmit() {
+  reset()
+  await submit()
 }
 </script>
 
 <template>
-  <VCard>
-    <VCardItem>
-      <VCardTitle>Ajouter un groupe</VCardTitle>
-      <VCardSubtitle>Un nom et un nombre de couverts suffisent.</VCardSubtitle>
-    </VCardItem>
-    <VCardText>
-      <VForm
-        ref="form"
-        validate-on="submit"
-        @submit.prevent="onSubmit"
+  <form
+    class="quick-add"
+    aria-label="Ajouter un groupe à la liste d'attente"
+    @submit.prevent="onSubmit"
+  >
+    <div class="quick-add__fields">
+      <VTextField
+        v-model="name"
+        label="Nom du groupe"
+        prepend-inner-icon="ri-user-line"
+        placeholder="Famille Ngo"
+        maxlength="255"
+        required
+        :error-messages="apiError?.fieldMessage('customer_name')"
+        autocomplete="off"
+        hide-details="auto"
+      />
+      <VTextField
+        v-model="size"
+        label="Couverts"
+        prepend-inner-icon="ri-group-line"
+        type="number"
+        min="1"
+        max="200"
+        required
+        :error-messages="apiError?.fieldMessage('party_size')"
+        hide-details="auto"
+      />
+      <AppPhoneField
+        :key="phoneKey"
+        v-model="phone"
+        label="Téléphone (facultatif)"
+        :error-messages="apiError?.fieldMessage('customer_phone')"
+      />
+      <VTextField
+        v-model="email"
+        label="E-mail (facultatif)"
+        prepend-inner-icon="ri-mail-line"
+        type="email"
+        maxlength="254"
+        :error-messages="apiError?.fieldMessage('customer_email')"
+        hide-details="auto"
+      />
+    </div>
+    <div class="d-flex align-center justify-space-between ga-3 mt-3 flex-wrap">
+      <p
+        v-if="errorMessage"
+        class="text-error text-body-2 ma-0"
+        role="alert"
       >
-        <VRow>
-          <VCol
-            cols="12"
-            sm="6"
-            lg="3"
-          >
-            <VTextField
-              v-model="name"
-              label="Nom"
-              prepend-inner-icon="ri-user-line"
-              placeholder="Famille Ngono"
-              :rules="rules.name"
-              :error-messages="apiError?.fieldMessage('customer_name')"
-              maxlength="255"
-            />
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-            lg="2"
-          >
-            <VTextField
-              v-model="partySize"
-              label="Couverts"
-              prepend-inner-icon="ri-group-line"
-              type="number"
-              min="1"
-              :rules="rules.party"
-              :error-messages="apiError?.fieldMessage('party_size')"
-            />
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-            lg="2"
-          >
-            <VTextField
-              v-model="estimate"
-              label="Attente (min)"
-              prepend-inner-icon="ri-time-line"
-              type="number"
-              min="0"
-              placeholder="15"
-              :rules="rules.estimate"
-              :error-messages="apiError?.fieldMessage('estimated_wait_minutes')"
-            />
-          </VCol>
-          <VCol
-            cols="12"
-            sm="8"
-            lg="3"
-          >
-            <AppPhoneField
-              :key="phoneKey"
-              v-model="phone"
-              label="Téléphone"
-              :error-messages="apiError?.fieldMessage('customer_phone')"
-            />
-          </VCol>
-          <VCol
-            cols="12"
-            sm="4"
-            lg="2"
-          >
-            <VBtn
-              type="submit"
-              block
-              size="large"
-              prepend-icon="ri-add-line"
-              :loading="pending"
-            >
-              Ajouter
-            </VBtn>
-          </VCol>
-        </VRow>
-
-        <VAlert
-          v-if="message"
-          type="error"
-          variant="tonal"
-          density="compact"
-          class="mt-2"
-        >
-          {{ message }}
-        </VAlert>
-      </VForm>
-    </VCardText>
-  </VCard>
+        {{ errorMessage }}
+      </p>
+      <span v-else />
+      <VBtn
+        type="submit"
+        color="primary"
+        prepend-icon="ri-add-line"
+        :loading="pending"
+        :disabled="!name.trim()"
+      >
+        Ajouter à la file
+      </VBtn>
+    </div>
+  </form>
 </template>
+
+<style scoped>
+.quick-add {
+  padding: 16px;
+  border: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.25);
+  border-radius: 16px;
+  background: rgb(var(--v-theme-surface));
+}
+
+.quick-add__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.6fr);
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .quick-add__fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .quick-add__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

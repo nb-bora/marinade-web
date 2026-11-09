@@ -10,6 +10,7 @@ import type { MenuCategory } from './types'
 import { RowError, addCounts, booleanField, combineImports, numberField, requireText, runRows } from '@/lib/sheetImport'
 import type { ImportData, ImportDefinition, ImportResult, ImportSheetSpec, ImportTick, RowOutcome } from '@/lib/sheetImport'
 import { normalizeKey } from '@/lib/spreadsheet'
+import type { SheetRecord } from '@/lib/spreadsheet'
 import { useTenantStore } from '@/stores/tenant.store'
 
 const restaurantId = () => {
@@ -58,9 +59,13 @@ async function runMenus(data: ImportData, tick: ImportTick): Promise<ImportResul
 
   const id = restaurantId()
   const existing = new Map((await catalogApi.menus(id)).map(menu => [normalizeKey(menu.name), menu]))
+  const once = uniqueInSheet()
 
   addCounts(result, await runRows('Menus', records, async (record): Promise<RowOutcome> => {
     const name = requireText(record, 'nom', 'Nom')
+
+    once(name, record.row)
+
     const description = record.values.description || undefined
     const actif = booleanField(record, 'actif', 'Actif')
     const found = existing.get(normalizeKey(name))
@@ -86,6 +91,7 @@ async function runCategories(data: ImportData, tick: ImportTick): Promise<Import
 
   const menus = new Map((await catalogApi.menus(restaurantId())).map(menu => [normalizeKey(menu.name), menu]))
   const categoriesOf = new Map<string, MenuCategory[]>()
+  const once = uniqueInSheet()
 
   const load = async (menuId: string) => {
     if (!categoriesOf.has(menuId))
@@ -101,6 +107,8 @@ async function runCategories(data: ImportData, tick: ImportTick): Promise<Import
 
     if (!menu)
       throw new RowError('Menu', 'Ce menu n\'existe pas : ajoutez-le dans la feuille Menus.')
+
+    once(`${menu.id}|${name}`, record.row)
 
     const siblings = await load(menu.id)
     const found = siblings.find(category => normalizeKey(category.name) === normalizeKey(name))
@@ -153,6 +161,7 @@ const PLATS_SHEET: ImportSheetSpec = {
     { key: 'disponible', label: 'Disponible', hint: 'oui ou non. Vide : oui.', example: 'oui' },
     { key: 'temps_preparation', label: 'Temps de préparation', aliases: ['temps'], hint: 'En minutes, nombre entier.', example: '20' },
     { key: 'categorie', label: 'Catégorie', aliases: ['category'], hint: 'Nom d\'une catégorie de menu qui existe déjà.', example: 'Plats' },
+    { key: 'menu', label: 'Menu', aliases: ['carte'], hint: 'À renseigner seulement si la catégorie existe dans plusieurs menus.', example: 'Carte du midi' },
   ],
 }
 
@@ -171,12 +180,77 @@ const BOISSONS_SHEET: ImportSheetSpec = {
   ],
 }
 
-/** Les catégories de tous les menus, retrouvées par nom. */
+interface CategoryChoice {
+  category: MenuCategory
+  menu: string
+}
+
+/** Toutes les catégories, par nom, avec le menu qui les porte : une même catégorie peut exister dans plusieurs menus. */
 async function categoriesByName(id: string) {
   const menus = await catalogApi.menus(id)
-  const lists = await Promise.all(menus.map(menu => catalogApi.categories(menu.id)))
+  const lists = await Promise.all(menus.map(menu => catalogApi.categories(menu.id).then(categories => ({ menu, categories }))))
+  const byName = new Map<string, CategoryChoice[]>()
 
-  return new Map(lists.flat().reverse().map(category => [normalizeKey(category.name), category]))
+  for (const { menu, categories } of lists) {
+    for (const category of categories) {
+      const key = normalizeKey(category.name)
+
+      byName.set(key, [...(byName.get(key) ?? []), { category, menu: menu.name }])
+    }
+  }
+
+  return byName
+}
+
+/**
+ * Un nom ne doit figurer qu'une fois par feuille : sinon la seconde ligne écraserait la première.
+ * Renvoie la fonction qui enregistre un nom et refuse le doublon, en citant la ligne d'origine.
+ */
+export function uniqueInSheet() {
+  const rows = new Map<string, number>()
+
+  return (nom: string, row: number) => {
+    const key = normalizeKey(nom)
+    const first = rows.get(key)
+
+    if (first !== undefined)
+      throw new RowError('Nom', `Ce nom figure déjà dans le fichier (ligne ${first}). Gardez une seule ligne par article.`)
+
+    rows.set(key, row)
+  }
+}
+
+/** Le prix maximal accepté par le serveur (Numeric(10, 2)). */
+const PRIX_MAX = 99_999_999.99
+
+/**
+ * La catégorie d'un plat : retrouvée par nom. Si le nom existe dans plusieurs menus, la colonne « menu »
+ * désigne lequel ; sans elle, l'ambiguïté est signalée plutôt que de deviner.
+ */
+export function resolveCategory(record: SheetRecord, categories: Map<string, CategoryChoice[]>): MenuCategory | undefined {
+  const categoryName = record.values.categorie
+  const menuName = record.values.menu
+
+  if (!categoryName) {
+    if (menuName)
+      throw new RowError('Catégorie', 'Renseignez la catégorie du plat, ou retirez le menu.')
+
+    return undefined
+  }
+
+  const candidates = categories.get(normalizeKey(categoryName)) ?? []
+  const scoped = menuName ? candidates.filter(choice => normalizeKey(choice.menu) === normalizeKey(menuName)) : candidates
+
+  if (scoped.length === 0) {
+    throw new RowError('Catégorie', menuName
+      ? 'Cette catégorie n\'existe pas dans ce menu.'
+      : 'Cette catégorie n\'existe pas : ajoutez-la dans la feuille Catégories de l\'import des menus.')
+  }
+
+  if (scoped.length > 1)
+    throw new RowError('Catégorie', 'Plusieurs menus ont une catégorie de ce nom : précisez le menu dans la colonne « menu ».')
+
+  return scoped[0]?.category
 }
 
 export function platsImport(): ImportDefinition {
@@ -210,20 +284,20 @@ async function runPlats(data: ImportData, tick: ImportTick): Promise<ImportResul
 
   const id = restaurantId()
   const existing = new Map((await catalogApi.plats(id)).map(plat => [normalizeKey(plat.nom), plat]))
-  const categories = records.some(record => record.values.categorie) ? await categoriesByName(id) : new Map<string, MenuCategory>()
+  const categories = records.some(record => record.values.categorie) ? await categoriesByName(id) : new Map<string, CategoryChoice[]>()
+  const once = uniqueInSheet()
 
   addCounts(result, await runRows('Plats', records, async (record): Promise<RowOutcome> => {
     const nom = requireText(record, 'nom', 'Nom')
-    const prix = numberField(record, 'prix', 'Prix', { required: true, min: 1 }) ?? 0
+
+    once(nom, record.row)
+
+    const prix = numberField(record, 'prix', 'Prix', { required: true, min: 1, max: PRIX_MAX }) ?? 0
     const tempsPreparation = numberField(record, 'temps_preparation', 'Temps de préparation', { min: 0, integer: true })
     const disponible = booleanField(record, 'disponible', 'Disponible')
     const description = record.values.description || undefined
     const code = record.values.code || undefined
-    const categoryName = record.values.categorie
-    const category = categoryName ? categories.get(normalizeKey(categoryName)) : undefined
-
-    if (categoryName && !category)
-      throw new RowError('Catégorie', 'Cette catégorie n\'existe pas : ajoutez-la dans la feuille Catégories de l\'import des menus.')
+    const category = resolveCategory(record, categories)
 
     const found = existing.get(normalizeKey(nom))
 
@@ -263,10 +337,14 @@ async function runBoissons(data: ImportData, tick: ImportTick): Promise<ImportRe
 
   const id = restaurantId()
   const existing = new Map((await catalogApi.boissons(id)).map(boisson => [normalizeKey(boisson.nom), boisson]))
+  const once = uniqueInSheet()
 
   addCounts(result, await runRows('Boissons', records, async (record): Promise<RowOutcome> => {
     const nom = requireText(record, 'nom', 'Nom')
-    const prix = numberField(record, 'prix', 'Prix', { required: true, min: 1 }) ?? 0
+
+    once(nom, record.row)
+
+    const prix = numberField(record, 'prix', 'Prix', { required: true, min: 1, max: PRIX_MAX }) ?? 0
     const disponible = booleanField(record, 'disponible', 'Disponible')
     const alcool = booleanField(record, 'alcool', 'Alcool')
     const description = record.values.description || undefined

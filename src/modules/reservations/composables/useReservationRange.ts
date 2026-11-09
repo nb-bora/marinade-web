@@ -21,7 +21,7 @@ export const toBooking = (reservation: Reservation): Booking => {
  * Les réservations d'une plage de dates (début inclus, fin exclue) du restaurant courant.
  * Recharge quand la plage ou le restaurant change ; `refresh` met à jour sans clignotement.
  */
-export function useReservationRange(range: Ref<{ from: Date; to: Date }>) {
+export function useReservationRange(range: Readonly<Ref<{ from: Date; to: Date }>>) {
   const tenant = useTenantStore()
 
   const key = computed(() => `${tenant.currentId}|${range.value.from.getTime()}|${range.value.to.getTime()}`)

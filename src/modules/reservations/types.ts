@@ -16,6 +16,12 @@ export type WaitlistCreate = Schemas['WaitlistCreate']
 /** Tables du restaurant : lecture seule ici, la salle les gère. */
 export type Table = Schemas['TableResponse']
 
+export type Availability = Schemas['DisponibiliteResponse']
+export type AvailabilitySlot = Availability['creneaux'][number]
+
+export type ClientMatch = Schemas['ClientRecherche']
+export type ClientSummary = Schemas['ClientResume']
+
 /** Filtres de la liste des réservations (l'API filtre sur une plage de dates et un statut). */
 export interface ReservationFilters {
   from?: Date

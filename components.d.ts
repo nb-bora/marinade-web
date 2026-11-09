@@ -7,16 +7,19 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppAnimatedNumber: typeof import('./src/ui/AppAnimatedNumber.vue')['default']
     AppConfirmDialog: typeof import('./src/ui/AppConfirmDialog.vue')['default']
     AppEmptyState: typeof import('./src/ui/AppEmptyState.vue')['default']
     AppErrorState: typeof import('./src/ui/AppErrorState.vue')['default']
     AppFileDropZone: typeof import('./src/ui/AppFileDropZone.vue')['default']
     AppFormDialog: typeof import('./src/ui/AppFormDialog.vue')['default']
     AppFullPageMessage: typeof import('./src/ui/AppFullPageMessage.vue')['default']
+    AppHero: typeof import('./src/ui/AppHero.vue')['default']
     AppImportDialog: typeof import('./src/ui/AppImportDialog.vue')['default']
-    AppImportPanel: typeof import('./src/ui/AppImportPanel.vue')['default']
     AppImportSection: typeof import('./src/ui/AppImportSection.vue')['default']
     AppKpiCard: typeof import('./src/ui/AppKpiCard.vue')['default']
+    AppMetricGrid: typeof import('./src/ui/AppMetricGrid.vue')['default']
+    AppMetricTile: typeof import('./src/ui/AppMetricTile.vue')['default']
     AppMoney: typeof import('./src/ui/AppMoney.vue')['default']
     AppPageHeader: typeof import('./src/ui/AppPageHeader.vue')['default']
     AppPasswordField: typeof import('./src/ui/AppPasswordField.vue')['default']

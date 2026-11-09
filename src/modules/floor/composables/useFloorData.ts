@@ -1,5 +1,7 @@
 import { byNumber, coversOf } from '../service'
 import { floorApi } from '../api'
+import type { SalleConfig } from '../layout'
+import { defaultSalle, readSalle } from '../layout'
 import type { Invoice, ServiceSession, TableView } from '../types'
 import { sessionInvoice } from './invoices'
 import { useAsyncData } from '@/composables/useAsyncData'
@@ -7,6 +9,12 @@ import { useTenantStore } from '@/stores/tenant.store'
 
 export interface FloorSnapshot {
   views: TableView[]
+
+  /** Niveaux et zones de la salle (un seul niveau par défaut). */
+  salle: SalleConfig
+
+  /** Config complète du restaurant : l'aménagement s'y enregistre sans écraser les autres clés. */
+  config: Record<string, unknown>
 
   /** Sessions ouvertes sans table (comptoir, terrasse libre...). */
   looseSessions: { session: ServiceSession; total: number | null; amountDue: number | null }[]
@@ -48,12 +56,18 @@ export function useFloorData(withAmounts = true) {
     const restaurantId = tenant.currentId
 
     if (!restaurantId)
-      return { views: [], looseSessions: [] }
+      return { views: [], looseSessions: [], salle: defaultSalle(), config: {} }
 
-    const [tables, sessions] = await Promise.all([
+    const [tables, sessions, restaurant] = await Promise.all([
       floorApi.tables(restaurantId, signal),
       floorApi.activeSessions(restaurantId, signal),
+
+      // Une config illisible ne doit jamais masquer le plan : on retombe sur un niveau unique.
+      floorApi.restaurant(restaurantId, signal).catch(() => null),
     ])
+
+    const config = (restaurant?.config_jsonb ?? {}) as Record<string, unknown>
+    const salle = restaurant ? readSalle(config) : defaultSalle()
 
     const invoices = withAmounts ? await invoicesOf(restaurantId, sessions, signal) : new Map<string, Invoice | null>()
 
@@ -86,6 +100,6 @@ export function useFloorData(withAmounts = true) {
         amountDue: amount(invoices.get(session.id) ?? null, 'amount_due'),
       }))
 
-    return { views, looseSessions }
+    return { views, looseSessions, salle, config }
   }, { watch: [() => tenant.currentId] })
 }

@@ -1,145 +1,195 @@
-<!-- Petit calendrier mensuel : choisir un jour, repérer ceux qui ont des réservations. -->
+<!--
+  Mini-calendrier mensuel : un clic choisit le jour, les flèches changent de mois. Chaque jour
+  porte le nombre de réservations actives ; le jour affiché est souligné, aujourd'hui marqué.
+-->
 <script setup lang="ts">
-import { addMonths, dayKey, formatMonthYear, monthGrid, sameDay } from '../calendar'
+import { addMonthsIn, dayKey, formatFullDate, formatMonthYear, monthGridIn, sameDay, zonedParts } from '../calendar'
 
 const props = defineProps<{
-
-  /** Nombre de réservations par jour (clé `AAAA-MM-JJ`). */
+  month: Date
+  selected: Date
+  zone: string
+  now: Date
   counts: Map<string, number>
 }>()
 
-/** Jour sélectionné. */
-const selected = defineModel<Date>({ required: true })
+const emit = defineEmits<{
+  select: [day: Date]
+  'update:month': [month: Date]
+}>()
 
-/** Mois affiché (premier jour du mois). */
-const month = defineModel<Date>('month', { required: true })
+const WEEK_HEADERS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-const days = computed(() => monthGrid(month.value))
-const today = new Date()
-const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const cells = computed(() => monthGridIn(props.month, props.zone))
+const currentMonth = computed(() => zonedParts(props.month, props.zone).month)
+const title = computed(() => formatMonthYear(props.month, props.zone))
 
-function countOf(date: Date) {
-  return props.counts.get(dayKey(date)) ?? 0
+function countOf(day: Date): number {
+  return props.counts.get(dayKey(day, props.zone)) ?? 0
 }
 
-function label(date: Date) {
-  const count = countOf(date)
+function labelOf(day: Date): string {
+  const count = countOf(day)
+  const suffix = count ? `, ${count} réservation${count > 1 ? 's' : ''}` : ''
 
-  return `${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}${count ? `, ${count} réservation${count > 1 ? 's' : ''}` : ''}`
+  return `${formatFullDate(day, props.zone)}${suffix}`
 }
 </script>
 
 <template>
-  <div class="mini-cal">
-    <div class="d-flex align-center justify-space-between mb-2">
-      <IconBtn
+  <div class="mini">
+    <div class="mini__head">
+      <VBtn
+        icon="ri-arrow-left-s-line"
+        variant="text"
+        size="small"
         aria-label="Mois précédent"
-        @click="month = addMonths(month, -1)"
+        @click="emit('update:month', addMonthsIn(month, -1, zone))"
+      />
+      <div
+        class="mini__title"
+        aria-live="polite"
       >
-        <VIcon icon="ri-arrow-left-s-line" />
-      </IconBtn>
-      <span class="text-body-1 font-weight-semibold">{{ formatMonthYear(month) }}</span>
-      <IconBtn
+        {{ title }}
+      </div>
+      <VBtn
+        icon="ri-arrow-right-s-line"
+        variant="text"
+        size="small"
         aria-label="Mois suivant"
-        @click="month = addMonths(month, 1)"
-      >
-        <VIcon icon="ri-arrow-right-s-line" />
-      </IconBtn>
+        @click="emit('update:month', addMonthsIn(month, 1, zone))"
+      />
     </div>
 
     <div
-      class="mini-cal__grid"
+      class="mini__grid"
       role="grid"
-      :aria-label="formatMonthYear(month)"
+      :aria-label="`Calendrier : ${title}`"
     >
-      <span
-        v-for="(weekday, index) in WEEKDAYS"
-        :key="index"
-        class="mini-cal__weekday text-caption text-medium-emphasis"
+      <div
+        v-for="header in WEEK_HEADERS"
+        :key="header"
+        class="mini__weekday"
+        role="columnheader"
         aria-hidden="true"
-      >{{ weekday }}</span>
-
-      <button
-        v-for="date in days"
-        :key="dayKey(date)"
-        type="button"
-        class="mini-cal__day"
-        :class="{
-          'mini-cal__day--outside': date.getMonth() !== month.getMonth(),
-          'mini-cal__day--today': sameDay(date, today),
-          'mini-cal__day--selected': sameDay(date, selected),
-        }"
-        :aria-label="label(date)"
-        :aria-pressed="sameDay(date, selected)"
-        @click="selected = date"
       >
-        {{ date.getDate() }}
+        {{ header }}
+      </div>
+      <button
+        v-for="day in cells"
+        :key="dayKey(day, zone)"
+        type="button"
+        class="mini__day"
+        :class="{
+          'mini__day--outside': zonedParts(day, zone).month !== currentMonth,
+          'mini__day--today': sameDay(day, now, zone),
+          'mini__day--selected': sameDay(day, selected, zone),
+          'mini__day--busy': countOf(day) > 0,
+        }"
+        :aria-label="labelOf(day)"
+        :aria-pressed="sameDay(day, selected, zone)"
+        @click="emit('select', day)"
+      >
+        <span class="mini__number">{{ zonedParts(day, zone).day }}</span>
         <span
-          v-if="countOf(date)"
-          class="mini-cal__dot"
-        />
+          v-if="countOf(day) > 0"
+          class="mini__count"
+        >{{ countOf(day) }}</span>
       </button>
     </div>
+
+    <p class="mini__hint text-caption text-medium-emphasis">
+      Jour affiché : {{ formatFullDate(selected, zone) }}
+    </p>
   </div>
 </template>
 
 <style scoped>
-.mini-cal__grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+.mini {
+  padding: 12px;
+  border: 1px solid rgb(var(--v-theme-outline, 128 128 128) / 0.25);
+  border-radius: 16px;
+  background: rgb(var(--v-theme-surface));
 }
 
-.mini-cal__weekday {
-  padding-block: 4px;
-  text-align: center;
+.mini__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.mini__title {
   font-weight: 600;
+  text-align: center;
 }
 
-.mini-cal__day {
-  position: relative;
+.mini__grid {
   display: grid;
-  aspect-ratio: 1;
-  border-radius: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.mini__weekday {
+  padding: 4px 0;
+  font-size: 0.6875rem;
+  text-align: center;
+  color: rgb(var(--v-theme-on-surface) / 0.6);
+}
+
+.mini__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
   color: rgb(var(--v-theme-on-surface));
-  font-size: 0.8125rem;
-  place-items: center;
-  transition: background-color 0.12s ease;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
-.mini-cal__day:hover {
-  background: rgba(var(--v-theme-on-surface), var(--v-hover-opacity));
+.mini__day:hover {
+  background: rgb(var(--v-theme-on-surface) / 0.06);
 }
 
-.mini-cal__day:focus-visible {
+.mini__day:focus-visible {
   outline: 2px solid rgb(var(--v-theme-primary));
   outline-offset: 1px;
 }
 
-.mini-cal__day--outside {
-  color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity));
+.mini__day--outside {
+  color: rgb(var(--v-theme-on-surface) / 0.35);
 }
 
-.mini-cal__day--today {
-  box-shadow: inset 0 0 0 1px rgb(var(--v-theme-primary));
-  color: rgb(var(--v-theme-primary));
-  font-weight: 600;
+.mini__day--today .mini__number {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.mini-cal__day--selected,
-.mini-cal__day--selected:hover {
+.mini__day--selected {
+  border-color: rgb(var(--v-theme-primary));
+  background: rgb(var(--v-theme-primary) / 0.12);
+}
+
+.mini__count {
+  position: absolute;
+  bottom: 3px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
   background: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));
-  font-weight: 600;
+  font-size: 0.625rem;
+  line-height: 16px;
 }
 
-.mini-cal__dot {
-  position: absolute;
-  inset-block-end: 4px;
-  inline-size: 4px;
-  block-size: 4px;
-  border-radius: 50%;
-  background: currentcolor;
-  opacity: 0.7;
+.mini__hint {
+  margin: 8px 0 0;
 }
 </style>

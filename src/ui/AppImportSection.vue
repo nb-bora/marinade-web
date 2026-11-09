@@ -20,6 +20,12 @@ const props = defineProps<{
   sheets: ImportSheetSpec[]
   notes?: string[]
   run: (data: ImportData, tick: ImportTick) => Promise<ImportResult>
+
+  /** L'écran porte déjà le titre : la carte n'en répète pas un second. */
+  compact?: boolean
+
+  /** Masque la liste des colonnes attendues à l'étape 1 (le modèle reste le même). */
+  hideColumns?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -69,6 +75,36 @@ const issues = computed<ImportIssue[]>(() => result.value?.issues ?? [])
 const saved = computed(() => (result.value?.created ?? 0) + (result.value?.updated ?? 0))
 
 const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`
+
+/** Les premières lignes de chaque feuille, pour vérifier le fichier avant d'importer. */
+const PREVIEW_ROWS = 5
+
+const previews = computed(() => props.sheets
+  .map(spec => {
+    const records = mapped.value[spec.key]?.records ?? []
+
+    return { spec, count: records.length, records: records.slice(0, PREVIEW_ROWS) }
+  })
+  .filter(preview => preview.count > 0))
+
+/** Compte rendu des lignes refusées, à corriger dans le fichier puis à réimporter. */
+function downloadIssues() {
+  const header = ['Feuille', 'Ligne', 'Champ', 'Problème']
+  const rows = [header, ...issues.value.map(issue => [issue.sheet, String(issue.row), issue.field, issue.message])]
+
+  const csv = rows
+    .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
+    .join('\r\n')
+
+  // Le BOM en tête : Excel lit alors l'UTF-8 (accents) correctement.
+  const url = URL.createObjectURL(new Blob([`\u{FEFF}${csv}`], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = `${props.fileName}-lignes-refusees.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function onLoaded(loaded: Workbook) {
   workbook.value = loaded
@@ -125,8 +161,14 @@ const tiles = computed(() => [
 </script>
 
 <template>
-  <VCard class="import-section">
-    <VCardItem class="pb-2">
+  <VCard
+    class="import-section"
+    flat
+  >
+    <VCardItem
+      v-if="!compact"
+      class="pb-2"
+    >
       <template #prepend>
         <VAvatar
           color="primary"
@@ -180,7 +222,10 @@ const tiles = computed(() => [
           <span class="text-caption text-medium-emphasis">Format Excel (.xlsx), lisible aussi par LibreOffice et Google Sheets.</span>
         </div>
 
-        <div class="import-columns mt-4">
+        <div
+          v-if="!hideColumns"
+          class="import-columns mt-4"
+        >
           <div
             v-for="spec in sheets"
             :key="spec.key"
@@ -224,7 +269,7 @@ const tiles = computed(() => [
               Déposez le fichier rempli
             </div>
             <div class="text-body-2 text-medium-emphasis">
-              Vous verrez un aperçu des lignes avant que quoi que ce soit soit enregistré.
+              Un aperçu des lignes s'affiche avant tout enregistrement.
             </div>
           </div>
         </div>
@@ -297,6 +342,55 @@ const tiles = computed(() => [
           >
             {{ failure }}
           </VAlert>
+
+          <!-- Aperçu : les premières lignes de chaque feuille, avant toute écriture -->
+          <div
+            v-for="preview in previews"
+            :key="preview.spec.key"
+            class="import-preview mb-4"
+          >
+            <div class="text-body-2 font-weight-medium mb-2">
+              Aperçu de « {{ preview.spec.name }} »
+              <span class="text-medium-emphasis font-weight-regular">
+                : {{ preview.records.length }} ligne{{ preview.records.length > 1 ? 's' : '' }} sur {{ preview.count }}
+              </span>
+            </div>
+            <div class="import-preview__scroll">
+              <VTable density="compact">
+                <thead>
+                  <tr>
+                    <th class="text-no-wrap">
+                      Ligne
+                    </th>
+                    <th
+                      v-for="column in preview.spec.columns"
+                      :key="column.key"
+                      class="text-no-wrap"
+                    >
+                      {{ column.key }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="record in preview.records"
+                    :key="record.row"
+                  >
+                    <td class="tabular-nums text-medium-emphasis">
+                      {{ record.row }}
+                    </td>
+                    <td
+                      v-for="column in preview.spec.columns"
+                      :key="column.key"
+                      class="import-preview__cell"
+                    >
+                      {{ record.values[column.key] || '—' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </div>
+          </div>
 
           <!-- Progression -->
           <div
@@ -397,6 +491,14 @@ const tiles = computed(() => [
 
           <div class="d-flex flex-wrap justify-end gap-3">
             <VBtn
+              v-if="result && issues.length > 0"
+              variant="text"
+              prepend-icon="ri-file-download-line"
+              @click="downloadIssues"
+            >
+              Télécharger les lignes refusées
+            </VBtn>
+            <VBtn
               v-if="result"
               variant="tonal"
               color="secondary"
@@ -454,9 +556,31 @@ const tiles = computed(() => [
   border-radius: 10px;
 }
 
+/* Même carte que les autres écrans : filet fin, coins de 16 px, sans ombre. */
+.import-section {
+  border: 1px solid rgba(var(--v-border-color), 0.14);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
 .import-issues {
   max-block-size: 280px;
   overflow: auto;
+}
+
+/* Le tableau d'aperçu défile dans sa boîte, jamais sur la page. */
+.import-preview__scroll {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 10px;
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+.import-preview__cell {
+  max-inline-size: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 599px) {

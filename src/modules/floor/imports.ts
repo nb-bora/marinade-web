@@ -3,6 +3,8 @@
  * modification) habituelle ; une table dont le numéro existe déjà est mise à jour.
  */
 import { floorApi } from './api'
+import type { PlacementShape } from './layout'
+import { buildAttributes } from './layout'
 import { RowError, addCounts, numberField, requireText, runRows } from '@/lib/sheetImport'
 import type { ImportDefinition, ImportResult, ImportSheetSpec, RowOutcome } from '@/lib/sheetImport'
 import { normalizeKey } from '@/lib/spreadsheet'
@@ -15,17 +17,20 @@ const TABLES_SHEET: ImportSheetSpec = {
     { key: 'numero', label: 'Numéro', required: true, aliases: ['table', 'nom'], hint: 'Le numéro ou le nom de la table, unique dans la salle.', example: 'T1' },
     { key: 'capacite', label: 'Capacité', required: true, aliases: ['places'], hint: 'Nombre de places, entier au moins égal à 1.', example: '4' },
     { key: 'emplacement', label: 'Emplacement', aliases: ['section', 'zone'], hint: 'Où se trouve la table : Salle, Terrasse, Étage...', example: 'Terrasse' },
-    { key: 'forme', label: 'Forme', hint: 'rectangle ou rond (vide : inchangée).', example: 'rond' },
+    { key: 'forme', label: 'Forme', hint: 'rond, carré ou rectangle (vide : inchangée).', example: 'rond' },
   ],
 }
 
-const SHAPES: Record<string, 'rectangle' | 'rond'> = {
-  rectangle: 'rectangle',
-  rectangulaire: 'rectangle',
-  carre: 'rectangle',
-  rond: 'rond',
-  ronde: 'rond',
-  circulaire: 'rond',
+/** Mêmes formes que sur le plan : ronde, carrée, rectangulaire (« longue »). */
+const SHAPES: Record<string, PlacementShape> = {
+  rectangle: 'rect',
+  rectangulaire: 'rect',
+  longue: 'rect',
+  carre: 'square',
+  carree: 'square',
+  rond: 'round',
+  ronde: 'round',
+  circulaire: 'round',
 }
 
 export function tablesImport(): ImportDefinition {
@@ -55,7 +60,7 @@ export function tablesImport(): ImportDefinition {
         const forme = shapeText ? SHAPES[normalizeKey(shapeText)] : undefined
 
         if (shapeText && !forme)
-          throw new RowError('Forme', 'Répondez par « rectangle » ou « rond ».')
+          throw new RowError('Forme', 'Répondez par « rond », « carré » ou « rectangle ».')
 
         const found = existing.get(normalizeKey(numero))
 
@@ -63,7 +68,7 @@ export function tablesImport(): ImportDefinition {
           await floorApi.updateTable(found.id, {
             capacite,
             emplacement,
-            attributs_jsonb: forme ? { ...found.attributs_jsonb, forme } : undefined,
+            attributs_jsonb: forme ? buildAttributes(found.attributs_jsonb, { forme }) : undefined,
           })
 
           return 'updated'
@@ -74,7 +79,7 @@ export function tablesImport(): ImportDefinition {
           capacite,
           emplacement,
           statut: 'libre',
-          attributs_jsonb: forme ? { forme } : undefined,
+          attributs_jsonb: forme ? buildAttributes(null, { forme }) : undefined,
         }))
       }, result.issues, tick))
 

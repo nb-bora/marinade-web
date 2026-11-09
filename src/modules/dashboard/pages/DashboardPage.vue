@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
+import ManagerDashboard from '../components/ManagerDashboard.vue'
 import { collectWidgets } from '@/lib/module/registry'
 import type { DashboardWidget } from '@/lib/module/types'
 import { features } from '@/plugins/router'
@@ -31,7 +32,10 @@ const today = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric'
 </script>
 
 <template>
-  <div>
+  <!-- Propriétaire / manager : le tableau de bord de pilotage. Les autres rôles gardent les widgets de leurs modules. -->
+  <ManagerDashboard v-if="tenant.can('management')" />
+
+  <div v-else>
     <VRow v-if="widgets.length">
       <VCol
         v-for="widget in widgets"

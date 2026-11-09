@@ -92,7 +92,7 @@ export function requireText(record: SheetRecord, key: string, label: string): st
   return value
 }
 
-export function numberField(record: SheetRecord, key: string, label: string, options: { required?: boolean; min?: number; integer?: boolean } = {}): number | undefined {
+export function numberField(record: SheetRecord, key: string, label: string, options: { required?: boolean; min?: number; max?: number; integer?: boolean } = {}): number | undefined {
   const text = record.values[key] ?? ''
 
   if (text === '') {
@@ -110,6 +110,8 @@ export function numberField(record: SheetRecord, key: string, label: string, opt
     throw new RowError(label, 'Un nombre entier est attendu.')
   if (options.min !== undefined && value < options.min)
     throw new RowError(label, `La valeur doit être au moins ${options.min}.`)
+  if (options.max !== undefined && value > options.max)
+    throw new RowError(label, `La valeur ne peut pas dépasser ${options.max.toLocaleString('fr-FR')}.`)
 
   return value
 }

@@ -1,4 +1,7 @@
 import type {
+  Availability,
+  ClientMatch,
+  ClientSummary,
   Reservation,
   ReservationCreate,
   ReservationFilters,
@@ -8,6 +11,7 @@ import type {
   WaitlistEntry,
 } from './types'
 import { container } from '@/container'
+import type { RestaurantResponse } from '@/lib/api/types'
 import type { HttpClient } from '@/lib/http/HttpClient'
 
 const BASE = '/v1/reservations'
@@ -15,7 +19,10 @@ const BASE = '/v1/reservations'
 /** Taille maximale d'une page côté serveur. */
 const PAGE = 500
 
-/** Réservations, liste d'attente et lecture des tables (en-tête `X-Tenant-ID`). */
+/** `force=true` n'est envoyé que sur une action explicitement forcée par la gestion. */
+const forceQuery = (force: boolean | undefined) => (force ? { force: true } : undefined)
+
+/** Réservations, disponibilités, clients, liste d'attente et lecture des tables. */
 export class ReservationsApi {
   constructor(private readonly http: HttpClient) {}
 
@@ -47,56 +54,88 @@ export class ReservationsApi {
     return this.http.get<Reservation>(`${BASE}/${reservationId}`, { signal })
   }
 
-  create(restaurantId: string, body: ReservationCreate) {
-    return this.http.post<Reservation>(`${BASE}/restaurants/${restaurantId}/reservations`, body)
+  create(restaurantId: string, body: ReservationCreate, force?: boolean) {
+    return this.http.post<Reservation>(`${BASE}/restaurants/${restaurantId}/reservations`, body, { query: forceQuery(force) })
   }
 
-  update(reservationId: string, body: ReservationUpdate) {
-    return this.http.put<Reservation>(`${BASE}/${reservationId}`, body)
+  update(reservationId: string, body: ReservationUpdate, force?: boolean) {
+    return this.http.put<Reservation>(`${BASE}/${reservationId}`, body, { query: forceQuery(force) })
   }
 
-  remove(reservationId: string) {
-    return this.http.delete<void>(`${BASE}/${reservationId}`)
+  remove(reservationId: string, reason?: string) {
+    return this.http.delete<void>(`${BASE}/${reservationId}`, { query: { reason } })
   }
 
-  confirm(reservationId: string) {
-    return this.http.post<Reservation>(`${BASE}/${reservationId}/confirm`)
+  confirm(reservationId: string, notes?: string) {
+    return this.http.post<Reservation>(`${BASE}/${reservationId}/confirm`, { notes })
   }
 
   checkIn(reservationId: string) {
     return this.http.post<Reservation>(`${BASE}/${reservationId}/check-in`)
   }
 
+  noShow(reservationId: string) {
+    return this.http.post<Reservation>(`${BASE}/${reservationId}/no-show`)
+  }
+
+  complete(reservationId: string) {
+    return this.http.post<Reservation>(`${BASE}/${reservationId}/complete`)
+  }
+
   cancel(reservationId: string, reason: string) {
     return this.http.post<Reservation>(`${BASE}/${reservationId}/cancel`, { reason })
   }
 
+  // Disponibilité et clients ----------------------------------------------------------
+
+  availability(restaurantId: string, date: string, partySize: number, duration: number, signal?: AbortSignal) {
+    return this.http.get<Availability>(`${BASE}/restaurants/${restaurantId}/availability`, {
+      signal,
+      query: { date, party_size: partySize, duration },
+    })
+  }
+
+  searchCustomers(restaurantId: string, term: string, signal?: AbortSignal) {
+    return this.http.get<ClientMatch[]>(`${BASE}/restaurants/${restaurantId}/customers/search`, { signal, query: { q: term } })
+  }
+
+  customerSummary(restaurantId: string, customerId: string, signal?: AbortSignal) {
+    return this.http.get<ClientSummary>(`${BASE}/restaurants/${restaurantId}/customers/${customerId}/summary`, { signal })
+  }
+
   // Liste d'attente ------------------------------------------------------------------
 
-  waitlist(restaurantId: string, signal?: AbortSignal) {
-    return this.all<WaitlistEntry>(`${BASE}/restaurants/${restaurantId}/waitlist`, {}, signal)
+  waitlist(restaurantId: string, status?: string, signal?: AbortSignal) {
+    return this.all<WaitlistEntry>(`${BASE}/restaurants/${restaurantId}/waitlist`, { status }, signal)
   }
 
   addToWaitlist(restaurantId: string, body: WaitlistCreate) {
     return this.http.post<WaitlistEntry>(`${BASE}/restaurants/${restaurantId}/waitlist`, body)
   }
 
-  seat(waitlistId: string, tableId?: string) {
-    return this.http.post<WaitlistEntry>(`${BASE}/waitlist/${waitlistId}/seat`, undefined, { query: { table_id: tableId } })
+  seat(waitlistId: string, tableId: string, force?: boolean) {
+    return this.http.post<WaitlistEntry>(`${BASE}/waitlist/${waitlistId}/seat`, undefined, {
+      query: { table_id: tableId, ...forceQuery(force) },
+    })
+  }
+
+  notify(waitlistId: string) {
+    return this.http.post<{ envoye: boolean; destinataire: string }>(`${BASE}/waitlist/${waitlistId}/notify`)
   }
 
   removeFromWaitlist(waitlistId: string, reason?: string) {
     return this.http.delete<void>(`${BASE}/waitlist/${waitlistId}`, { query: { reason } })
   }
 
+  /** Le restaurant courant : son fuseau IANA règle l'affichage et la saisie des créneaux. */
+  restaurant(restaurantId: string, signal?: AbortSignal) {
+    return this.http.get<RestaurantResponse>(`/v1/restaurants/${restaurantId}`, { signal })
+  }
+
   // Tables (lecture seule) -----------------------------------------------------------
 
   tables(restaurantId: string, signal?: AbortSignal) {
     return this.all<Table>(`/v1/restaurants/${restaurantId}/tables`, {}, signal)
-  }
-
-  freeTables(restaurantId: string, signal?: AbortSignal) {
-    return this.all<Table>(`/v1/restaurants/${restaurantId}/tables/free`, {}, signal)
   }
 }
 

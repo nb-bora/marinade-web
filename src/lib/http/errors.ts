@@ -32,10 +32,14 @@ export class ApiError extends Error {
   readonly fieldErrors: FieldError[]
   readonly details: Record<string, unknown>
 
+  /** Code stable du serveur (ex. `stock.insufficient`) : pour les réactions du front, jamais pour l'affichage. */
+  readonly code?: string
+
   constructor(init: {
     status: number
     message: string
     kind?: ApiErrorKind
+    code?: string
     fieldErrors?: FieldError[]
     details?: Record<string, unknown>
   }) {
@@ -43,6 +47,7 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = init.status
     this.kind = init.kind ?? kindOf(init.status)
+    this.code = init.code
     this.fieldErrors = init.fieldErrors ?? []
     this.details = init.details ?? {}
   }
@@ -93,6 +98,25 @@ function fieldErrorsFrom(detail: unknown[]): FieldError[] {
 /** Construit l'`ApiError` correspondant à une réponse HTTP en échec. */
 export function apiErrorFromResponse(status: number, body: unknown): ApiError {
   if (isRecord(body)) {
+    const code = typeof body.code === 'string' ? body.code : undefined
+
+    // Problème Marinade (application/problem+json) : erreurs de champ dans `errors`, message dans `detail`.
+    if (Array.isArray(body.errors)) {
+      const fieldErrors = body.errors.filter(isRecord).map(item => ({
+        field: String(item.field ?? ''),
+        message: String(item.detail ?? item.message ?? 'Valeur invalide'),
+      }))
+
+      if (fieldErrors.length) {
+        return new ApiError({
+          status,
+          code,
+          fieldErrors,
+          message: typeof body.detail === 'string' ? body.detail : fieldErrors[0].message,
+        })
+      }
+    }
+
     if (Array.isArray(body.detail)) {
       const fieldErrors = fieldErrorsFrom(body.detail)
 
@@ -104,7 +128,7 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
     }
 
     if (typeof body.detail === 'string')
-      return new ApiError({ status, message: body.detail })
+      return new ApiError({ status, code, message: body.detail })
 
     if (typeof body.message === 'string') {
       return new ApiError({
