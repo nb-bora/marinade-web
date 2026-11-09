@@ -43,6 +43,12 @@ declare global {
 
     /** Intervalle d'actualisation des écrans en direct, en ms (défaut 10000). */
     readonly VITE_LIVE_POLL_INTERVAL_MS?: string
+
+    /** Raison sociale de l'éditeur, citée dans les pages légales (facultatif). */
+    readonly VITE_LEGAL_ENTITY_NAME?: string
+
+    /** Adresse e-mail de contact pour les demandes légales et de données personnelles (facultatif). */
+    readonly VITE_LEGAL_CONTACT_EMAIL?: string
   }
 }
 
