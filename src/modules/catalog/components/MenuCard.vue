@@ -1,14 +1,17 @@
 <!--
-  Carte d'un menu : couverture en dégradé orange, statut, nombre de catégories et de plats, et le menu
-  d'actions (⋮). Toute la carte ouvre la fiche du menu ; le bouton ⋮ garde son propre clic.
+  Carte d'un menu : couverture orange avec trame de points, pastille d'icône à cheval sur le bord,
+  statut, aperçu des catégories, chiffres clés et menu d'actions (⋮). Toute la carte ouvre la fiche
+  du menu ; le bouton ⋮ et le pied de carte gardent leur propre clic.
 -->
 <script setup lang="ts">
-import type { Menu } from '../types'
+import type { Menu, MenuCategory } from '../types'
 import { formatDate } from '@/lib/format'
 
 const props = defineProps<{
   menu: Menu
-  categoryCount: number
+
+  /** Catégories du menu, déjà triées par ordre. */
+  categories: MenuCategory[]
   platCount: number
   canWrite: boolean
 
@@ -23,17 +26,13 @@ const emit = defineEmits<{
   plats: []
 }>()
 
-/**
- * Une seule couverture pour tous les menus, aux couleurs de la marque : un menu actif est orange,
- * un menu inactif reste gris. Le même pictogramme partout, pour que la grille reste lisible.
- */
-const cover = computed(() => (props.menu.actif
-  ? { '--cover-from': '#D55A1E', '--cover-to': '#F08A3C' }
-  : {}))
+/** Nombre de catégories nommées sur la carte ; les suivantes sont résumées en « +N ». */
+const PREVIEW = 3
 
 const glyph = 'ri-book-open-line'
 
-const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`
+const shown = computed(() => props.categories.slice(0, PREVIEW))
+const hidden = computed(() => Math.max(0, props.categories.length - PREVIEW))
 </script>
 
 <template>
@@ -41,14 +40,11 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
     class="menu-card"
     :class="{ 'menu-card--off': !menu.actif }"
   >
-    <div
-      class="menu-card__cover"
-      :style="cover"
-    >
+    <div class="menu-card__cover">
       <VIcon
         :icon="glyph"
-        class="menu-card__glyph"
-        size="88"
+        class="menu-card__watermark"
+        size="132"
       />
       <AppStatusChip
         class="menu-card__status"
@@ -101,6 +97,13 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
     </div>
 
     <div class="menu-card__body">
+      <span class="menu-card__badge">
+        <VIcon
+          :icon="glyph"
+          size="26"
+        />
+      </span>
+
       <h2 class="menu-card__title text-h6">
         <button
           type="button"
@@ -117,24 +120,62 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
         {{ menu.description || 'Aucune description.' }}
       </p>
 
-      <div class="menu-card__stats">
-        <span class="menu-card__stat">
-          <VIcon
-            icon="ri-price-tag-3-line"
-            size="18"
-          />
-          <strong class="tabular-nums">{{ categoryCount }}</strong>
-          catégorie{{ categoryCount > 1 ? 's' : '' }}
-        </span>
-        <span class="menu-card__stat">
-          <VIcon
-            icon="ri-restaurant-2-line"
-            size="18"
-          />
-          <strong class="tabular-nums">{{ platCount }}</strong>
-          plat{{ platCount > 1 ? 's' : '' }}
-        </span>
-      </div>
+      <ul
+        v-if="categories.length"
+        class="menu-card__chips"
+        :aria-label="`Catégories du menu ${menu.name}`"
+      >
+        <li
+          v-for="category in shown"
+          :key="category.id"
+          class="menu-card__chip"
+        >
+          {{ category.name }}
+        </li>
+        <li
+          v-if="hidden"
+          class="menu-card__chip menu-card__chip--more"
+        >
+          +{{ hidden }}
+        </li>
+      </ul>
+      <p
+        v-else
+        class="menu-card__chips-empty text-caption"
+      >
+        <VIcon
+          icon="ri-information-line"
+          size="14"
+        />
+        Pas encore de catégorie
+      </p>
+
+      <dl class="menu-card__stats">
+        <div class="menu-card__stat">
+          <dt>
+            <VIcon
+              icon="ri-price-tag-3-line"
+              size="14"
+            />
+            Catégorie{{ categories.length > 1 ? 's' : '' }}
+          </dt>
+          <dd class="tabular-nums">
+            {{ categories.length }}
+          </dd>
+        </div>
+        <div class="menu-card__stat">
+          <dt>
+            <VIcon
+              icon="ri-restaurant-2-line"
+              size="14"
+            />
+            Plat{{ platCount > 1 ? 's' : '' }}
+          </dt>
+          <dd class="tabular-nums">
+            {{ platCount }}
+          </dd>
+        </div>
+      </dl>
     </div>
 
     <footer class="menu-card__footer">
@@ -143,7 +184,7 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
         variant="text"
         size="small"
         append-icon="ri-arrow-right-line"
-        :aria-label="`Voir ${plural(platCount, 'plat')} du menu ${menu.name}`"
+        :aria-label="`Voir les ${platCount} plat${platCount > 1 ? 's' : ''} du menu ${menu.name}`"
         class="menu-card__plats"
         @click="emit('plats')"
       >
@@ -155,48 +196,61 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
 
 <style scoped>
 .menu-card {
+  --cover-from: #c24d14;
+  --cover-to: #f08a3c;
+
   position: relative;
   display: flex;
   flex-direction: column;
   block-size: 100%;
   overflow: hidden;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 16px;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
   background: rgb(var(--v-theme-surface));
-  transition: border-color 0.2s ease;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Survol discret : seule la bordure change, la carte ne bouge pas. */
+/* Un menu inactif reste lisible mais passe en gris : la grille montre d'un coup d'œil ce qui est proposé. */
+.menu-card--off {
+  --cover-from: #7f7f8c;
+  --cover-to: #b1b1bb;
+}
+
 .menu-card:hover,
 .menu-card:focus-within {
-  border-color: rgba(var(--v-theme-primary), 0.45);
+  border-color: rgba(var(--v-theme-primary), 0.5);
+  box-shadow: 0 12px 28px -14px rgba(var(--v-theme-primary), 0.55);
+  transform: translateY(-2px);
 }
 
+/* Couverture : dégradé, halo en haut à droite et trame de points, comme le bandeau de la page. */
 .menu-card__cover {
-  --cover-from: #8d8d99;
-  --cover-to: #b5b5bf;
-
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  block-size: 124px;
-  background: linear-gradient(135deg, var(--cover-from), var(--cover-to));
+  overflow: hidden;
+  block-size: 112px;
+  background:
+    radial-gradient(circle at 88% -20%, rgba(255, 255, 255, 0.34), transparent 60%),
+    linear-gradient(135deg, var(--cover-from), var(--cover-to));
   color: #fff;
-  transition: filter 0.25s ease;
 }
 
-.menu-card--off .menu-card__cover {
-  filter: saturate(0.6);
+.menu-card__cover::before {
+  position: absolute;
+  content: "";
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(120deg, transparent 20%, #000 100%);
+  opacity: 0.5;
 }
 
-.menu-card__glyph {
-  position: relative;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.menu-card:hover .menu-card__glyph {
-  transform: none;
+.menu-card__watermark {
+  position: absolute;
+  inset-block-end: -28px;
+  inset-inline-end: 8px;
+  color: rgba(255, 255, 255, 0.2);
+  transform: rotate(-12deg);
 }
 
 .menu-card__status {
@@ -204,8 +258,8 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   z-index: 2;
   inset-block-start: 12px;
   inset-inline-start: 12px;
-  background: rgb(var(--v-theme-surface));
   border-radius: 6px;
+  background: rgb(var(--v-theme-surface));
 }
 
 .menu-card__more {
@@ -227,12 +281,48 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   flex: 1 1 auto;
   flex-direction: column;
   gap: 6px;
-  padding: 16px 20px 12px;
+  padding: 0 20px 14px;
+}
+
+/* La pastille d'icône déborde sur la couverture : elle donne un point d'ancrage à la carte. */
+.menu-card__badge {
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  inline-size: 52px;
+  block-size: 52px;
+  margin-block: -26px 6px;
+  border: 4px solid rgb(var(--v-theme-surface));
+  border-radius: 16px;
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 4px 12px -4px rgba(var(--v-theme-on-surface), 0.25);
+  color: rgb(var(--v-theme-primary));
+  position: relative;
+}
+
+.menu-card__badge::before {
+  position: absolute;
+  content: "";
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-primary), 0.12);
+}
+
+.menu-card__badge > * {
+  position: relative;
+}
+
+.menu-card--off .menu-card__badge {
+  color: rgba(var(--v-theme-on-surface), 0.6);
+}
+
+.menu-card--off .menu-card__badge::before {
+  background: rgba(var(--v-theme-on-surface), 0.08);
 }
 
 .menu-card__title {
-  font-weight: 600;
-  line-height: 1.35;
+  font-weight: 700;
+  line-height: 1.3;
   margin-block: 0;
 }
 
@@ -261,9 +351,9 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
 }
 
 .menu-card__open:focus-visible::after {
-  border-radius: 12px;
+  border-radius: 14px;
   outline: 2px solid rgb(var(--v-theme-primary));
-  outline-offset: -2px;
+  outline-offset: -4px;
 }
 
 .menu-card__description {
@@ -275,24 +365,87 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   -webkit-line-clamp: 2;
 }
 
-.menu-card__stats {
+.menu-card__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-block-start: 6px;
+  gap: 6px;
+  padding: 0;
+  margin: 6px 0 0;
+  list-style: none;
 }
 
-.menu-card__stat {
+.menu-card__chip {
+  overflow: hidden;
+  max-inline-size: 100%;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-card__chip--more {
+  background: rgba(var(--v-theme-on-surface), 0.07);
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.menu-card--off .menu-card__chip {
+  background: rgba(var(--v-theme-on-surface), 0.07);
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.menu-card__chips-empty {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 6px;
+  margin: 6px 0 0;
+  padding: 3px 10px;
+  border: 1px dashed rgba(var(--v-border-color), 0.4);
+  border-radius: 999px;
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-  font-size: 0.875rem;
 }
 
-.menu-card__stat strong {
-  color: rgb(var(--v-theme-on-surface));
-  font-size: 1rem;
+/* Deux chiffres clés côte à côte, dans un bloc teinté : la valeur d'abord, le libellé en dessous. */
+.menu-card__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: auto 0 0;
+  padding-block-start: 10px;
+}
+
+.menu-card__stats .menu-card__stat {
+  padding: 8px 14px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.menu-card__stat:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.menu-card__stat:last-child {
+  border-radius: 0 12px 12px 0;
+  border-inline-start: 1px solid rgba(var(--v-border-color), 0.2);
+}
+
+.menu-card__stat dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.menu-card__stat dd {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .menu-card__footer {
@@ -302,21 +455,17 @@ const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? '
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 12px 10px 20px;
-  border-block-start: 1px solid rgba(var(--v-border-color), 0.5);
-  margin-block-start: 4px;
-  padding-block-start: 8px;
+  padding: 8px 12px 10px 20px;
+  border-block-start: 1px solid rgba(var(--v-border-color), 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu-card,
-  .menu-card__glyph {
+  .menu-card {
     transition: none;
   }
 
   .menu-card:hover,
-  .menu-card:focus-within,
-  .menu-card:hover .menu-card__glyph {
+  .menu-card:focus-within {
     transform: none;
   }
 }

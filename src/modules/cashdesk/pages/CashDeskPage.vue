@@ -3,21 +3,27 @@ import SessionTile from '../components/SessionTile.vue'
 import ShiftDialogs from '../components/ShiftDialogs.vue'
 import { useCashSessions } from '../composables/useCashSessions'
 import { useShift } from '../composables/useShift'
-import { plural } from '../labels'
+import { METHODS, METHOD_ORDER, plural } from '../labels'
+import { toNumber } from '../money'
 import type { Shift } from '../types'
 import { useLive } from '@/composables/useLive'
 import { useSubmit } from '@/composables/useSubmit'
 import { formatDateTime, formatMoney, formatTime } from '@/lib/format'
-import type { StatStripItem } from '@/ui/AppStatStrip.vue'
+import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
 
 const router = useRouter()
 const toast = useToast()
+const tenant = useTenantStore()
 
 const shift = useShift()
-const { toCollect, withoutOrder, totalDue, loading, error, rows, reload, refresh } = useCashSessions()
+const { toCollect, withoutOrder, totalDue, error, rows, reload, refresh } = useCashSessions()
 
-const { isLive } = useLive(refresh)
+// Le shift (et son bilan) se relit avec les sessions : un shift ouvert ou fermé depuis un autre appareil
+// apparaît tout seul. Le premier tour part dès l'ouverture de l'écran.
+const { isLive } = useLive(() => Promise.all([refresh(), shift.sync()]))
+
+watch(() => tenant.currentId, () => shift.sync())
 
 // L'heure sert aux « il y a 5 minutes » : on la rafraîchit avec les données.
 const now = ref(new Date())
@@ -52,74 +58,77 @@ watch(closeDialog, () => resetClose())
 
 const loadedOnce = computed(() => rows.value !== null)
 
-const shiftLabel = computed(() => {
-  if (shift.state.value === 'closed')
-    return 'Fermée'
-
-  return 'Ouverte'
-})
+// Shift ----------------------------------------------------------------------------------------
 
 const shiftHint = computed(() => {
-  if (shift.state.value === 'open' && shift.shift.value)
-    return `depuis ${formatTime(shift.shift.value.opened_at)}`
-  if (shift.state.value === 'open-elsewhere')
-    return 'ouverte sur un autre appareil'
+  if (shift.shift.value && shift.isOpen.value)
+    return `Ouverte depuis ${formatTime(shift.shift.value.opened_at)}`
+  if (shift.isOpen.value)
+    return 'Ouverte sur un autre appareil'
 
-  return 'à ouvrir avant d\'encaisser'
+  return 'À ouvrir avant d\'encaisser'
 })
 
-const stats = computed<StatStripItem[]>(() => [
-  {
-    label: 'Caisse',
-    value: shiftLabel.value,
-    icon: shift.isOpen.value ? 'ri-lock-unlock-line' : 'ri-lock-line',
-    hint: shiftHint.value,
-    hintColor: shift.isOpen.value ? 'success' : 'warning',
-  },
-  {
-    label: 'Fond de caisse',
-    value: shift.shift.value ? formatMoney(shift.shift.value.opening_balance) : '—',
-    icon: 'ri-safe-2-line',
-    hint: shift.shift.value ? `ouvert à ${formatTime(shift.shift.value.opened_at)}` : undefined,
-  },
-  {
-    label: 'À encaisser',
-    value: formatMoney(totalDue.value),
-    icon: 'ri-hand-coin-line',
-    hint: plural(toCollect.value.length, 'addition') + (toCollect.value.length ? ' en attente' : ''),
-  },
-  {
-    label: 'Sessions sans commande',
-    value: String(withoutOrder.value),
-    icon: 'ri-armchair-line',
-    hint: withoutOrder.value ? 'rien à encaisser pour l\'instant' : undefined,
-  },
-])
+const report = computed(() => shift.summary.value)
 
-const gap = computed(() => shift.lastClosed.value ? Number(shift.lastClosed.value.variance ?? 0) : 0)
+const orderOf = (method: string) => {
+  const index = (METHOD_ORDER as string[]).indexOf(method)
+
+  return index === -1 ? METHOD_ORDER.length : index
+}
+
+/** Encaissements du shift par moyen de paiement, dans l'ordre d'affichage habituel (moyens inconnus à la fin). */
+const byMethod = computed(() => Object.entries(report.value?.payments_by_method ?? {})
+  .filter(([, entry]) => entry.count > 0)
+  .sort(([a], [b]) => orderOf(a) - orderOf(b))
+  .map(([method, entry]) => {
+    const known = (METHODS as Record<string, (typeof METHODS)[keyof typeof METHODS] | undefined>)[method]
+
+    return {
+      method,
+      label: known?.label ?? method,
+      icon: known?.icon ?? 'ri-wallet-3-line',
+      color: known?.color ?? 'secondary',
+      count: entry.count,
+      total: toNumber(entry.total),
+    }
+  }))
+
+const collected = computed(() => toNumber(report.value?.payments_total))
+
+const gap = computed(() => shift.lastClosed.value ? toNumber(shift.lastClosed.value.variance) : 0)
 
 const goTo = (sessionId: string) => router.push(`/caisse/sessions/${sessionId}`)
+
+const reloading = ref(false)
+
+async function reloadAll() {
+  reloading.value = true
+  try {
+    await Promise.all([reload(), shift.sync()])
+  }
+  finally {
+    reloading.value = false
+  }
+}
 </script>
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Finance"
       title="Caisse"
       subtitle="Ouvrez votre shift, encaissez les additions et fermez la caisse en fin de service."
+      :live="isLive"
     >
+      <template #eyebrow-extra>
+        · {{ shift.isOpen.value ? shiftHint : 'Caisse fermée' }}
+      </template>
       <template #actions>
-        <VChip
-          v-if="isLive"
-          size="small"
-          color="success"
-          variant="tonal"
-          prepend-icon="ri-live-line"
-        >
-          En direct
-        </VChip>
         <IconBtn
-          aria-label="Actualiser"
-          @click="reload"
+          aria-label="Actualiser la caisse"
+          :loading="reloading"
+          @click="reloadAll"
         >
           <VIcon icon="ri-refresh-line" />
         </IconBtn>
@@ -143,13 +152,47 @@ const goTo = (sessionId: string) => router.push(`/caisse/sessions/${sessionId}`)
           Fermer la caisse
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
-    <AppStatStrip
-      :items="stats"
-      :loading="loading && !loadedOnce"
-      class="mb-6"
-    />
+    <AppMetricGrid class="mt-5 mb-6">
+      <AppMetricTile
+        hero
+        label="À encaisser"
+        icon="ri-hand-coin-line"
+        :hint="toCollect.length ? `${plural(toCollect.length, 'addition')} en attente` : 'Aucune addition en attente'"
+      >
+        <AppAnimatedNumber
+          v-slot="{ current }"
+          :value="totalDue"
+        >
+          {{ formatMoney(current) }}
+        </AppAnimatedNumber>
+      </AppMetricTile>
+      <AppMetricTile
+        label="Caisse"
+        :icon="shift.isOpen.value ? 'ri-lock-unlock-line' : 'ri-lock-line'"
+        :color="shift.isOpen.value ? 'success' : 'warning'"
+        :hint="shiftHint"
+      >
+        {{ shift.isOpen.value ? 'Ouverte' : 'Fermée' }}
+      </AppMetricTile>
+      <AppMetricTile
+        label="Fond de caisse"
+        icon="ri-safe-2-line"
+        color="secondary"
+        :hint="shift.shift.value ? `Compté à ${formatTime(shift.shift.value.opened_at)}` : 'Aucun shift ouvert'"
+      >
+        {{ shift.shift.value ? formatMoney(shift.shift.value.opening_balance) : '—' }}
+      </AppMetricTile>
+      <AppMetricTile
+        label="Encaissé ce shift"
+        icon="ri-money-dollar-circle-line"
+        color="info"
+        :hint="report ? plural(report.payments_count, 'paiement') : 'Disponible à l\'ouverture'"
+      >
+        {{ report ? formatMoney(collected) : '—' }}
+      </AppMetricTile>
+    </AppMetricGrid>
 
     <VAlert
       v-if="shift.lastClosed.value"
@@ -185,14 +228,48 @@ const goTo = (sessionId: string) => router.push(`/caisse/sessions/${sessionId}`)
       Aucun shift n'est ouvert. Vous pouvez encaisser, mais les espèces ne seront comptées dans la caisse qu'à partir de l'ouverture.
     </VAlert>
 
-    <div class="d-flex align-center justify-space-between mb-4">
+    <section
+      v-if="byMethod.length"
+      class="shift-methods mb-6"
+      aria-label="Encaissements du shift par moyen de paiement"
+    >
+      <h2 class="shift-methods__title">
+        Encaissé par moyen de paiement
+      </h2>
+      <ul class="shift-methods__list">
+        <li
+          v-for="item in byMethod"
+          :key="item.method"
+          class="shift-methods__item"
+          :style="{ '--method': `var(--v-theme-${item.color})` }"
+        >
+          <span class="shift-methods__icon">
+            <VIcon
+              :icon="item.icon"
+              size="20"
+            />
+          </span>
+          <span class="min-w-0">
+            <span class="shift-methods__label">{{ item.label }}</span>
+            <span class="shift-methods__amount tabular-nums text-no-wrap">{{ formatMoney(item.total) }}</span>
+            <span class="shift-methods__count">{{ plural(item.count, 'paiement') }}</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-4">
       <h2 class="text-h5">
         Sessions à encaisser
       </h2>
       <span
         v-if="loadedOnce"
         class="text-body-2 text-medium-emphasis"
-      >{{ plural(toCollect.length, 'session') }}</span>
+      >
+        {{ plural(toCollect.length, 'session') }}<template v-if="withoutOrder">
+          · {{ plural(withoutOrder, 'session') }} sans commande
+        </template>
+      </span>
     </div>
 
     <AppErrorState
@@ -246,8 +323,72 @@ const goTo = (sessionId: string) => router.push(`/caisse/sessions/${sessionId}`)
       :loading="opening || closing"
       :error="openDialog ? openMessage : closeMessage"
       :result="closedShift"
+      :pending-count="toCollect.length"
       @open="openShift"
       @close="closeShift"
     />
   </div>
 </template>
+
+<style scoped>
+.shift-methods {
+  padding: 16px 20px;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
+  background: rgb(var(--v-theme-surface));
+}
+
+.shift-methods__title {
+  margin-block-end: 12px;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shift-methods__list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  list-style: none;
+}
+
+.shift-methods__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(var(--method), 0.09);
+}
+
+.shift-methods__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 12px;
+  background: rgba(var(--method), 0.16);
+  color: rgb(var(--method));
+}
+
+.shift-methods__label,
+.shift-methods__amount,
+.shift-methods__count {
+  display: block;
+}
+
+.shift-methods__label,
+.shift-methods__count {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.8125rem;
+}
+
+.shift-methods__amount {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+</style>

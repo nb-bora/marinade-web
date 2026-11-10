@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { stockApi } from '../api'
-import { COMPONENT_TYPE_OPTIONS, UNITS, nonNegativeQty, parseQty, required } from '../labels'
+import { COMPONENT_TYPE_OPTIONS, UNITS, amountRule, maxLength, normalizeType, normalizeUnit, parseQty, required } from '../labels'
 import type { Composant } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
 import { useTenantStore } from '@/stores/tenant.store'
@@ -22,10 +22,15 @@ const description = ref('')
 
 const isEdit = computed(() => props.composant !== null)
 
+// Le serveur ne convertit pas les quantités déjà en stock quand l'unité change : on prévient avant.
+const unitChanged = computed(() => isEdit.value
+  && normalizeUnit(unit.value) !== ''
+  && normalizeUnit(unit.value) !== normalizeUnit(props.composant?.stock_unite))
+
 const save = useSubmit(async () => {
   const body = {
     nom: nom.value.trim(),
-    type: (type.value ?? '').trim().toLowerCase(),
+    type: normalizeType(type.value),
     stock_unite: (unit.value ?? '').trim(),
     prix_supplement: parseQty(supplement.value),
     disponible: available.value,
@@ -51,7 +56,7 @@ watch(open, isOpen => {
   nom.value = source?.nom ?? ''
   type.value = source?.type ?? 'base'
   unit.value = source?.stock_unite ?? 'portion'
-  supplement.value = source ? String(Number(source.prix_supplement)) : '0'
+  supplement.value = source ? String(Number(source.prix_supplement)).replace('.', ',') : '0'
   available.value = source?.disponible ?? true
   description.value = source?.description ?? ''
   save.reset()
@@ -76,7 +81,7 @@ watch(open, isOpen => {
           prepend-inner-icon="ri-flask-line"
           autocomplete="off"
           autofocus
-          :rules="[required('Indiquez le nom du composant.')]"
+          :rules="[required('Indiquez le nom du composant.'), maxLength(255, 'Nom')]"
           :error-messages="save.apiError.value?.fieldMessage('nom')"
         />
       </VCol>
@@ -94,7 +99,7 @@ watch(open, isOpen => {
           prepend-inner-icon="ri-price-tag-3-line"
           hint="Choisissez dans la liste ou saisissez la vôtre."
           persistent-hint
-          :rules="[required('Indiquez une catégorie.')]"
+          :rules="[required('Indiquez une catégorie.'), (value: string | null) => normalizeType(value).length <= 30 || 'Catégorie : 30 caractères au plus.']"
           :error-messages="save.apiError.value?.fieldMessage('type')"
         />
       </VCol>
@@ -109,9 +114,23 @@ watch(open, isOpen => {
           prepend-inner-icon="ri-scales-line"
           hint="Ex. kg, litre, portion."
           persistent-hint
-          :rules="[required('Indiquez l\'unité.')]"
+          :rules="[required('Indiquez l\'unité.'), maxLength(20, 'Unité')]"
           :error-messages="save.apiError.value?.fieldMessage('stock_unite')"
         />
+      </VCol>
+      <VCol
+        v-if="unitChanged"
+        cols="12"
+        class="pt-0"
+      >
+        <VAlert
+          type="warning"
+          variant="tonal"
+          density="comfortable"
+        >
+          Changer l'unité ne convertit pas les quantités déjà en stock ni les fiches techniques : vérifiez-les après
+          l'enregistrement, ou passez par un ajustement d'inventaire.
+        </VAlert>
       </VCol>
       <VCol
         cols="12"
@@ -124,7 +143,7 @@ watch(open, isOpen => {
           inputmode="decimal"
           hint="Facturé en plus quand le client choisit ce composant."
           persistent-hint
-          :rules="[nonNegativeQty]"
+          :rules="[amountRule(2)]"
           :error-messages="save.apiError.value?.fieldMessage('prix_supplement')"
         />
       </VCol>

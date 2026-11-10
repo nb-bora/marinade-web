@@ -15,6 +15,7 @@ export type Shift = Schemas['ShiftResponse']
 export type ShiftOpenRequest = Schemas['ShiftOpenRequest']
 export type ShiftCloseRequest = Schemas['ShiftCloseRequest']
 export type ShiftStatus = Schemas['CashShiftStatus']
+export type ShiftSummary = Schemas['ShiftSummaryResponse']
 
 export type ServiceSession = Schemas['SessionResponse']
 export type SessionStatus = Schemas['SessionStatus']

@@ -1,5 +1,10 @@
+<!--
+  Offre actuelle : bandeau orange avec le nom de l'offre, son statut et son prix, puis les dates, le
+  plafond et l'avancement de la période. Une alerte apparaît quand l'abonnement n'est plus actif
+  ou approche de sa fin.
+-->
 <script setup lang="ts">
-import { daysBetween, presentStatus } from '../labels'
+import { daysBetween, presentStatus, statusNote } from '../labels'
 import type { Subscription, Tier } from '../types'
 import { formatDate, formatMoney } from '@/lib/format'
 
@@ -9,6 +14,7 @@ const props = defineProps<{
 }>()
 
 const status = computed(() => presentStatus(props.subscription.status))
+const note = computed(() => statusNote(props.subscription.status))
 
 const today = computed(() => new Date().toLocaleDateString('sv-SE'))
 
@@ -27,94 +33,88 @@ const period = computed(() => {
 })
 
 const ending = computed(() => period.value !== null && period.value.left <= 14)
+
+const facts = computed(() => [
+  { icon: 'ri-calendar-event-line', label: 'Début', value: formatDate(props.subscription.start_date) },
+  { icon: 'ri-calendar-check-line', label: 'Fin', value: props.subscription.end_date ? formatDate(props.subscription.end_date) : 'Sans date de fin' },
+  { icon: 'ri-wallet-3-line', label: 'Plafond par jour', value: props.tier ? formatMoney(props.tier.daily_limit_fcfa) : '—' },
+  { icon: 'ri-price-tag-3-line', label: 'Prix à l\'année', value: props.tier ? formatMoney(props.tier.annual_price_fcfa) : '—' },
+])
 </script>
 
 <template>
-  <VCard class="h-100">
-    <VCardItem>
-      <VCardTitle>Offre actuelle</VCardTitle>
-      <VCardSubtitle>Ce que votre restaurant a souscrit</VCardSubtitle>
-      <template #append>
-        <AppStatusChip
-          :label="status.label"
-          :tone="status.tone"
-          :icon="status.icon"
+  <VCard class="plan-card h-100">
+    <div class="plan-card__banner">
+      <VAvatar
+        class="plan-card__crown"
+        rounded="lg"
+        size="56"
+      >
+        <VIcon
+          icon="ri-vip-crown-2-line"
+          size="30"
         />
-      </template>
-    </VCardItem>
-
-    <VCardText>
-      <div class="d-flex align-center gap-4 mb-6">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          rounded
-          size="56"
+      </VAvatar>
+      <div class="min-w-0 flex-grow-1">
+        <div class="plan-card__eyebrow">
+          Offre actuelle
+        </div>
+        <div class="plan-card__name text-truncate">
+          {{ tier?.name ?? 'Offre personnalisée' }}
+        </div>
+        <div
+          v-if="tier"
+          class="plan-card__price"
         >
-          <VIcon
-            icon="ri-vip-crown-2-line"
-            size="30"
-          />
-        </VAvatar>
-        <div class="min-w-0">
-          <div class="text-h4 font-weight-semibold text-truncate">
-            {{ tier?.name ?? 'Offre personnalisée' }}
-          </div>
-          <div
-            v-if="tier"
-            class="text-body-1 text-medium-emphasis"
-          >
-            {{ formatMoney(tier.monthly_price_fcfa) }} par mois
-          </div>
+          {{ formatMoney(tier.monthly_price_fcfa) }} par mois
         </div>
       </div>
+      <AppStatusChip
+        class="plan-card__status"
+        :label="status.label"
+        :tone="status.tone"
+        :icon="status.icon"
+      />
+    </div>
 
-      <VRow>
-        <VCol
-          cols="6"
-          md="3"
+    <VCardText class="pt-5">
+      <dl class="plan-facts">
+        <div
+          v-for="fact in facts"
+          :key="fact.label"
+          class="plan-fact"
         >
-          <div class="text-body-2 text-medium-emphasis">
-            Début
+          <VAvatar
+            color="primary"
+            variant="tonal"
+            rounded="lg"
+            size="34"
+          >
+            <VIcon
+              :icon="fact.icon"
+              size="18"
+            />
+          </VAvatar>
+          <div class="min-w-0">
+            <dt class="text-body-2 text-medium-emphasis">
+              {{ fact.label }}
+            </dt>
+            <dd class="text-body-1 font-weight-medium text-truncate">
+              {{ fact.value }}
+            </dd>
           </div>
-          <div class="text-body-1 font-weight-medium">
-            {{ formatDate(subscription.start_date) }}
-          </div>
-        </VCol>
-        <VCol
-          cols="6"
-          md="3"
-        >
-          <div class="text-body-2 text-medium-emphasis">
-            Fin
-          </div>
-          <div class="text-body-1 font-weight-medium">
-            {{ subscription.end_date ? formatDate(subscription.end_date) : 'Sans date de fin' }}
-          </div>
-        </VCol>
-        <VCol
-          cols="6"
-          md="3"
-        >
-          <div class="text-body-2 text-medium-emphasis">
-            Plafond par jour
-          </div>
-          <div class="text-body-1 font-weight-medium">
-            {{ tier ? formatMoney(tier.daily_limit_fcfa) : '—' }}
-          </div>
-        </VCol>
-        <VCol
-          cols="6"
-          md="3"
-        >
-          <div class="text-body-2 text-medium-emphasis">
-            Prix à l'année
-          </div>
-          <div class="text-body-1 font-weight-medium">
-            {{ tier ? formatMoney(tier.annual_price_fcfa) : '—' }}
-          </div>
-        </VCol>
-      </VRow>
+        </div>
+      </dl>
+
+      <VAlert
+        v-if="note"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mt-5"
+      >
+        {{ note }}
+      </VAlert>
 
       <template v-if="period">
         <div class="d-flex justify-space-between text-body-2 mt-6 mb-2">
@@ -131,7 +131,7 @@ const ending = computed(() => period.value !== null && period.value.left <= 14)
           aria-label="Avancement de la période d'abonnement"
         />
         <VAlert
-          v-if="ending"
+          v-if="ending && !note"
           type="warning"
           variant="tonal"
           density="compact"
@@ -146,3 +146,69 @@ const ending = computed(() => period.value !== null && period.value.left <= 14)
     </VCardText>
   </VCard>
 </template>
+
+<style scoped>
+.plan-card {
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.plan-card__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background:
+    radial-gradient(circle at 92% -30%, rgba(255, 255, 255, 0.32), transparent 60%),
+    linear-gradient(135deg, rgb(var(--v-theme-primary)), #b8470a);
+  color: #fff;
+}
+
+.plan-card__crown {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.plan-card__eyebrow {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.plan-card__name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.plan-card__price {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.plan-card__status {
+  border-radius: 6px;
+  background: rgb(var(--v-theme-surface));
+}
+
+.plan-facts {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+}
+
+.plan-fact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plan-fact dd {
+  margin: 0;
+}
+</style>

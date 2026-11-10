@@ -45,6 +45,9 @@ const whole = computed(() => wholeDue(props.due))
 const total = computed(() => parts.value.reduce((sum, part) => sum + amountOf(part), 0))
 const left = computed(() => whole.value - total.value)
 
+/** Part du reste dû déjà répartie entre les lignes (plafonnée à 100 %). */
+const coverage = computed(() => whole.value > 0 ? Math.min(Math.round(total.value / whole.value * 100), 100) : 0)
+
 const phoneError = (part: Part) => triedToSubmit.value && isMobile(part) && !phoneValid(part)
   ? 'Numéro à 9 chiffres obligatoire.'
   : ''
@@ -232,8 +235,19 @@ defineExpose({ reset })
       </VBtn>
     </div>
 
+    <VProgressLinear
+      :model-value="coverage"
+      :color="problem ? 'error' : left === 0 ? 'success' : 'primary'"
+      bg-color="secondary"
+      bg-opacity="0.2"
+      height="8"
+      rounded
+      class="mt-4"
+      :aria-label="`${coverage} % du reste dû réparti`"
+    />
+
     <div
-      class="recap d-flex flex-wrap justify-space-between align-center gap-2 mt-4 pa-4"
+      class="recap d-flex flex-wrap justify-space-between align-center gap-2 mt-3 pa-4"
       :class="{ 'recap--error': problem }"
     >
       <div>
@@ -294,11 +308,16 @@ defineExpose({ reset })
 <style scoped>
 .part {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
+  border-radius: 16px;
+  transition: border-color 0.15s ease;
+}
+
+.part:focus-within {
+  border-color: rgba(var(--v-theme-primary), 0.55);
 }
 
 .recap {
-  border-radius: 12px;
+  border-radius: 16px;
   background: rgba(var(--v-theme-on-surface), 0.04);
 }
 

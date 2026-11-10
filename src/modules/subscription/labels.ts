@@ -20,6 +20,24 @@ const STATUS: Record<SubscriptionStatus, Presentation> = {
 export const presentStatus = (status: string): Presentation =>
   status in STATUS ? STATUS[status as SubscriptionStatus] : { label: status, tone: 'neutral', icon: 'ri-question-line' }
 
+/** Ce qu'un statut qui n'est pas « actif » change concrètement pour le restaurant. */
+const STATUS_NOTES: Partial<Record<SubscriptionStatus, string>> = {
+  pending: 'L\'abonnement n\'est pas encore activé : aucun achat ne peut être imputé sur le plafond.',
+  suspended: 'L\'abonnement est suspendu : aucun achat ne peut être imputé sur le plafond. Rapprochez-vous de l\'équipe Marinade.',
+  cancelled: 'L\'abonnement est résilié : le plafond journalier n\'est plus renouvelé.',
+  expired: 'L\'abonnement a expiré : le plafond journalier n\'est plus renouvelé. Rapprochez-vous de l\'équipe Marinade pour le renouveler.',
+}
+
+export const statusNote = (status: string): string | null => STATUS_NOTES[status as SubscriptionStatus] ?? null
+
+/** Message sous la jauge du jour, selon ce qu'il reste du plafond ; `null` tant qu'il n'y a rien à signaler. */
+export function gaugeMessage(usedPercent: number, remaining: number | null): string | null {
+  if (remaining === 0)
+    return 'Le plafond du jour est atteint : plus aucun achat ne peut être imputé avant demain.'
+
+  return usedPercent >= 90 ? 'Le plafond du jour est presque atteint.' : null
+}
+
 /** Couleur de la jauge : de plus en plus alarmante à mesure que le plafond du jour se vide. */
 export function gaugeColor(usedPercent: number): 'success' | 'warning' | 'error' {
   if (usedPercent >= 90)

@@ -1,29 +1,19 @@
-import { isActive } from '../labels'
 import { ordersApi } from '../api'
-import type { Commande, Refund, Table } from '../types'
+import { bucketOf } from '../labels'
+import { refundedOf } from '../refunds'
+import type { Commande, Table } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useTenantStore } from '@/stores/tenant.store'
 
-/** Au-delà, on n'interroge plus les remboursements : il faut une requête par commande. */
-const LEDGER_LIMIT = 100
-const LEDGER_PARALLEL = 6
-
-/** Somme de décimaux arrivés en chaînes. */
-const sum = (values: string[]) => values.reduce((total, value) => total + Number(value), 0)
-
-export const refundedOf = (refunds: Refund[] | undefined) =>
-  sum((refunds ?? []).filter(refund => refund.statut === 'approved').map(refund => refund.montant))
-
-export const pendingOf = (refunds: Refund[] | undefined) =>
-  sum((refunds ?? []).filter(refund => refund.statut === 'requested').map(refund => refund.montant))
+const byCreation = (direction: 1 | -1) => (a: Commande, b: Commande) =>
+  direction * (Date.parse(a.created_at) - Date.parse(b.created_at))
 
 /**
- * Les commandes du restaurant courant, leurs tables et leurs remboursements.
+ * Les commandes du restaurant courant et leurs tables.
  *
- * Le back ne renvoie ni articles ni remboursements dans une commande (les listes sont toujours
- * vides) et n'expose pas le montant déjà remboursé : on interroge donc les remboursements des
- * commandes qui peuvent en avoir (servies ou payées), par petits groupes, et on les garde en
- * mémoire pour le tableau, les indicateurs et le tiroir.
+ * Le back joint les lignes et les remboursements à chaque commande : les indicateurs et le
+ * tableau se calculent donc sur la liste, sans requête par commande (avant, une requête par
+ * commande servie ou payée partait à chaque actualisation).
  */
 export function useOrders() {
   const tenant = useTenantStore()
@@ -41,75 +31,31 @@ export function useOrders() {
 
   const tableNames = computed(() => new Map((tables.data.value ?? []).map(table => [table.id, table.numero])))
 
-  /** Remboursements connus, par commande. `undefined` : pas (encore) chargés. */
-  const ledger = ref<Record<string, Refund[]>>({})
-  const ledgerLoading = ref(false)
-  const ledgerPartial = ref(false)
+  const all = computed(() => orders.data.value ?? [])
 
-  function setRefunds(commandeId: string, refunds: Refund[]) {
-    ledger.value = { ...ledger.value, [commandeId]: refunds }
-  }
+  /** À servir, les plus anciennes d'abord : ce sont celles qui attendent le plus. */
+  const active = computed(() => all.value.filter(order => bucketOf(order.statut) === 'active').sort(byCreation(1)))
 
-  async function loadLedger(rows: Commande[]) {
-    const candidates = rows.filter(order => order.statut === 'servie' || order.statut === 'payee')
-    const wanted = candidates.slice(0, LEDGER_LIMIT)
+  /** Paiement lancé, pas encore confirmé : les plus anciennes d'abord, elles sont les plus suspectes. */
+  const paying = computed(() => all.value.filter(order => bucketOf(order.statut) === 'paying').sort(byCreation(1)))
 
-    ledgerPartial.value = candidates.length > wanted.length
-    ledgerLoading.value = true
+  const history = computed(() => all.value.filter(order => bucketOf(order.statut) === 'history').sort(byCreation(-1)))
 
-    try {
-      for (let index = 0; index < wanted.length; index += LEDGER_PARALLEL) {
-        const group = wanted.slice(index, index + LEDGER_PARALLEL)
-        const results = await Promise.allSettled(group.map(order => ordersApi.refunds(order.id)))
-        const next = { ...ledger.value }
+  const refunds = computed(() => all.value.flatMap(order => order.remboursements))
 
-        results.forEach((result, position) => {
-          if (result.status === 'fulfilled')
-            next[group[position].id] = result.value
-        })
-        ledger.value = next
-      }
-    }
-    finally {
-      ledgerLoading.value = false
-    }
-  }
+  /** Demandes en attente de décision d'un manager. */
+  const pendingRefunds = computed(() => refunds.value.filter(refund => refund.statut === 'requested'))
 
-  watch(orders.data, rows => {
-    if (rows)
-      loadLedger(rows)
-  })
+  const refundedTotal = computed(() => refundedOf(refunds.value))
 
-  watch(restaurantId, () => {
-    ledger.value = {}
-  })
-
-  const active = computed(() => (orders.data.value ?? []).filter(order => isActive(order.statut))
-    .sort((a, b) => a.created_at.localeCompare(b.created_at)))
-
-  const history = computed(() => (orders.data.value ?? []).filter(order => !isActive(order.statut))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at)))
-
-  /** Demandes en attente de décision, avec la commande concernée. */
-  const pendingRefunds = computed(() => Object.values(ledger.value)
-    .flat()
-    .filter(refund => refund.statut === 'requested'))
-
-  const refundedTotal = computed(() => refundedOf(Object.values(ledger.value).flat()))
-
-  async function reload() {
-    await orders.refresh()
-  }
+  const reload = () => orders.refresh()
 
   return {
     orders,
     tables,
     tableNames,
-    ledger,
-    ledgerLoading,
-    ledgerPartial,
-    setRefunds,
     active,
+    paying,
     history,
     pendingRefunds,
     refundedTotal,

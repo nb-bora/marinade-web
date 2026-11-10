@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { stockApi } from '../api'
 import CombinaisonFormDialog from '../components/CombinaisonFormDialog.vue'
+import ItemCell from '../components/ItemCell.vue'
+import StockCard from '../components/StockCard.vue'
+import { useStockOverview } from '../composables/useStockOverview'
+import { matchesSearch } from '../labels'
 import type { Combinaison, Composant } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
 import { formatMoney } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
+
+type Filter = 'all' | 'sale' | 'blocked' | 'off'
+type Sale = 'sale' | 'blocked' | 'off' | 'unknown'
 
 const tenant = useTenantStore()
 const canWrite = computed(() => tenant.can('management'))
@@ -25,32 +32,81 @@ const composants = useAsyncData(
   { watch: [() => tenant.currentId] },
 )
 
+// Le niveau de stock de chaque composant : il explique pourquoi une offre active n'est pas vendable.
+const overview = useStockOverview()
+
 const nameById = computed(() => new Map((composants.data.value ?? []).map(item => [item.id, item.nom])))
+const rowById = computed(() => new Map(overview.rows.value.map(row => [row.composant.id, row])))
 const recommendedIds = computed(() => new Set((recommended.data.value ?? []).map(item => item.id)))
 
 const names = (item: Combinaison) => item.composant_ids.map(id => nameById.value.get(id) ?? 'Composant supprimé')
 
-interface Sale { label: string; tone: 'success' | 'warning' | 'neutral'; icon: string }
+/**
+ * Ce qui empêche la vente, composant par composant : le serveur ne vend une offre que si tous ses composants
+ * sont proposés et ont du stock libre. Vide si rien de précis n'est connu (stock chargé en retard, quantité exigée).
+ */
+function blockers(item: Combinaison): string[] {
+  return item.composant_ids.flatMap(id => {
+    const name = nameById.value.get(id)
+    const row = rowById.value.get(id)
+
+    if (!name)
+      return ['un composant supprimé']
+    if (row?.composant && !row.composant.disponible)
+      return [`${name} (masqué)`]
+    if (row?.state === 'rupture')
+      return [`${name} (en rupture)`]
+
+    return []
+  })
+}
+
+// Tant que les recommandations ne sont pas chargées, on ne dit pas « bloquée » : on ne le sait pas.
+const salesKnown = computed(() => recommended.data.value !== null)
 
 function saleOf(item: Combinaison): Sale {
   if (!item.disponible)
-    return { label: 'Désactivée', tone: 'neutral', icon: 'ri-pause-circle-line' }
+    return 'off'
+  if (!salesKnown.value)
+    return 'unknown'
 
-  return recommendedIds.value.has(item.id)
-    ? { label: 'En vente', tone: 'success', icon: 'ri-checkbox-circle-line' }
-    : { label: 'Stock insuffisant', tone: 'warning', icon: 'ri-alarm-warning-line' }
+  return recommendedIds.value.has(item.id) ? 'sale' : 'blocked'
 }
 
-const search = ref('')
+const SALE_INFO: Record<Sale, { label: string; tone: 'success' | 'warning' | 'neutral'; icon: string }> = {
+  sale: { label: 'En vente', tone: 'success', icon: 'ri-checkbox-circle-line' },
+  blocked: { label: 'Non vendable', tone: 'warning', icon: 'ri-alarm-warning-line' },
+  off: { label: 'Désactivée', tone: 'neutral', icon: 'ri-pause-circle-line' },
+  unknown: { label: 'À vérifier', tone: 'neutral', icon: 'ri-question-line' },
+}
+
 const loadedOnce = computed(() => all.data.value !== null)
+const list = computed(() => all.data.value ?? [])
 
-const filtered = computed(() => {
-  const term = search.value.trim().toLowerCase()
+const counts = computed(() => ({
+  total: list.value.length,
+  sale: list.value.filter(item => saleOf(item) === 'sale').length,
+  blocked: list.value.filter(item => saleOf(item) === 'blocked').length,
+  off: list.value.filter(item => saleOf(item) === 'off').length,
+}))
 
-  return (all.data.value ?? [])
-    .filter(item => !term || item.nom.toLowerCase().includes(term))
-    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-})
+const filter = ref<Filter>('all')
+const search = ref('')
+const searchDebounced = refDebounced(search, 250)
+
+const filterOptions = computed(() => [
+  { value: 'all' as const, title: `Toutes (${counts.value.total})` },
+  { value: 'sale' as const, title: `En vente (${counts.value.sale})` },
+  { value: 'blocked' as const, title: `Non vendables (${counts.value.blocked})` },
+  { value: 'off' as const, title: `Désactivées (${counts.value.off})` },
+])
+
+const hasFilters = computed(() => filter.value !== 'all' || search.value.trim() !== '')
+
+const filtered = computed(() => list.value
+  .filter(item => filter.value === 'all' || saleOf(item) === filter.value)
+  .filter(item => matchesSearch(searchDebounced.value, item.nom, item.description, ...names(item)))
+  .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')))
 
 const pager = useClientPagination(filtered, 10)
 
@@ -62,21 +118,29 @@ function openDialog(item: Combinaison | null) {
   dialogOpen.value = true
 }
 
+function clearFilters() {
+  filter.value = 'all'
+  search.value = ''
+}
+
 function reloadAll() {
   all.reload()
   recommended.reload()
   composants.reload()
+  overview.reload()
 }
 
 function afterSave() {
   all.refresh()
   recommended.refresh()
+  overview.refresh()
 }
 </script>
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Stock"
       title="Combinaisons"
       subtitle="Des offres à prix unique composées de plusieurs composants. Une offre dont un composant manque n'est plus proposée."
     >
@@ -98,37 +162,110 @@ function afterSave() {
           Nouvelle combinaison
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="all.error.value && !loadedOnce"
+      class="mt-5"
       :error="all.error.value"
       @retry="reloadAll"
     />
 
     <template v-else>
-      <VCard
-        v-if="loadedOnce"
-        class="recommended"
-      >
-        <VCardItem>
-          <template #prepend>
-            <VAvatar
-              color="success"
-              variant="tonal"
-              rounded
-            >
-              <VIcon icon="ri-thumb-up-line" />
-            </VAvatar>
-          </template>
-          <VCardTitle>Vendables en ce moment</VCardTitle>
-          <VCardSubtitle>Offres actives dont tous les composants sont en stock</VCardSubtitle>
-        </VCardItem>
-        <VCardText>
+      <AppMetricGrid class="mt-5 mb-6">
+        <template v-if="!loadedOnce">
           <VSkeletonLoader
-            v-if="recommended.data.value === null"
+            v-for="n in 4"
+            :key="n"
+            type="article"
+            class="rounded-lg"
+          />
+        </template>
+        <template v-else>
+          <AppMetricTile
+            hero
+            label="Combinaisons"
+            icon="ri-restaurant-2-line"
+            :hint="salesKnown ? `${counts.sale} en vente sur ${counts.total}` : 'Disponibilité en cours de calcul'"
+            :gauge="salesKnown && counts.total ? Math.round((counts.sale / counts.total) * 100) : undefined"
+            gauge-label="Part des offres en vente"
+          >
+            <AppAnimatedNumber
+              v-slot="{ current }"
+              :value="counts.total"
+            >
+              {{ Math.round(current) }}
+            </AppAnimatedNumber>
+          </AppMetricTile>
+          <AppMetricTile
+            label="En vente"
+            icon="ri-thumb-up-line"
+            color="success"
+            hint="Tous les composants sont en stock"
+          >
+            <AppAnimatedNumber
+              v-slot="{ current }"
+              :value="counts.sale"
+            >
+              {{ Math.round(current) }}
+            </AppAnimatedNumber>
+          </AppMetricTile>
+          <AppMetricTile
+            label="Non vendables"
+            icon="ri-alarm-warning-line"
+            :color="counts.blocked ? 'warning' : 'success'"
+            :hint="counts.blocked ? 'Un composant manque ou est masqué' : 'Aucune offre bloquée'"
+          >
+            <AppAnimatedNumber
+              v-slot="{ current }"
+              :value="counts.blocked"
+            >
+              {{ Math.round(current) }}
+            </AppAnimatedNumber>
+          </AppMetricTile>
+          <AppMetricTile
+            label="Désactivées"
+            icon="ri-pause-circle-line"
+            color="secondary"
+            hint="Retirées de la carte"
+          >
+            <AppAnimatedNumber
+              v-slot="{ current }"
+              :value="counts.off"
+            >
+              {{ Math.round(current) }}
+            </AppAnimatedNumber>
+          </AppMetricTile>
+        </template>
+      </AppMetricGrid>
+
+      <StockCard
+        title="Vendables en ce moment"
+        subtitle="Offres actives dont tous les composants sont en stock"
+        class="recommended mb-6"
+      >
+        <div class="pa-5">
+          <VSkeletonLoader
+            v-if="recommended.data.value === null && !recommended.error.value"
             type="list-item-two-line"
           />
+          <VAlert
+            v-else-if="recommended.data.value === null"
+            type="warning"
+            variant="tonal"
+            density="comfortable"
+          >
+            Impossible de calculer les offres vendables.
+            <template #append>
+              <VBtn
+                size="small"
+                variant="text"
+                @click="recommended.reload()"
+              >
+                Réessayer
+              </VBtn>
+            </template>
+          </VAlert>
           <p
             v-else-if="recommended.data.value.length === 0"
             class="text-body-2 text-medium-emphasis mb-0"
@@ -145,7 +282,7 @@ function afterSave() {
             >
               <div class="recommended__item pa-4">
                 <div class="d-flex justify-space-between align-start gap-3">
-                  <div class="text-body-1 font-weight-semibold text-high-emphasis min-w-0">
+                  <div class="text-body-1 font-weight-semibold text-high-emphasis min-w-0 text-break">
                     {{ item.nom }}
                   </div>
                   <span class="text-body-1 font-weight-semibold text-primary tabular-nums text-no-wrap">
@@ -165,24 +302,33 @@ function afterSave() {
               </div>
             </VCol>
           </VRow>
-        </VCardText>
-      </VCard>
+        </div>
+      </StockCard>
 
-      <VCard class="mt-6">
-        <VCardItem class="pb-2">
-          <VCardTitle>Toutes les combinaisons</VCardTitle>
-        </VCardItem>
-        <VCardText>
+      <StockCard title="Toutes les combinaisons">
+        <template #toolbar>
+          <div class="stock-filter">
+            <AppSegmented
+              v-model="filter"
+              :options="filterOptions"
+              label="Filtrer les combinaisons par statut"
+            />
+          </div>
           <VTextField
             v-model="search"
+            class="stock-search"
             label="Rechercher une combinaison"
+            placeholder="Nom ou composant"
             prepend-inner-icon="ri-search-line"
+            density="compact"
+            variant="solo-filled"
+            flat
+            rounded="lg"
+            hide-details
             clearable
             autocomplete="off"
           />
-        </VCardText>
-
-        <VDivider />
+        </template>
 
         <VSkeletonLoader
           v-if="!loadedOnce"
@@ -192,11 +338,19 @@ function afterSave() {
         <AppEmptyState
           v-else-if="filtered.length === 0"
           icon="ri-restaurant-2-line"
-          :title="search ? 'Aucune combinaison ne correspond' : 'Aucune combinaison pour l\'instant'"
-          :text="search ? 'Essayez un autre mot.' : 'Composez une offre à prix unique à partir de vos composants.'"
+          :title="hasFilters ? 'Aucune combinaison ne correspond' : 'Aucune combinaison pour l\'instant'"
+          :text="hasFilters ? 'Essayez un autre statut ou une autre recherche.' : 'Composez une offre à prix unique à partir de vos composants.'"
         >
           <VBtn
-            v-if="!search && canWrite"
+            v-if="hasFilters"
+            variant="outlined"
+            prepend-icon="ri-filter-off-line"
+            @click="clearFilters"
+          >
+            Effacer les filtres
+          </VBtn>
+          <VBtn
+            v-else-if="canWrite"
             color="primary"
             prepend-icon="ri-add-line"
             @click="openDialog(null)"
@@ -206,7 +360,10 @@ function afterSave() {
         </AppEmptyState>
 
         <template v-else>
-          <VTable hover>
+          <VTable
+            hover
+            aria-label="Liste des combinaisons"
+          >
             <thead>
               <tr>
                 <th>Combinaison</th>
@@ -229,26 +386,24 @@ function afterSave() {
               <tr
                 v-for="item in pager.rows.value"
                 :key="item.id"
+                :class="[saleOf(item) === 'blocked' ? 'row--alerte' : undefined, saleOf(item) === 'off' ? 'row--muted' : undefined]"
               >
                 <td>
-                  <div class="d-flex align-center gap-3 py-2">
-                    <VAvatar
-                      color="primary"
-                      variant="tonal"
-                      rounded
-                      size="38"
+                  <ItemCell
+                    icon="ri-restaurant-2-line"
+                    :title="item.nom"
+                    :muted="saleOf(item) === 'off'"
+                  >
+                    <template #subtitle>
+                      {{ item.composant_ids.length }} composant{{ item.composant_ids.length > 1 ? 's' : '' }}
+                    </template>
+                    <div
+                      v-if="saleOf(item) === 'blocked' && blockers(item).length"
+                      class="text-caption text-warning mt-1"
                     >
-                      <VIcon icon="ri-restaurant-2-line" />
-                    </VAvatar>
-                    <div class="min-w-0">
-                      <div class="text-body-1 font-weight-medium text-high-emphasis text-truncate">
-                        {{ item.nom }}
-                      </div>
-                      <div class="text-body-2 text-medium-emphasis">
-                        {{ item.composant_ids.length }} composant{{ item.composant_ids.length > 1 ? 's' : '' }}
-                      </div>
+                      Bloquée par {{ blockers(item).join(', ') }}
                     </div>
-                  </div>
+                  </ItemCell>
                 </td>
                 <td class="d-none d-md-table-cell">
                   <div class="d-flex flex-wrap gap-1 py-2">
@@ -262,14 +417,14 @@ function afterSave() {
                     </VChip>
                   </div>
                 </td>
-                <td class="text-end font-weight-semibold text-high-emphasis tabular-nums">
+                <td class="text-end font-weight-semibold text-high-emphasis tabular-nums text-no-wrap">
                   {{ formatMoney(item.prix, item.devise) }}
                 </td>
                 <td>
                   <AppStatusChip
-                    :label="saleOf(item).label"
-                    :tone="saleOf(item).tone"
-                    :icon="saleOf(item).icon"
+                    :label="SALE_INFO[saleOf(item)].label"
+                    :tone="SALE_INFO[saleOf(item)].tone"
+                    :icon="SALE_INFO[saleOf(item)].icon"
                   />
                 </td>
                 <td
@@ -306,7 +461,7 @@ function afterSave() {
             @update:page-size="pager.pageSize.value = $event"
           />
         </template>
-      </VCard>
+      </StockCard>
     </template>
 
     <CombinaisonFormDialog
@@ -320,13 +475,15 @@ function afterSave() {
 
 <style scoped>
 .recommended {
-  border: 1px solid rgba(var(--v-theme-success), 0.35);
+  border-color: rgba(var(--v-theme-success), 0.35) !important;
 }
 
 .recommended__item {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 10px;
-  background: rgba(var(--v-theme-success), 0.05);
+  border: 1px solid rgba(var(--v-theme-success), 0.25);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--v-theme-success), 0.12), transparent 60%),
+    rgba(var(--v-theme-success), 0.04);
   block-size: 100%;
 }
 </style>

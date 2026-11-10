@@ -1,13 +1,12 @@
 import { cashDeskApi } from '../api'
-import type { Shift } from '../types'
+import type { Shift, ShiftSummary } from '../types'
 import { isApiError } from '@/lib/http/errors'
 import { useSessionStore } from '@/stores/session.store'
 import { useTenantStore } from '@/stores/tenant.store'
 
 /**
- * `open` : on a ouvert le shift ici ; `open-elsewhere` : le serveur répond qu'un shift est déjà
- * ouvert pour ce caissier mais on n'en connaît pas le détail (ouvert depuis un autre appareil) ;
- * `closed` : aucun shift ouvert à notre connaissance.
+ * `open` : on connaît le shift ouvert ; `open-elsewhere` : le serveur répond qu'un shift est déjà
+ * ouvert pour ce caissier mais on n'a pas pu en lire le détail ; `closed` : aucun shift ouvert.
  */
 export type ShiftState = 'open' | 'open-elsewhere' | 'closed'
 
@@ -46,9 +45,10 @@ function write(key: string, value: Stored) {
 /**
  * Le shift de caisse du caissier connecté dans le restaurant courant.
  *
- * Le back ne sait ni lire le shift en cours ni lister les shifts : on retient donc, dans ce
- * navigateur, la réponse d'ouverture et celle de fermeture (avec l'écart d'audit). Si le serveur
- * répond « déjà ouvert » sans que l'on connaisse ce shift, l'état devient `open-elsewhere`.
+ * La vérité vient du serveur : `sync()` lit `GET /shifts/current` (404 = aucun shift ouvert) et le
+ * bilan du shift (encaissements par moyen). Le navigateur ne retient que ce qu'un shift fermé laisse
+ * derrière lui (`lastClosed`, avec l'écart d'audit) et un état de repli, pour l'affichage instantané
+ * au chargement et si le serveur ne répond pas.
  */
 export function useShift() {
   const tenant = useTenantStore()
@@ -56,9 +56,15 @@ export function useShift() {
 
   const key = computed(() => `marinade.cashdesk.shift.${tenant.currentId ?? 'none'}.${user.user?.id ?? 'anon'}`)
   const stored = ref<Stored>(read(key.value))
+  const summary = ref<ShiftSummary | null>(null)
+
+  /** Chaque ouverture ou fermeture invalide les lectures serveur déjà parties (réponses périmées). */
+  let epoch = 0
 
   watch(key, value => {
+    epoch++
     stored.value = read(value)
+    summary.value = null
   })
 
   function save(next: Stored) {
@@ -71,6 +77,39 @@ export function useShift() {
   const lastClosed = computed(() => stored.value.lastClosed)
   const isOpen = computed(() => stored.value.state !== 'closed')
 
+  /** Relit le shift et son bilan auprès du serveur. Un échec réseau garde l'état mémorisé. */
+  async function sync(): Promise<void> {
+    if (!tenant.currentId)
+      return
+
+    const startedAt = epoch
+
+    try {
+      const current = await cashDeskApi.currentShift()
+
+      if (startedAt !== epoch)
+        return
+
+      if (!current) {
+        summary.value = null
+        if (stored.value.state !== 'closed' || stored.value.shift)
+          save({ ...stored.value, state: 'closed', shift: null })
+
+        return
+      }
+
+      save({ ...stored.value, state: 'open', shift: current })
+
+      const report = await cashDeskApi.shiftSummary(current.id)
+
+      if (startedAt === epoch)
+        summary.value = report
+    }
+    catch {
+      // Serveur injoignable ou bilan indisponible : l'écran garde ce qu'il sait.
+    }
+  }
+
   /** Ouvre le shift. Renvoie `already` si le serveur en connaît déjà un d'ouvert. */
   async function open(openingBalance: number): Promise<'opened' | 'already'> {
     const restaurantId = tenant.currentId
@@ -81,13 +120,17 @@ export function useShift() {
     try {
       const opened = await cashDeskApi.openShift(restaurantId, { opening_balance: openingBalance })
 
+      epoch++
       save({ state: 'open', shift: opened, lastClosed: null })
+      summary.value = null
+      void sync()
 
       return 'opened'
     }
     catch (cause) {
       if (isApiError(cause) && cause.kind === 'conflict') {
         save({ ...stored.value, state: stored.value.shift ? 'open' : 'open-elsewhere' })
+        await sync()
 
         return 'already'
       }
@@ -110,14 +153,19 @@ export function useShift() {
       // ici) : on retient l'heure de ce poste, qui est celle à laquelle le caissier a fermé.
       const closed = { ...answer, closed_at: new Date().toISOString() }
 
+      epoch++
       save({ state: 'closed', shift: null, lastClosed: closed })
+      summary.value = null
 
       return closed
     }
     catch (cause) {
       // Le serveur n'a aucun shift ouvert pour ce caissier : notre mémoire était périmée.
-      if (isApiError(cause) && cause.kind === 'not_found')
+      if (isApiError(cause) && cause.kind === 'not_found') {
+        epoch++
         save({ ...stored.value, state: 'closed', shift: null })
+        summary.value = null
+      }
 
       throw cause
     }
@@ -127,5 +175,5 @@ export function useShift() {
     save({ ...stored.value, lastClosed: null })
   }
 
-  return { state, shift, lastClosed, isOpen, open, close, dismissLastClosed }
+  return { state, shift, summary, lastClosed, isOpen, sync, open, close, dismissLastClosed }
 }

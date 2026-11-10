@@ -1,4 +1,5 @@
 import { cashDeskApi } from '../api'
+import { isPayable } from '../labels'
 import type { CashSession, Invoice } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useTenantStore } from '@/stores/tenant.store'
@@ -73,10 +74,10 @@ export function useCashSessions() {
     }))
   }, { watch: [() => tenant.currentId] })
 
-  /** Sessions avec une addition non soldée, les plus anciennes d'abord. */
+  /** Sessions avec une addition à encaisser, les plus anciennes d'abord. */
   const toCollect = computed(() => (data.value ?? [])
-    .filter(row => row.invoice !== null && Number(row.invoice.amount_due) > 0)
-    .sort((a, b) => a.session.opened_at.localeCompare(b.session.opened_at)))
+    .filter(row => row.invoice !== null && isPayable(row.invoice))
+    .sort((a, b) => new Date(a.session.opened_at).getTime() - new Date(b.session.opened_at).getTime()))
 
   const withoutOrder = computed(() => (data.value ?? []).filter(row => row.invoice === null).length)
   const totalDue = computed(() => toCollect.value.reduce((sum, row) => sum + Number(row.invoice?.amount_due ?? 0), 0))

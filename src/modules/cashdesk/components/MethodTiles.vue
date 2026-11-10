@@ -5,11 +5,19 @@ import type { PaymentMethod } from '../types'
 
 const model = defineModel<PaymentMethod>({ required: true })
 
-function move(step: number) {
-  const index = METHOD_ORDER.indexOf(model.value)
+const buttons = ref<HTMLButtonElement[]>([])
 
-  model.value = METHOD_ORDER[(index + step + METHOD_ORDER.length) % METHOD_ORDER.length]
+/** Les flèches changent de moyen ET déplacent le focus : sinon le clavier reste sur l'ancienne tuile. */
+async function select(index: number) {
+  const size = METHOD_ORDER.length
+  const target = (index + size) % size
+
+  model.value = METHOD_ORDER[target]
+  await nextTick()
+  buttons.value[target]?.focus()
 }
+
+const current = () => METHOD_ORDER.indexOf(model.value)
 </script>
 
 <template>
@@ -17,12 +25,17 @@ function move(step: number) {
     class="method-tiles"
     role="radiogroup"
     aria-label="Moyen de paiement"
-    @keydown.right.prevent="move(1)"
-    @keydown.left.prevent="move(-1)"
+    @keydown.right.prevent="select(current() + 1)"
+    @keydown.down.prevent="select(current() + 1)"
+    @keydown.left.prevent="select(current() - 1)"
+    @keydown.up.prevent="select(current() - 1)"
+    @keydown.home.prevent="select(0)"
+    @keydown.end.prevent="select(METHOD_ORDER.length - 1)"
   >
     <button
       v-for="method in METHOD_ORDER"
       :key="method"
+      ref="buttons"
       type="button"
       role="radio"
       class="method-tile"
@@ -32,11 +45,19 @@ function move(step: number) {
       :tabindex="model === method ? 0 : -1"
       @click="model = method"
     >
-      <VIcon
-        :icon="METHODS[method].icon"
-        size="30"
-      />
+      <span class="method-tile__icon">
+        <VIcon
+          :icon="METHODS[method].icon"
+          size="26"
+        />
+      </span>
       <span class="method-tile__label">{{ METHODS[method].label }}</span>
+      <VIcon
+        v-if="model === method"
+        icon="ri-checkbox-circle-fill"
+        size="18"
+        class="method-tile__check"
+      />
     </button>
   </div>
 </template>
@@ -49,33 +70,48 @@ function move(step: number) {
 }
 
 .method-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-block-size: 84px;
-  padding: 10px 6px;
+  gap: 8px;
+  min-block-size: 96px;
+  padding: 12px 6px;
   border: 1.5px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
+  border-radius: 16px;
   background: rgb(var(--v-theme-surface));
   color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
   cursor: pointer;
-  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.method-tile :deep(.v-icon) {
+.method-tile__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: 14px;
+  background: rgba(var(--tile-color), 0.12);
   color: rgb(var(--tile-color));
 }
 
 .method-tile:hover {
-  background: rgba(var(--tile-color), 0.08);
+  background: rgba(var(--tile-color), 0.06);
 }
 
 .method-tile--active,
 .method-tile--active:hover {
   border-color: rgb(var(--tile-color));
-  background: rgba(var(--tile-color), 0.14);
+  background: rgba(var(--tile-color), 0.12);
+  box-shadow: 0 8px 20px -12px rgba(var(--tile-color), 0.7);
+}
+
+.method-tile__check {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  color: rgb(var(--tile-color));
 }
 
 .method-tile__label {
@@ -96,7 +132,19 @@ function move(step: number) {
   }
 
   .method-tile {
-    min-block-size: 76px;
+    min-block-size: 84px;
+    gap: 6px;
+  }
+
+  .method-tile__icon {
+    inline-size: 38px;
+    block-size: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-tile {
+    transition: none;
   }
 }
 </style>

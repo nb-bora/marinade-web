@@ -1,4 +1,4 @@
-import { subscriptionApi } from '../api'
+import { TRANSACTION_CAP, subscriptionApi } from '../api'
 import type { SubscriptionOverview, SubscriptionTransaction } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useClientPagination } from '@/composables/useClientPagination'
@@ -7,8 +7,9 @@ import { useTenantStore } from '@/stores/tenant.store'
 /**
  * Abonnement du restaurant courant : offres, solde du jour et historique des soldes.
  *
- * `/subscriptions/me` rend l'abonnement actif du COMPTE, quel que soit le restaurant : on
- * vérifie qu'il appartient bien au restaurant courant avant de l'afficher.
+ * `/subscriptions/me` rend l'abonnement ACTIF du restaurant courant (en-tête X-Tenant-ID), quel que
+ * soit le compte qui l'a souscrit. Par prudence, on vérifie quand même qu'il appartient bien au
+ * restaurant courant avant de l'afficher.
  */
 export function useSubscription() {
   const tenant = useTenantStore()
@@ -54,10 +55,32 @@ export function useSubscription() {
   const rows = computed(() => transactions.data.value ?? [])
   const pager = useClientPagination(rows, 10)
 
+  /** Les lectures sont plafonnées : au-delà, les achats les plus anciens manquent à la liste. */
+  const truncated = computed(() => rows.value.length >= TRANSACTION_CAP)
+
+  /** Relecture complète sans clignotement : après un achat imputé. L'abonnement d'abord, ses transactions ensuite. */
   async function reload() {
     await overview.refresh()
     await transactions.refresh()
   }
 
-  return { overview, subscription, tier, dailyLimit, used, remaining, usedPercent, transactions, rows, pager, reload }
+  /** Bouton « Actualiser » : relit tout et montre l'état de chargement. */
+  async function reloadAll() {
+    await overview.reload()
+    await transactions.reload()
+  }
+
+  /**
+   * Actualisation automatique : le solde du jour se relit à chaque tour, mais l'historique complet
+   * (jusqu'à plusieurs milliers de lignes, donc plusieurs requêtes) seulement si la consommation a bougé.
+   */
+  async function refreshLive() {
+    const before = used.value
+
+    await overview.refresh()
+    if (used.value !== before)
+      await transactions.refresh()
+  }
+
+  return { overview, subscription, tier, dailyLimit, used, remaining, usedPercent, transactions, rows, pager, truncated, reload, reloadAll, refreshLive }
 }

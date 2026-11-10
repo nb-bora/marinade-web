@@ -22,23 +22,36 @@ const amount = ref<number | null>(null)
 const description = ref('')
 const posId = ref('')
 
-/** Une clé par ouverture : si la réponse se perd, renvoyer le formulaire ne débite pas deux fois. */
+/**
+ * Une clé par saisie : si la réponse se perd, renvoyer le même formulaire ne débite pas deux fois.
+ * Dès qu'un champ change, c'est un autre achat : la clé change aussi (sinon, après un refus, corriger
+ * le montant rejouerait l'ancienne clé).
+ */
 let idempotencyKey = crypto.randomUUID()
+
+watch([amount, description, posId], () => {
+  idempotencyKey = crypto.randomUUID()
+})
 
 watch(open, isOpen => {
   if (isOpen) {
-    idempotencyKey = crypto.randomUUID()
     amount.value = null
     description.value = ''
     posId.value = ''
+    idempotencyKey = crypto.randomUUID()
   }
 })
+
+/** Le plafond restant en une touche : le cas courant est de vider le solde du jour. */
+const useAll = () => {
+  amount.value = props.remaining
+}
 
 const { submit, pending, error } = useSubmit(async () => {
   await subscriptionApi.record({
     subscription_id: props.subscription.id,
     restaurant_id: props.subscription.restaurant_id,
-    amount_fcfa: Math.round(Number(amount.value)),
+    amount_fcfa: Number(amount.value),
     description: description.value.trim() || null,
     pos_transaction_id: posId.value.trim() || null,
     idempotency_key: idempotencyKey,
@@ -56,6 +69,10 @@ const amountRule = (value: number | null) => {
 
   if (!(number > 0))
     return 'Indiquez un montant supérieur à 0.'
+
+  // Le FCFA n'a pas de centimes : le back attend un entier, on ne l'arrondit pas en silence.
+  if (!Number.isInteger(number))
+    return 'Indiquez un montant entier, sans décimales.'
 
   return props.remaining === null || number <= props.remaining ? true : `Au plus ${formatMoney(props.remaining)} aujourd'hui.`
 }
@@ -78,10 +95,24 @@ const amountRule = (value: number | null) => {
       prepend-inner-icon="ri-money-dollar-circle-line"
       type="number"
       min="1"
+      step="1"
       suffix="FCFA"
       :rules="[amountRule]"
       class="mb-3"
-    />
+    >
+      <template
+        v-if="remaining"
+        #append-inner
+      >
+        <VBtn
+          size="small"
+          variant="tonal"
+          @click="useAll"
+        >
+          Tout le solde
+        </VBtn>
+      </template>
+    </VTextField>
     <VTextField
       v-model="description"
       label="Description (facultatif)"

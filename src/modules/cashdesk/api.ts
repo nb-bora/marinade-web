@@ -6,6 +6,7 @@ import type {
   Shift,
   ShiftCloseRequest,
   ShiftOpenRequest,
+  ShiftSummary,
   SplitPaymentRequest,
   Table,
 } from './types'
@@ -44,6 +45,24 @@ export class CashDeskApi {
 
   closeShift(restaurantId: string, body: ShiftCloseRequest) {
     return this.http.post<Shift>(`${this.ros(restaurantId)}/shifts/close`, body)
+  }
+
+  /** Mon shift ouvert dans le restaurant courant (en-tête `X-Tenant-ID`) ; `null` s'il n'y en a pas. */
+  async currentShift(signal?: AbortSignal): Promise<Shift | null> {
+    try {
+      return await this.http.get<Shift>('/v1/ros/shifts/current', { signal })
+    }
+    catch (cause) {
+      if (isApiError(cause) && cause.kind === 'not_found')
+        return null
+
+      throw cause
+    }
+  }
+
+  /** Bilan d'un shift : encaissements par moyen de paiement et espèces attendues dans le tiroir. */
+  shiftSummary(shiftId: string, signal?: AbortSignal) {
+    return this.http.get<ShiftSummary>(`/v1/ros/shifts/${shiftId}/summary`, { signal })
   }
 
   // Sessions et additions -----------------------------------------------------------------

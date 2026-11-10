@@ -1,24 +1,30 @@
-<!-- Fiche d'un plat, en tiroir latéral. -->
+<!-- Fiche d'un plat, en tiroir latéral : prix, état, poste, préparation, accompagnements et actions. -->
 <script setup lang="ts">
-import { onKeyStroke } from '@vueuse/core'
 import { catalogApi } from '../api'
+import { useProductDetail } from '../composables/useProductDetail'
+import { stationLabel } from '../products'
 import type { Plat } from '../types'
-import ProductAvatar from './ProductAvatar.vue'
+import ProductDrawerShell from './ProductDrawerShell.vue'
+import ProductHero from './ProductHero.vue'
 import { formatDateTime } from '@/lib/format'
 
 defineProps<{
   canWrite: boolean
   categoryName: string | null
+
+  /** Une bascule de disponibilité est en cours. */
+  busy: boolean
 }>()
 
-const emit = defineEmits<{ edit: [plat: Plat] }>()
+const emit = defineEmits<{
+  edit: [plat: Plat]
+  toggle: [plat: Plat]
+}>()
 
 /** Identifiant du plat affiché ; `null` ferme le tiroir. */
 const platId = defineModel<string | null>({ required: true })
 
-const detail = ref<Plat | null>(null)
-const loading = ref(false)
-const error = ref<unknown>(null)
+const { detail, loading, error, retry, reload } = useProductDetail(platId, (id, signal) => catalogApi.plat(id, signal))
 
 const isOpen = computed({
   get: () => platId.value !== null,
@@ -28,170 +34,166 @@ const isOpen = computed({
   },
 })
 
-let controller: AbortController | null = null
-
-onKeyStroke('Escape', () => {
-  if (isOpen.value)
-    isOpen.value = false
-})
-
-async function load(id: string) {
-  controller?.abort()
-
-  const current = new AbortController()
-
-  controller = current
-  loading.value = true
-  error.value = null
-
-  try {
-    const result = await catalogApi.plat(id, current.signal)
-
-    if (!current.signal.aborted)
-      detail.value = result
-  }
-  catch (cause) {
-    if (!current.signal.aborted)
-      error.value = cause
-  }
-  finally {
-    if (!current.signal.aborted)
-      loading.value = false
-  }
-}
-
-watch(platId, id => {
-  detail.value = null
-  if (id)
-    load(id)
-}, { immediate: true })
-
-onScopeDispose(() => controller?.abort())
-
 /** Recharge la fiche après une modification faite depuis la page. */
-defineExpose({ reload: () => platId.value && load(platId.value) })
+defineExpose({ reload })
 </script>
 
 <template>
-  <VNavigationDrawer
+  <ProductDrawerShell
     v-model="isOpen"
-    location="end"
-    temporary
-    width="440"
-    aria-label="Fiche du plat"
+    title="Fiche du plat"
+    :loading="loading"
+    :error="error"
+    :ready="detail !== null"
+    @retry="retry"
   >
-    <div class="d-flex align-center justify-space-between pa-4 pb-2">
-      <h2 class="text-h6">
-        Fiche du plat
-      </h2>
-      <IconBtn
-        aria-label="Fermer"
-        @click="isOpen = false"
+    <template v-if="detail">
+      <ProductHero
+        :name="detail.nom"
+        :price="detail.prix"
+        :currency="detail.devise"
+        :photo-url="detail.photo_url"
+        icon="ri-restaurant-2-line"
+        :muted="!detail.disponible"
       >
-        <VIcon icon="ri-close-line" />
-      </IconBtn>
-    </div>
+        <AppStatusChip
+          :label="detail.disponible ? 'Disponible' : 'Indisponible'"
+          :tone="detail.disponible ? 'success' : 'neutral'"
+          :icon="detail.disponible ? 'ri-checkbox-circle-line' : 'ri-pause-circle-line'"
+        />
+        <AppStatusChip
+          v-if="categoryName"
+          :label="categoryName"
+          tone="info"
+          icon="ri-price-tag-3-line"
+        />
+      </ProductHero>
 
-    <div class="px-4 pb-6">
-      <AppErrorState
-        v-if="error"
-        :error="error"
-        @retry="platId && load(platId)"
-      />
-
-      <VSkeletonLoader
-        v-else-if="loading && !detail"
-        type="heading, list-item-two-line, list-item-two-line, list-item-two-line"
-      />
-
-      <template v-else-if="detail">
-        <div class="d-flex align-center gap-4 mb-4">
-          <ProductAvatar
-            :photo-url="detail.photo_url"
-            icon="ri-restaurant-2-line"
-            :size="72"
-          />
-          <div class="min-w-0">
-            <div class="text-h6 text-wrap">
-              {{ detail.nom }}
-            </div>
-            <div class="text-h5 font-weight-semibold text-primary mt-1">
-              <AppMoney
-                :amount="detail.prix"
-                :currency="detail.devise"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 mb-4">
-          <AppStatusChip
-            :label="detail.disponible ? 'Disponible' : 'Indisponible'"
-            :tone="detail.disponible ? 'success' : 'neutral'"
-            :icon="detail.disponible ? 'ri-checkbox-circle-line' : 'ri-pause-circle-line'"
-          />
-          <AppStatusChip
-            v-if="categoryName"
-            :label="categoryName"
-            tone="info"
-            icon="ri-price-tag-3-line"
-          />
-        </div>
-
+      <div class="pa-5">
         <p
-          v-if="detail.description"
-          class="text-body-1 mb-4"
+          class="text-body-1 mb-5"
+          :class="{ 'text-medium-emphasis font-italic': !detail.description }"
         >
-          {{ detail.description }}
+          {{ detail.description || 'Aucune description.' }}
         </p>
 
-        <VList
-          density="compact"
-          class="pa-0 bg-transparent"
-        >
-          <VListItem class="px-0">
-            <VListItemSubtitle>Temps de préparation</VListItemSubtitle>
-            <VListItemTitle>
-              {{ detail.temps_preparation != null ? `${detail.temps_preparation} min` : 'Non renseigné' }}
-            </VListItemTitle>
-          </VListItem>
-          <VListItem class="px-0">
-            <VListItemSubtitle>Ajouté le</VListItemSubtitle>
-            <VListItemTitle>{{ formatDateTime(detail.created_at) }}</VListItemTitle>
-          </VListItem>
-          <VListItem class="px-0">
-            <VListItemSubtitle>Dernière modification</VListItemSubtitle>
-            <VListItemTitle>{{ formatDateTime(detail.updated_at) }}</VListItemTitle>
-          </VListItem>
-        </VList>
+        <dl class="facts">
+          <div class="facts__item">
+            <dt>
+              <VIcon
+                icon="ri-timer-line"
+                size="14"
+              />
+              Préparation
+            </dt>
+            <dd class="tabular-nums">
+              {{ detail.temps_preparation != null ? `${detail.temps_preparation} min` : 'Non renseignée' }}
+            </dd>
+          </div>
+          <div class="facts__item">
+            <dt>
+              <VIcon
+                icon="ri-store-2-line"
+                size="14"
+              />
+              Poste
+            </dt>
+            <dd>{{ stationLabel(detail.station) ?? 'Non défini' }}</dd>
+          </div>
+        </dl>
 
         <template v-if="detail.composants.length">
-          <h3 class="text-subtitle-1 font-weight-medium mt-5 mb-2">
+          <h3 class="text-subtitle-2 font-weight-semibold mt-6 mb-2">
             Accompagnements proposés
           </h3>
-          <div class="d-flex flex-wrap gap-2">
-            <VChip
+          <ul class="chips">
+            <li
               v-for="composant in detail.composants"
               :key="composant.id"
-              size="small"
-              label
-              variant="tonal"
+              class="chips__item"
             >
               {{ composant.nom }}
-            </VChip>
-          </div>
+            </li>
+          </ul>
         </template>
 
-        <VBtn
+        <div class="text-caption text-medium-emphasis mt-6">
+          <div>Ajouté le {{ formatDateTime(detail.created_at) }}</div>
+          <div>Modifié le {{ formatDateTime(detail.updated_at) }}</div>
+        </div>
+
+        <div
           v-if="canWrite"
-          block
-          class="mt-6"
-          prepend-icon="ri-pencil-line"
-          @click="emit('edit', detail)"
+          class="d-flex flex-column gap-2 mt-6"
         >
-          Modifier ce plat
-        </VBtn>
-      </template>
-    </div>
-  </VNavigationDrawer>
+          <VBtn
+            block
+            prepend-icon="ri-pencil-line"
+            @click="emit('edit', detail)"
+          >
+            Modifier ce plat
+          </VBtn>
+          <VBtn
+            block
+            variant="tonal"
+            :color="detail.disponible ? 'secondary' : 'success'"
+            :prepend-icon="detail.disponible ? 'ri-pause-circle-line' : 'ri-play-circle-line'"
+            :loading="busy"
+            :disabled="busy"
+            @click="emit('toggle', detail)"
+          >
+            {{ detail.disponible ? 'Marquer indisponible' : 'Remettre en vente' }}
+          </VBtn>
+        </div>
+      </div>
+    </template>
+  </ProductDrawerShell>
 </template>
+
+<style scoped>
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.facts__item {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.facts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips__item {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+</style>

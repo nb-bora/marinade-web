@@ -3,6 +3,7 @@ import { cashDeskApi } from '../api'
 import BillSummary from '../components/BillSummary.vue'
 import ReceiptDialog from '../components/ReceiptDialog.vue'
 import { useOrderedLines } from '../composables/useOrderedLines'
+import { INVOICE_STATUS, isPayable, present } from '../labels'
 import { toNumber } from '../money'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { formatDateTime, formatMoney } from '@/lib/format'
@@ -25,6 +26,10 @@ const { lines } = useOrderedLines(sessionId)
 
 const due = computed(() => invoice.value ? toNumber(invoice.value.amount_due) : 0)
 
+// Une facture annulée ou remboursée n'est plus à encaisser, même s'il lui reste un « reste dû ».
+const payable = computed(() => invoice.value !== null && isPayable(invoice.value))
+const voided = computed(() => invoice.value !== null && ['CANCELLED', 'REFUNDED'].includes(invoice.value.status))
+
 const paidShare = computed(() => {
   const total = invoice.value ? toNumber(invoice.value.total_amount) : 0
 
@@ -40,10 +45,17 @@ const hash = computed(() => invoice.value?.fiscal_hash ?? null)
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Facture"
       :title="invoice ? `Facture ${invoice.invoice_number}` : 'Facture'"
       :subtitle="invoice ? `Émise le ${formatDateTime(invoice.created_at)}` : undefined"
     >
+      <template
+        v-if="invoice"
+        #eyebrow-extra
+      >
+        <AppStatusChip v-bind="present(INVOICE_STATUS, invoice.status)" />
+      </template>
       <template #actions>
         <VBtn
           variant="text"
@@ -53,7 +65,7 @@ const hash = computed(() => invoice.value?.fiscal_hash ?? null)
           Caisse
         </VBtn>
         <VBtn
-          v-if="invoice && invoice.session_id && due > 0"
+          v-if="invoice && invoice.session_id && payable"
           color="primary"
           prepend-icon="ri-hand-coin-line"
           :to="`/caisse/sessions/${invoice.session_id}`"
@@ -70,20 +82,25 @@ const hash = computed(() => invoice.value?.fiscal_hash ?? null)
           Imprimer
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="error && !invoice"
+      class="mt-5"
       :error="error"
       @retry="reload"
     />
 
     <VSkeletonLoader
       v-else-if="loading && !invoice"
+      class="mt-5"
       type="card, card"
     />
 
-    <VRow v-else-if="invoice">
+    <VRow
+      v-else-if="invoice"
+      class="mt-2"
+    >
       <VCol
         cols="12"
         lg="7"
@@ -117,14 +134,29 @@ const hash = computed(() => invoice.value?.fiscal_hash ?? null)
               rounded
               :aria-label="`Payé à ${paidShare} %`"
             />
-            <div class="d-flex justify-space-between align-end mt-3">
+            <div
+              v-if="!voided"
+              class="d-flex justify-space-between align-end mt-3"
+            >
               <span class="text-body-1 text-medium-emphasis">Reste dû</span>
               <span
                 class="text-h5 font-weight-bold tabular-nums"
                 :class="due > 0 ? 'text-primary' : 'text-success'"
               >{{ formatMoney(invoice.amount_due, currency) }}</span>
             </div>
-            <p class="text-body-2 text-medium-emphasis mt-4 mb-0">
+            <VAlert
+              v-else
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-3"
+            >
+              Cette facture est {{ invoice.status === 'REFUNDED' ? 'remboursée' : 'annulée' }} : plus rien n'est à encaisser.
+            </VAlert>
+            <p
+              v-if="!voided"
+              class="text-body-2 text-medium-emphasis mt-4 mb-0"
+            >
               {{ paidShare }} % de l'addition est réglé.
             </p>
             <template v-if="hash">

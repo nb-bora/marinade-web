@@ -1,8 +1,10 @@
 <!-- Création et modification d'une boisson. -->
 <script setup lang="ts">
 import { catalogApi } from '../api'
+import { normalize, stationItems } from '../products'
 import type { Boisson } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
+import { formatMoney } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
 
@@ -28,18 +30,34 @@ const disponible = ref(true)
 const station = ref<'KITCHEN' | 'BAR' | 'DESSERT'>('BAR')
 
 /** Où la boisson est servie ou préparée : son ticket s'affiche sur l'écran de ce poste. */
-const stationItems = [
-  { value: 'BAR', title: 'Bar' },
-  { value: 'KITCHEN', title: 'Cuisine' },
-  { value: 'DESSERT', title: 'Desserts' },
-] as const
+const stations = stationItems('BAR')
 
 const isEdit = computed(() => props.boisson !== null)
+
+// La devise d'une boisson existante n'est pas modifiable ici : on l'affiche telle qu'elle est enregistrée.
+const currency = computed(() => props.boisson?.devise ?? 'XAF')
+const priceLabel = computed(() => `Prix (${currency.value === 'XAF' ? 'FCFA' : currency.value})`)
+
+/** Le prix tel qu'il sera affiché aux clients : « 500 » devient « 500 FCFA ». */
+const pricePreview = computed(() => Number(prix.value) > 0 ? formatMoney(prix.value, currency.value) : undefined)
+
+/**
+ * « jus » et « Jus » désignent la même catégorie : si elle existe déjà à la casse et aux accents
+ * près, on reprend son écriture plutôt que d'en créer une seconde (le filtre de la page les séparerait).
+ */
+function canonicalCategory(value: string | null | undefined) {
+  const text = value?.trim()
+
+  if (!text)
+    return null
+
+  return props.suggestions.find(item => normalize(item) === normalize(text)) ?? text
+}
 
 const { submit, pending, message, apiError, reset } = useSubmit(async () => {
   const body = {
     nom: nom.value.trim(),
-    category: category.value?.trim() || null,
+    category: canonicalCategory(category.value),
     prix: Number(prix.value),
     description: description.value.trim() || null,
     alcool: alcool.value,
@@ -108,11 +126,14 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
       >
         <VTextField
           v-model="prix"
-          label="Prix (FCFA)"
+          :label="priceLabel"
           prepend-inner-icon="ri-money-dollar-circle-line"
           type="number"
           min="0"
           step="any"
+          inputmode="decimal"
+          :hint="pricePreview"
+          :persistent-hint="!!pricePreview"
           :rules="prixRules"
           :error-messages="apiError?.fieldMessage('prix')"
         />
@@ -147,7 +168,7 @@ const categoryRules = [(value: string | null) => !value || value.length <= 50 ||
       >
         <VSelect
           v-model="station"
-          :items="stationItems"
+          :items="stations"
           label="Poste de production"
           prepend-inner-icon="ri-goblet-line"
           hint="Le ticket part sur l'écran de ce poste."

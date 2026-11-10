@@ -43,6 +43,15 @@ export const INVOICE_STATUS: Record<InvoiceStatus, Presentation> = {
   REFUNDED: { label: 'Remboursée', tone: 'info', icon: 'ri-refund-2-line' },
 }
 
+/**
+ * Une facture annulée ou remboursée n'est plus à encaisser, même s'il lui reste un « reste dû » :
+ * le back ne contrôle pas ce statut au paiement, c'est donc à la caisse de ne pas le proposer.
+ */
+const CLOSED_INVOICE: readonly string[] = ['CANCELLED', 'REFUNDED']
+
+export const isPayable = (invoice: { status: string; amount_due: number | string }) =>
+  !CLOSED_INVOICE.includes(invoice.status) && Number(invoice.amount_due) > 0
+
 export const SESSION_STATUS: Record<SessionStatus, Presentation> = {
   OPEN: { label: 'Ouverte', tone: 'info', icon: 'ri-door-open-line' },
   ACTIVE: { label: 'En cours', tone: 'warning', icon: 'ri-restaurant-line' },

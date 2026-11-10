@@ -17,6 +17,10 @@ const billing = ref<Billing>('monthly')
 const sorted = computed(() => [...props.tiers].sort((a, b) => a.daily_limit_fcfa - b.daily_limit_fcfa))
 const current = computed(() => props.tiers.find(tier => tier.id === props.currentId) ?? null)
 
+/** Plafond de l'offre rapporté à la plus généreuse : une barre dit la différence plus vite qu'un chiffre. */
+const maxLimit = computed(() => Math.max(1, ...props.tiers.map(tier => tier.daily_limit_fcfa)))
+const limitPercent = (tier: Tier) => Math.max(4, Math.round((tier.daily_limit_fcfa / maxLimit.value) * 100))
+
 const price = (tier: Tier) => (billing.value === 'monthly' ? tier.monthly_price_fcfa : tier.annual_price_fcfa)
 
 /** Écart de plafond avec l'offre actuelle, pour situer chaque offre d'un coup d'œil. */
@@ -66,6 +70,7 @@ function compared(tier: Tier): string | null {
           :class="{ 'plan-card--current': tier.id === currentId }"
           variant="flat"
           border
+          :aria-current="tier.id === currentId ? 'true' : undefined"
         >
           <VCardText class="d-flex flex-column h-100">
             <div class="d-flex align-center justify-space-between gap-2 mb-4">
@@ -93,6 +98,14 @@ function compared(tier: Tier): string | null {
               <template v-else-if="billing === 'annual'">
                 Soit {{ formatMoney(Math.round(tier.annual_price_fcfa / 12)) }} par mois
               </template>
+            </div>
+
+            <div
+              class="plan-card__limit mt-4"
+              role="img"
+              :aria-label="`Plafond de ${formatMoney(tier.daily_limit_fcfa)} par jour`"
+            >
+              <span :style="{ inlineSize: `${limitPercent(tier)}%` }" />
             </div>
 
             <VDivider class="my-4" />
@@ -135,9 +148,42 @@ function compared(tier: Tier): string | null {
 </template>
 
 <style scoped>
+.plan-card {
+  border-radius: 18px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-card:hover {
+  border-color: rgba(var(--v-theme-primary), 0.45) !important;
+  box-shadow: 0 12px 28px -16px rgba(var(--v-theme-primary), 0.5) !important;
+}
+
 .plan-card--current {
   border-color: rgb(var(--v-theme-primary)) !important;
   border-width: 2px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--v-theme-primary), 0.14), transparent 55%),
+    rgb(var(--v-theme-surface)) !important;
+}
+
+.plan-card__limit {
+  overflow: hidden;
+  block-size: 6px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-on-surface), 0.1);
+}
+
+.plan-card__limit > span {
+  display: block;
+  block-size: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(var(--v-theme-primary)), #f08a3c);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-card {
+    transition: none;
+  }
 }
 
 .plan-card__note {

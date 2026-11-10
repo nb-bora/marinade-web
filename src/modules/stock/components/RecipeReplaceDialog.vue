@@ -1,7 +1,7 @@
 <!-- Réécrit toute la fiche technique d'un plat en une seule fois. -->
 <script setup lang="ts">
 import { stockApi } from '../api'
-import { UNITS, parseQty, positiveQty, required } from '../labels'
+import { UNITS, compatibleUnits, parseQty, positiveQty, required, toInput } from '../labels'
 import type { Composant, Plat, PlatComposant } from '../types'
 import { useConfirm } from '@/composables/useConfirm'
 import { useSubmit } from '@/composables/useSubmit'
@@ -34,6 +34,13 @@ const options = computed(() => props.composants
 
 function blank(): Draft {
   return { key: counter++, composantId: null, quantity: '1', unit: 'portion' }
+}
+
+/** Les unités qui se convertissent en unité de stock du composant choisi ; la liste habituelle sinon. */
+function unitItems(draft: Draft) {
+  const composant = props.composants.find(item => item.id === draft.composantId)
+
+  return composant ? compatibleUnits(composant.stock_unite) : UNITS
 }
 
 function pick(draft: Draft, id: string | null) {
@@ -78,7 +85,7 @@ watch(open, isOpen => {
   drafts.value = props.lines.map(line => ({
     key: counter++,
     composantId: line.composant_id,
-    quantity: String(Number(line.quantite)).replace('.', ','),
+    quantity: toInput(line.quantite),
     unit: line.unite,
   }))
   save.reset()
@@ -123,7 +130,7 @@ watch(open, isOpen => {
       />
       <VCombobox
         v-model="draft.unit"
-        :items="UNITS"
+        :items="unitItems(draft)"
         label="Unité"
         prepend-inner-icon="ri-scales-line"
         :rules="[required('Unité ?')]"

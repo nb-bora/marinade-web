@@ -8,6 +8,9 @@ defineProps<{
   loading?: boolean
   error?: string
 
+  /** Additions encore à encaisser : on prévient avant de fermer la caisse. */
+  pendingCount?: number
+
   /** Shift que l'on vient de fermer : affiche le résultat de l'audit. */
   result: Shift | null
 }>()
@@ -49,6 +52,8 @@ const variance = (shift: Shift) => toNumber(shift.variance)
     subtitle="Comptez le fond de caisse avant de commencer à encaisser."
     icon="ri-lock-unlock-line"
     submit-label="Ouvrir la caisse"
+    confirm-title="Ouvrir la caisse ?"
+    :confirm-text="`Le shift s'ouvre avec un fond de caisse de ${formatMoney(parseAmount(opening))}.`"
     :loading="loading"
     :error="error"
     @submit="emit('open', parseAmount(opening))"
@@ -82,10 +87,23 @@ const variance = (shift: Shift) => toNumber(shift.variance)
     subtitle="Comptez toutes les espèces du tiroir. Le système calcule l'écart avec ce qui est attendu."
     icon="ri-lock-line"
     submit-label="Fermer la caisse"
+    confirm-title="Fermer la caisse ?"
+    :confirm-text="`Vous déclarez ${formatMoney(parseAmount(counted))} dans le tiroir. Le shift est clôturé et l'écart est enregistré dans le journal d'audit : cette action est définitive.`"
     :loading="loading"
     :error="error"
     @submit="emit('close', parseAmount(counted))"
   >
+    <VAlert
+      v-if="pendingCount"
+      type="warning"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      icon="ri-error-warning-line"
+    >
+      {{ pendingCount }} addition{{ pendingCount > 1 ? 's restent' : ' reste' }} à encaisser. Les paiements encaissés après la fermeture
+      ne seront plus comptés dans l'écart de ce shift.
+    </VAlert>
     <VTextField
       v-model="counted"
       label="Montant compté dans le tiroir (FCFA)"

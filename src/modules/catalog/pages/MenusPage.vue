@@ -210,7 +210,10 @@ const afterChange = () => {
       </VCol>
     </VRow>
 
-    <VCard v-else-if="menus.length === 0">
+    <VCard
+      v-else-if="menus.length === 0"
+      class="mt-5 rounded"
+    >
       <div class="d-flex flex-column align-center text-center pa-8 pa-md-12 gap-2">
         <MenusIllustration />
         <h2 class="text-h5 mt-2">
@@ -289,17 +292,30 @@ const afterChange = () => {
       </AppMetricGrid>
 
       <div class="menus-toolbar mb-6">
-        <AppSegmented
-          v-model="status"
-          :options="statusOptions"
-          label="Filtrer les menus par statut"
-        />
+        <div class="menus-toolbar__filters">
+          <AppSegmented
+            v-model="status"
+            :options="statusOptions"
+            label="Filtrer les menus par statut"
+          />
+          <span
+            v-if="hasFilters"
+            class="text-body-2 text-medium-emphasis"
+            aria-live="polite"
+          >
+            {{ filtered.length }} résultat{{ filtered.length > 1 ? 's' : '' }}
+          </span>
+        </div>
         <VTextField
           v-model="search"
           class="menus-toolbar__search"
           label="Rechercher un menu"
+          placeholder="Nom ou description"
           prepend-inner-icon="ri-search-line"
           density="compact"
+          variant="solo-filled"
+          flat
+          rounded="lg"
           hide-details
           clearable
           autocomplete="off"
@@ -334,7 +350,7 @@ const afterChange = () => {
         >
           <MenuCard
             :menu="menu"
-            :category-count="categoriesOf(menu.id).length"
+            :categories="categoriesOf(menu.id)"
             :plat-count="platsOf(menu)"
             :can-write="canWrite"
             :busy="toggling !== null"
@@ -389,8 +405,15 @@ const afterChange = () => {
   gap: 12px 16px;
 }
 
+.menus-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
 .menus-toolbar__search {
-  flex: 0 1 320px;
+  flex: 0 1 340px;
   min-inline-size: 220px;
 }
 

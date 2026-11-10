@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DailyBalance } from '../types'
 import { useChartTheme } from '@/composables/useChartTheme'
-import { formatMoney } from '@/lib/format'
+import { addDays, formatMoney, startOfDay } from '@/lib/format'
 
 const props = defineProps<{
   balances: DailyBalance[]
@@ -12,10 +12,25 @@ const DAYS = 30
 const theme = useChartTheme()
 const dayLabel = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
-const recent = computed(() => props.balances.slice(-DAYS))
+/**
+ * Les soldes des 30 derniers JOURS (aujourd'hui compris), pas les 30 derniers soldes : un jour sans
+ * solde ouvert ne doit pas faire remonter l'historique plus loin que ce que le titre annonce.
+ */
+const recent = computed(() => {
+  const since = addDays(startOfDay(), -(DAYS - 1)).toLocaleDateString('sv-SE')
+
+  return props.balances.filter(balance => balance.balance_date >= since)
+})
 
 const total = computed(() => recent.value.reduce((sum, balance) => sum + balance.used_balance_fcfa, 0))
 const average = computed(() => (recent.value.length ? Math.round(total.value / recent.value.length) : 0))
+
+/** Part du plafond cumulé des jours ouverts qui a été consommée. */
+const usageRate = computed(() => {
+  const ceiling = recent.value.reduce((sum, balance) => sum + balance.initial_balance_fcfa, 0)
+
+  return ceiling > 0 ? Math.round((total.value / ceiling) * 100) : 0
+})
 
 const peak = computed(() => recent.value.reduce<DailyBalance | null>(
   (top, balance) => (!top || balance.used_balance_fcfa > top.used_balance_fcfa ? balance : top),
@@ -59,7 +74,7 @@ const options = computed(() => {
 </script>
 
 <template>
-  <VCard>
+  <VCard class="history-card">
     <VCardItem>
       <VCardTitle>Consommation des 30 derniers jours</VCardTitle>
       <VCardSubtitle>Ce qui a été consommé chaque jour, face au plafond</VCardSubtitle>
@@ -81,21 +96,65 @@ const options = computed(() => {
           :series="series"
         />
 
-        <div class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mt-2">
-          <div class="d-flex align-center gap-3">
-            <span class="text-h5 font-weight-semibold tabular-nums">{{ formatMoney(average) }}</span>
-            <span class="text-body-2 text-medium-emphasis">consommés en moyenne par jour</span>
+        <dl class="history-stats mt-3">
+          <div class="history-stat">
+            <dt>Moyenne par jour</dt>
+            <dd class="tabular-nums">
+              {{ formatMoney(average) }}
+            </dd>
           </div>
-          <VSpacer />
-          <span
+          <div class="history-stat">
+            <dt>Total consommé</dt>
+            <dd class="tabular-nums">
+              {{ formatMoney(total) }}
+              <span class="text-body-2 text-medium-emphasis font-weight-regular">· {{ usageRate }} % du plafond</span>
+            </dd>
+          </div>
+          <div
             v-if="peak && peak.used_balance_fcfa > 0"
-            class="text-body-2"
+            class="history-stat"
           >
-            Pic : <strong class="text-primary">{{ dayLabel.format(new Date(`${peak.balance_date}T00:00:00`)) }}</strong>
-            ({{ formatMoney(peak.used_balance_fcfa) }})
-          </span>
-        </div>
+            <dt>Pic de consommation</dt>
+            <dd class="tabular-nums">
+              {{ formatMoney(peak.used_balance_fcfa) }}
+              <span class="text-body-2 text-medium-emphasis font-weight-regular">· {{ dayLabel.format(new Date(`${peak.balance_date}T00:00:00`)) }}</span>
+            </dd>
+          </div>
+        </dl>
       </template>
     </VCardText>
   </VCard>
 </template>
+
+<style scoped>
+.history-card {
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.history-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin: 0;
+}
+
+.history-stat {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.history-stat dt {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.8125rem;
+}
+
+.history-stat dd {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+</style>

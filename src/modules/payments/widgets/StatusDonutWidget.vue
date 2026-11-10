@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePaymentInsights } from '../composables/usePaymentInsights'
 import { presentStatus } from '../statuses'
+import { hexToRgb } from '@layouts/utils'
 import { useChartTheme } from '@/composables/useChartTheme'
 
 const { week, loading } = usePaymentInsights()
@@ -8,16 +9,29 @@ const theme = useChartTheme()
 
 const TONE_COLOR = { success: 'success', error: 'error', warning: 'warning', info: 'info', neutral: 'secondary' } as const
 
-const slices = computed(() =>
-  Object.entries(week.value?.by_status ?? {})
+/**
+ * Plusieurs statuts partagent la même teinte (échoué / délai dépassé en rouge, en attente / annulé /
+ * à vérifier en orange) : sans autre repère, deux parts voisines se confondent. Dans une même teinte,
+ * la plus grosse part garde la couleur pleine et les suivantes s'éclaircissent.
+ */
+const SHADES = [1, 0.62, 0.4]
+
+const slices = computed(() => {
+  const used = new Map<string, number>()
+
+  return Object.entries(week.value?.by_status ?? {})
     .filter(([, total]) => total.count > 0)
     .sort(([, a], [, b]) => b.count - a.count)
     .map(([status, total]) => {
       const view = presentStatus(status)
+      const color = TONE_COLOR[view.tone]
+      const rank = used.get(color) ?? 0
 
-      return { status, label: view.label, count: total.count, color: TONE_COLOR[view.tone] }
-    }),
-)
+      used.set(color, rank + 1)
+
+      return { status, label: view.label, count: total.count, color, shade: SHADES[Math.min(rank, SHADES.length - 1)] }
+    })
+})
 
 const total = computed(() => week.value?.transactions ?? 0)
 
@@ -27,7 +41,11 @@ const options = computed(() => {
   return {
     chart: { type: 'donut', fontFamily: t.fontFamily },
     labels: slices.value.map(slice => slice.label),
-    colors: slices.value.map(slice => t[slice.color]),
+    colors: slices.value.map(slice => {
+      const rgb = hexToRgb(t[slice.color])
+
+      return rgb && slice.shade < 1 ? `rgba(${rgb},${slice.shade})` : t[slice.color]
+    }),
     stroke: { width: 3, colors: [t.surface] },
     dataLabels: { enabled: false },
     legend: { show: false },
@@ -84,10 +102,9 @@ const options = computed(() => {
             :key="slice.status"
             class="d-flex align-center gap-2"
           >
-            <VBadge
-              dot
-              inline
-              :color="slice.color"
+            <span
+              class="legend__dot"
+              :style="{ background: `rgba(var(--v-theme-${slice.color}), ${slice.shade})` }"
             />
             <span class="text-body-2">{{ slice.label }}</span>
             <VSpacer />
@@ -106,5 +123,12 @@ const options = computed(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 0;
   list-style: none;
+}
+
+.legend__dot {
+  flex: none;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
 }
 </style>

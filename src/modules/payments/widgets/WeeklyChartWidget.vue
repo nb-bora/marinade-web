@@ -3,15 +3,18 @@ import { usePaymentInsights } from '../composables/usePaymentInsights'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { formatMoney } from '@/lib/format'
 
-const { days, loading } = usePaymentInsights()
+const { days, currency, loading } = usePaymentInsights()
 const theme = useChartTheme()
 
 const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' })
 const longDay = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
 
-const best = computed(() =>
-  days.value.reduce<typeof days.value[number] | null>((top, day) => (!top || day.collected > top.collected ? day : top), null),
-)
+// Aucun « meilleur jour » tant qu'aucun jour n'a encaissé : sinon le premier jour vide serait mis en avant.
+const best = computed(() => {
+  const top = days.value.reduce<typeof days.value[number] | null>((leader, day) => (!leader || day.collected > leader.collected ? day : leader), null)
+
+  return top && top.collected > 0 ? top : null
+})
 
 const total = computed(() => days.value.reduce((sum, day) => sum + day.collected, 0))
 const average = computed(() => days.value.length ? Math.round(total.value / days.value.length) : 0)
@@ -43,7 +46,7 @@ const options = computed(() => {
         formatter: (value: number) => (value >= 1000 ? `${Math.round(value / 1000)} k` : String(value)),
       },
     },
-    tooltip: { theme: t.mode, y: { formatter: (value: number) => formatMoney(value) } },
+    tooltip: { theme: t.mode, y: { formatter: (value: number) => formatMoney(value, currency.value) } },
     states: { hover: { filter: { type: 'darken', value: 0.9 } } },
   }
 })
@@ -75,16 +78,16 @@ const options = computed(() => {
         class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mt-2"
       >
         <div class="d-flex align-center gap-3">
-          <span class="text-h4 font-weight-semibold tabular-nums">{{ formatMoney(average) }}</span>
+          <span class="text-h4 font-weight-semibold tabular-nums">{{ formatMoney(average, currency) }}</span>
           <span class="text-body-2 text-medium-emphasis">en moyenne par jour</span>
         </div>
         <VSpacer />
         <span
-          v-if="best && best.collected > 0"
+          v-if="best"
           class="text-body-2"
         >
           Meilleur jour : <strong class="text-primary">{{ longDay.format(best.date) }}</strong>
-          ({{ formatMoney(best.collected) }})
+          ({{ formatMoney(best.collected, currency) }})
         </span>
       </div>
     </VCardText>

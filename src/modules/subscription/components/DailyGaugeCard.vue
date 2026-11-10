@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { gaugeColor } from '../labels'
+import { gaugeColor, gaugeMessage } from '../labels'
 import { formatMoney } from '@/lib/format'
 
 const props = defineProps<{
@@ -15,10 +15,11 @@ const props = defineProps<{
 }>()
 
 const color = computed(() => gaugeColor(props.percent))
+const message = computed(() => gaugeMessage(props.percent, props.remaining))
 </script>
 
 <template>
-  <VCard class="h-100">
+  <VCard class="gauge-card h-100">
     <VCardItem>
       <VCardTitle>Solde du jour</VCardTitle>
       <VCardSubtitle>Ce qu'il reste à consommer aujourd'hui</VCardSubtitle>
@@ -58,6 +59,16 @@ const color = computed(() => gaugeColor(props.percent))
         >
           {{ formatMoney(used) }} déjà consommés
         </VChip>
+
+        <VAlert
+          v-if="message"
+          :type="color === 'error' ? 'error' : 'warning'"
+          variant="tonal"
+          density="compact"
+          class="mt-4 text-start w-100"
+        >
+          {{ message }}
+        </VAlert>
       </template>
 
       <AppEmptyState
@@ -71,3 +82,12 @@ const color = computed(() => gaugeColor(props.percent))
     </VCardText>
   </VCard>
 </template>
+
+<style scoped>
+.gauge-card {
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+</style>

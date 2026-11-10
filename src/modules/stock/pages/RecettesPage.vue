@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { stockApi } from '../api'
+import ItemCell from '../components/ItemCell.vue'
 import RecipeLineDialog from '../components/RecipeLineDialog.vue'
 import RecipeReplaceDialog from '../components/RecipeReplaceDialog.vue'
+import StockCard from '../components/StockCard.vue'
 import { useStockOverview } from '../composables/useStockOverview'
 import { recettesImport } from '../imports'
-import { STATE_INFO, componentTypeLabel, formatQty } from '../labels'
+import { STATE_INFO, componentTypeLabel, formatQty, portionsFor } from '../labels'
 import type { Plat, PlatComposant } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { useConfirm } from '@/composables/useConfirm'
@@ -41,19 +43,51 @@ watch(plats.data, list => {
     platId.value = list?.[0]?.id ?? null
 })
 
+// La fiche garde l'identifiant du plat qu'elle décrit : en changeant de plat, les lignes de l'ancien ne restent pas
+// affichées sous le nouveau pendant le chargement.
 const recipe = useAsyncData(
-  signal => platId.value ? stockApi.recipe(platId.value, signal) : Promise.resolve([] as PlatComposant[]),
+  async signal => {
+    const id = platId.value
+
+    return id ? { platId: id, lines: await stockApi.recipe(id, signal) } : { platId: null, lines: [] as PlatComposant[] }
+  },
   { watch: [platId] },
 )
 
+const recipeReady = computed(() => recipe.data.value !== null && recipe.data.value.platId === platId.value)
+
 const composants = computed(() => overview.rows.value.map(row => row.composant))
 const rowById = computed(() => new Map(overview.rows.value.map(row => [row.composant.id, row])))
+const nameOf = (id: string) => rowById.value.get(id)?.composant.nom ?? 'Composant supprimé'
 
-const lines = computed(() => (recipe.data.value ?? [])
+const lines = computed(() => (recipeReady.value ? recipe.data.value?.lines ?? [] : [])
   .slice()
-  .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (rowById.value.get(a.composant_id)?.composant.nom ?? '').localeCompare(rowById.value.get(b.composant_id)?.composant.nom ?? '', 'fr')))
+  .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || nameOf(a.composant_id).localeCompare(nameOf(b.composant_id), 'fr')))
 
 const usedIds = computed(() => lines.value.map(line => line.composant_id))
+
+// Portions encore réalisables avec le stock disponible, ligne par ligne ; la plus basse limite le plat.
+const portions = computed(() => new Map(lines.value.map(line => {
+  const row = rowById.value.get(line.composant_id)
+
+  return [line.id, row ? portionsFor(line, row.stock, row.composant.stock_unite) : null] as const
+})))
+
+const limiting = computed(() => {
+  let best: { line: PlatComposant; count: number } | null = null
+
+  for (const line of lines.value) {
+    const count = portions.value.get(line.id)
+
+    if (count !== null && count !== undefined && (!best || count < best.count))
+      best = { line, count }
+  }
+
+  return best
+})
+
+// Une ligne qu'on ne sait pas convertir (unité de comptage différente) rend le calcul partiel : on le dit.
+const unknownCount = computed(() => lines.value.filter(line => portions.value.get(line.id) === null).length)
 
 const lineDialog = ref(false)
 const editingLine = ref<PlatComposant | null>(null)
@@ -65,7 +99,7 @@ function openLine(line: PlatComposant | null) {
 }
 
 const remove = useSubmit(async (line: PlatComposant) => {
-  const name = rowById.value.get(line.composant_id)?.composant.nom ?? 'ce composant'
+  const name = nameOf(line.composant_id)
 
   if (!await confirm({
     title: 'Retirer ce composant ?',
@@ -103,7 +137,8 @@ function retry() {
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Stock"
       title="Fiches techniques"
       subtitle="Ce que consomme chaque plat : le stock des composants baisse automatiquement à chaque commande."
     >
@@ -112,7 +147,7 @@ function retry() {
         #actions
       >
         <VBtn
-          variant="outlined"
+          variant="tonal"
           color="secondary"
           prepend-icon="ri-upload-2-line"
           @click="importDialog = true"
@@ -120,112 +155,142 @@ function retry() {
           Importer
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="loadError && !ready"
+      class="mt-5"
       :error="loadError"
       @retry="retry"
     />
 
     <VSkeletonLoader
       v-else-if="!ready"
+      class="mt-5"
       type="card, table"
     />
 
     <AppEmptyState
       v-else-if="platOptions.length === 0"
+      class="mt-5"
       icon="ri-restaurant-line"
       title="Aucun plat dans la carte"
       text="Créez d'abord des plats dans votre carte : vous pourrez ensuite décrire leur fiche technique ici."
-    />
+    >
+      <VBtn
+        color="primary"
+        to="/catalog/plats"
+      >
+        Aller aux plats
+      </VBtn>
+    </AppEmptyState>
 
     <template v-else>
-      <VCard>
-        <VCardText>
-          <VRow align="center">
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <VAutocomplete
-                v-model="platId"
-                :items="platOptions"
-                label="Plat"
-                prepend-inner-icon="ri-restaurant-line"
-                hide-details
-                no-data-text="Aucun plat ne correspond."
-              />
-            </VCol>
-            <VCol
-              v-if="plat"
-              cols="12"
-              md="6"
-            >
-              <div class="d-flex flex-wrap align-center gap-x-6 gap-y-1">
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    Prix de vente
-                  </div>
-                  <div class="text-h6 tabular-nums">
-                    {{ formatMoney(plat.prix, plat.devise) }}
-                  </div>
-                </div>
-                <AppStatusChip
-                  :label="plat.disponible ? 'Disponible' : 'Indisponible'"
-                  :tone="plat.disponible ? 'success' : 'neutral'"
-                />
-              </div>
-            </VCol>
-          </VRow>
-        </VCardText>
-      </VCard>
-
-      <VCard class="mt-6">
-        <div class="d-flex flex-wrap align-center justify-space-between gap-3 pa-5">
-          <div class="min-w-0">
-            <h2 class="text-h6">
-              Nomenclature
-            </h2>
-            <p class="text-body-2 text-medium-emphasis mb-0">
-              {{ lines.length }} composant{{ lines.length > 1 ? 's' : '' }} pour une portion de « {{ plat?.nom }} »
-            </p>
-          </div>
-          <div
-            v-if="canWrite"
-            class="d-flex flex-wrap gap-2"
-          >
-            <VBtn
-              variant="outlined"
-              color="secondary"
-              prepend-icon="ri-file-edit-line"
-              :disabled="!plat"
-              @click="replaceDialog = true"
-            >
-              Remplacer toute la fiche
-            </VBtn>
-            <VBtn
-              color="primary"
-              prepend-icon="ri-add-line"
-              :disabled="!plat"
-              @click="openLine(null)"
-            >
-              Ajouter un composant
-            </VBtn>
-          </div>
+      <StockCard class="mt-5">
+        <div class="pa-5">
+          <VAutocomplete
+            v-model="platId"
+            :items="platOptions"
+            label="Plat"
+            prepend-inner-icon="ri-restaurant-line"
+            variant="solo-filled"
+            flat
+            rounded="lg"
+            hide-details
+            no-data-text="Aucun plat ne correspond."
+          />
         </div>
+      </StockCard>
 
-        <VDivider />
+      <AppMetricGrid
+        v-if="plat"
+        class="my-6"
+      >
+        <AppMetricTile
+          hero
+          label="Prix de vente"
+          icon="ri-price-tag-3-line"
+          :hint="plat.disponible ? 'Plat proposé à la carte' : 'Plat indisponible'"
+        >
+          {{ formatMoney(plat.prix, plat.devise) }}
+        </AppMetricTile>
+        <AppMetricTile
+          label="Composants"
+          icon="ri-stack-line"
+          color="info"
+          :hint="lines.length ? 'Pour une portion' : 'Fiche vide'"
+        >
+          <AppAnimatedNumber
+            v-slot="{ current }"
+            :value="lines.length"
+          >
+            {{ Math.round(current) }}
+          </AppAnimatedNumber>
+        </AppMetricTile>
+        <AppMetricTile
+          label="Portions possibles"
+          icon="ri-restaurant-2-line"
+          :color="limiting ? (limiting.count === 0 ? 'error' : 'success') : 'secondary'"
+        >
+          <template v-if="limiting">
+            {{ formatQty(limiting.count) }}
+          </template>
+          <template v-else>
+            —
+          </template>
+          <template #hint>
+            <template v-if="!recipeReady">
+              Calcul en cours…
+            </template>
+            <template v-else-if="lines.length === 0">
+              Aucune fiche : le stock n'est pas décompté
+            </template>
+            <template v-else-if="!limiting">
+              Unités à convertir pour calculer
+            </template>
+            <template v-else>
+              Limité par {{ nameOf(limiting.line.composant_id) }}{{ unknownCount ? ` (calcul partiel : ${unknownCount} ligne${unknownCount > 1 ? 's' : ''} non convertible${unknownCount > 1 ? 's' : ''})` : '' }}
+            </template>
+          </template>
+        </AppMetricTile>
+      </AppMetricGrid>
+
+      <StockCard
+        title="Nomenclature"
+        :subtitle="recipeReady ? `${lines.length} composant${lines.length > 1 ? 's' : ''} pour une portion de « ${plat?.nom} »` : undefined"
+      >
+        <template
+          v-if="canWrite"
+          #actions
+        >
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            prepend-icon="ri-file-edit-line"
+            :disabled="!plat || !recipeReady"
+            @click="replaceDialog = true"
+          >
+            Remplacer toute la fiche
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            :disabled="!plat || !recipeReady"
+            @click="openLine(null)"
+          >
+            Ajouter un composant
+          </VBtn>
+        </template>
 
         <AppErrorState
-          v-if="recipe.error.value && recipe.data.value === null"
+          v-if="recipe.error.value && !recipeReady"
           class="ma-4"
           :error="recipe.error.value"
           @retry="recipe.reload()"
         />
 
         <VSkeletonLoader
-          v-else-if="recipe.data.value === null"
+          v-else-if="!recipeReady"
           type="table-thead, table-tbody"
         />
 
@@ -248,15 +313,19 @@ function retry() {
         <VTable
           v-else
           hover
+          aria-label="Composants consommés par une portion"
         >
           <thead>
             <tr>
               <th>Composant</th>
               <th class="text-end">
-                Quantité
+                Par portion
               </th>
               <th class="d-none d-md-table-cell">
                 Stock disponible
+              </th>
+              <th class="text-end d-none d-sm-table-cell">
+                Portions
               </th>
               <th
                 v-if="canWrite"
@@ -270,27 +339,15 @@ function retry() {
             <tr
               v-for="line in lines"
               :key="line.id"
+              :class="rowById.get(line.composant_id) ? `row--${rowById.get(line.composant_id)!.state}` : undefined"
             >
               <td>
-                <div class="d-flex align-center gap-3 py-2">
-                  <VAvatar
-                    color="primary"
-                    variant="tonal"
-                    rounded
-                    size="38"
-                    class="d-none d-sm-flex"
-                  >
-                    <VIcon icon="ri-stack-line" />
-                  </VAvatar>
-                  <div class="min-w-0">
-                    <div class="text-body-1 font-weight-medium text-high-emphasis text-truncate">
-                      {{ rowById.get(line.composant_id)?.composant.nom ?? 'Composant supprimé' }}
-                    </div>
-                    <div class="text-body-2 text-medium-emphasis">
-                      {{ componentTypeLabel(rowById.get(line.composant_id)?.composant.type ?? 'autre') }}
-                    </div>
-                  </div>
-                </div>
+                <ItemCell
+                  icon="ri-stack-line"
+                  :title="nameOf(line.composant_id)"
+                  :subtitle="componentTypeLabel(rowById.get(line.composant_id)?.composant.type ?? 'autre')"
+                  hide-avatar-on-mobile
+                />
               </td>
               <td class="text-end tabular-nums text-no-wrap font-weight-medium">
                 {{ formatQty(line.quantite) }} <span class="text-medium-emphasis font-weight-regular">{{ line.unite }}</span>
@@ -300,6 +357,7 @@ function retry() {
                   <AppStatusChip
                     :label="`${formatQty(rowById.get(line.composant_id)?.stock.disponible)} ${rowById.get(line.composant_id)?.composant.stock_unite}`"
                     :tone="STATE_INFO[rowById.get(line.composant_id)!.state].tone"
+                    :icon="STATE_INFO[rowById.get(line.composant_id)!.state].icon"
                   />
                 </template>
                 <span
@@ -307,12 +365,40 @@ function retry() {
                   class="text-medium-emphasis"
                 >—</span>
               </td>
+              <td class="text-end d-none d-sm-table-cell text-no-wrap">
+                <template v-if="portions.get(line.id) !== null && portions.get(line.id) !== undefined">
+                  <span class="tabular-nums font-weight-medium">{{ formatQty(portions.get(line.id)) }}</span>
+                  <VChip
+                    v-if="limiting?.line.id === line.id && lines.length > 1"
+                    size="x-small"
+                    label
+                    variant="tonal"
+                    color="warning"
+                    class="ms-2"
+                  >
+                    Limitant
+                  </VChip>
+                </template>
+                <VTooltip
+                  v-else
+                  location="top"
+                >
+                  <template #activator="{ props: tip }">
+                    <span
+                      v-bind="tip"
+                      class="text-medium-emphasis"
+                      tabindex="0"
+                    >—</span>
+                  </template>
+                  Unité de la ligne et unité de stock non convertibles ici
+                </VTooltip>
+              </td>
               <td
                 v-if="canWrite"
                 class="text-end text-no-wrap"
               >
                 <IconBtn
-                  :aria-label="`Modifier la quantité de ${rowById.get(line.composant_id)?.composant.nom ?? 'ce composant'}`"
+                  :aria-label="`Modifier la quantité de ${nameOf(line.composant_id)}`"
                   @click="openLine(line)"
                 >
                   <VIcon icon="ri-edit-line" />
@@ -324,7 +410,7 @@ function retry() {
                   </VTooltip>
                 </IconBtn>
                 <IconBtn
-                  :aria-label="`Retirer ${rowById.get(line.composant_id)?.composant.nom ?? 'ce composant'} de la fiche`"
+                  :aria-label="`Retirer ${nameOf(line.composant_id)} de la fiche`"
                   :disabled="remove.pending.value"
                   @click="remove.submit(line)"
                 >
@@ -340,7 +426,7 @@ function retry() {
             </tr>
           </tbody>
         </VTable>
-      </VCard>
+      </StockCard>
     </template>
 
     <RecipeLineDialog

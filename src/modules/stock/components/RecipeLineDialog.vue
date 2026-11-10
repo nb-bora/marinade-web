@@ -1,7 +1,7 @@
 <!-- Ajoute un composant à la fiche technique d'un plat, ou modifie sa quantité. -->
 <script setup lang="ts">
 import { stockApi } from '../api'
-import { UNITS, parseQty, positiveQty, required } from '../labels'
+import { UNITS, compatibleUnits, componentTypeLabel, normalizeUnit, parseQty, positiveQty, required, toInput } from '../labels'
 import type { Composant, Plat, PlatComposant } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
 import { useToast } from '@/stores/toast.store'
@@ -29,10 +29,37 @@ const isEdit = computed(() => props.line !== null)
 
 const options = computed(() => props.composants
   .filter(item => !props.usedIds.includes(item.id))
-  .map(item => ({ value: item.id, title: item.nom, subtitle: item.stock_unite }))
+  .map(item => ({ value: item.id, title: item.nom, subtitle: `${componentTypeLabel(item.type)} · en ${item.stock_unite}` }))
   .sort((a, b) => a.title.localeCompare(b.title, 'fr')))
 
+const selected = computed(() => props.composants.find(item => item.id === (props.line?.composant_id ?? composantId.value)) ?? null)
 const currentName = computed(() => props.composants.find(item => item.id === props.line?.composant_id)?.nom ?? 'Composant')
+
+// Les unités qui se convertissent en unité de stock (kg → g, L → cl...) ; sinon, la liste habituelle.
+const unitChoices = computed(() => selected.value ? compatibleUnits(selected.value.stock_unite) : UNITS)
+
+const unitHint = computed(() => {
+  if (!selected.value)
+    return undefined
+
+  const stockUnit = selected.value.stock_unite
+
+  return unitChoices.value.length > 1
+    ? `Le stock se compte en ${stockUnit} : ${unitChoices.value.join(', ')} sont convertis.`
+    : `Le stock se compte en ${stockUnit}.`
+})
+
+// Une unité hors de la grandeur du stock (grammes pour un stock en pièces) est le plus souvent une erreur ; le
+// serveur reste juge, car un composant peut avoir sa propre conversion.
+const unitWarning = computed(() => {
+  const stockUnit = selected.value?.stock_unite
+  const wanted = normalizeUnit(unit.value)
+
+  if (!stockUnit || !wanted || normalizeUnit(stockUnit) === wanted || compatibleUnits(stockUnit).some(item => normalizeUnit(item) === wanted))
+    return null
+
+  return `« ${unit.value} » n'est pas une unité de ${stockUnit} : l'enregistrement sera refusé sans conversion propre à ce composant.`
+})
 
 const save = useSubmit(async () => {
   if (!props.plat)
@@ -55,7 +82,7 @@ watch(open, isOpen => {
     return
 
   composantId.value = props.line?.composant_id ?? null
-  quantity.value = props.line ? String(Number(props.line.quantite)).replace('.', ',') : '1'
+  quantity.value = props.line ? toInput(props.line.quantite) : '1'
   unit.value = props.line?.unite ?? 'portion'
   save.reset()
 })
@@ -99,6 +126,7 @@ watch(composantId, id => {
           prepend-inner-icon="ri-hashtag"
           inputmode="decimal"
           autocomplete="off"
+          :autofocus="isEdit"
           :rules="[positiveQty]"
           :error-messages="save.apiError.value?.fieldMessage('quantite')"
         />
@@ -109,13 +137,24 @@ watch(composantId, id => {
       >
         <VCombobox
           v-model="unit"
-          :items="UNITS"
+          :items="unitChoices"
           label="Unité"
           prepend-inner-icon="ri-scales-line"
+          :hint="unitHint"
+          :persistent-hint="!!unitHint"
           :rules="[required('Indiquez l\'unité.')]"
           :error-messages="save.apiError.value?.fieldMessage('unite')"
         />
       </VCol>
     </VRow>
+    <VAlert
+      v-if="unitWarning"
+      type="warning"
+      variant="tonal"
+      density="comfortable"
+      class="mt-2"
+    >
+      {{ unitWarning }}
+    </VAlert>
   </AppFormDialog>
 </template>

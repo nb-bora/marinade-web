@@ -1,4 +1,5 @@
 import { createSharedComposable } from '@vueuse/core'
+import { IN_FLIGHT } from '../statuses'
 import { container } from '@/container'
 import { useLive } from '@/composables/useLive'
 import type { PaymentSummary } from '@/lib/api/types'
@@ -27,6 +28,9 @@ export const usePaymentInsights = createSharedComposable(() => {
   const error = ref<unknown>(null)
 
   const today = computed(() => days.value.at(-1) ?? null)
+
+  /** Devise du restaurant, telle que la déclare le serveur (FCFA par défaut). */
+  const currency = computed(() => week.value?.currency ?? 'XAF')
 
   async function load(): Promise<void> {
     const midnight = startOfDay()
@@ -62,13 +66,23 @@ export const usePaymentInsights = createSharedComposable(() => {
 
   useLive(load, REFRESH_MS)
 
-  return { week, days, today, loading, error, reload: load }
+  return { week, days, today, currency, loading, error, reload: load }
 })
 
-/** Taux de réussite d'un résumé, en pourcentage entier (null si aucune transaction). */
+/**
+ * Taux de réussite d'un résumé, en pourcentage entier, calculé sur les paiements TERMINÉS : un
+ * paiement encore en route (initié, en attente, en cours) n'est ni une réussite ni un échec, et ne
+ * doit pas faire baisser le taux le temps que la confirmation arrive. `null` s'il n'y en a aucun.
+ */
 export function successRate(summary: PaymentSummary | null): number | null {
-  if (!summary || summary.transactions === 0)
+  if (!summary)
     return null
 
-  return Math.round(((summary.by_status.success?.count ?? 0) / summary.transactions) * 100)
+  const inFlight = IN_FLIGHT.reduce((sum, status) => sum + (summary.by_status[status]?.count ?? 0), 0)
+  const finished = summary.transactions - inFlight
+
+  if (finished <= 0)
+    return null
+
+  return Math.min(Math.round(((summary.by_status.success?.count ?? 0) / finished) * 100), 100)
 }

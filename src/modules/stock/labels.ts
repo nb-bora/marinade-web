@@ -30,9 +30,12 @@ export const MOVEMENTS: MovementOption[] = [
     title: 'Ajustement',
     icon: 'ri-scales-3-line',
     quantityLabel: 'Quantité réellement en stock',
-    help: 'Inventaire : la quantité saisie remplace la quantité actuelle.',
+    help: 'Inventaire : la quantité saisie remplace la quantité actuelle (0 est permis si le stock est vide).',
   },
 ]
+
+/** Les trois types proposés dans le sélecteur du dialogue. */
+export const MOVEMENT_CHOICES = MOVEMENTS.map(item => ({ value: item.value, title: item.title }))
 
 export const movementLabel = (type: string) => MOVEMENTS.find(option => option.value === type)?.title ?? type
 
@@ -121,13 +124,46 @@ export function buildRows(composants: Composant[], levels: StockLevel[]): StockR
   })
 }
 
-/** Part de la jauge (0 à 100) : le seuil se trouve à mi-course, comme repère de la jauge. */
-export function gaugePercent(stock: StockLevel): number {
-  const quantity = Number(stock.quantite)
-  const threshold = Number(stock.seuil_alerte)
-  const scale = threshold > 0 ? threshold * 2 : Math.max(quantity, 1)
+/** Minuscules sans accents : « Protéine » et « proteine » se valent dans une recherche. */
+export const normalizeText = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
 
-  return Math.max(0, Math.min(100, (quantity / scale) * 100))
+/** La saisie se retrouve-t-elle dans l'un des champs ? Insensible à la casse et aux accents. */
+export function matchesSearch(term: string, ...fields: (string | null | undefined)[]): boolean {
+  const needle = normalizeText(term)
+
+  return !needle || fields.some(field => normalizeText(field ?? '').includes(needle))
+}
+
+export interface GaugeShares {
+
+  /** Part du stock disponible (0 à 100). */
+  available: number
+
+  /** Part du stock réservé par des commandes en cours (0 à 100). */
+  reserved: number
+
+  /** Position du seuil d'alerte, ou `null` s'il n'y en a pas. */
+  threshold: number | null
+}
+
+/**
+ * Parts de la jauge (0 à 100). La jauge suit le disponible, comme l'état et l'alerte du serveur : un stock
+ * entièrement réservé ne doit pas paraître plein. Le seuil est un repère ; l'échelle va jusqu'à deux fois le
+ * seuil (ou jusqu'à la quantité si elle le dépasse). Sans seuil, la jauge représente tout le stock : seule
+ * la part réservée se distingue.
+ */
+export function gaugeShares(stock: StockLevel): GaugeShares {
+  const quantity = Math.max(0, Number(stock.quantite) || 0)
+  const reserved = Math.min(quantity, Math.max(0, Number(stock.reservee) || 0))
+  const threshold = Math.max(0, Number(stock.seuil_alerte) || 0)
+  const scale = threshold > 0 ? Math.max(threshold * 2, quantity) : (quantity > 0 ? quantity : 1)
+  const share = (value: number) => Math.max(0, Math.min(100, (value / scale) * 100))
+
+  return {
+    available: share(quantity - reserved),
+    reserved: share(reserved),
+    threshold: threshold > 0 ? share(threshold) : null,
+  }
 }
 
 const quantityFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 })
@@ -147,11 +183,187 @@ export function parseQty(input: string | number | null | undefined): number {
   return Number(String(input ?? '').trim().replace(/\s/g, '').replace(',', '.'))
 }
 
-/** Règles de champ : message en français. */
+/** Un nombre renvoyé par le serveur, prêt à être modifié dans un champ : `'12.500'` → « 12,5 ». */
+export const toInput = (value: number | string | null | undefined) => String(Number(value ?? 0)).replace('.', ',')
+
+// Unités ------------------------------------------------------------------------------------------
+
+const UNIT_ALIASES: Record<string, string> = {
+  litre: 'l',
+  litres: 'l',
+  kilo: 'kg',
+  kilos: 'kg',
+  kilogramme: 'kg',
+  gramme: 'g',
+  grammes: 'g',
+  millilitre: 'ml',
+  centilitre: 'cl',
+  decilitre: 'dl',
+  pieces: 'piece',
+  unite: 'piece',
+  unites: 'piece',
+  portions: 'portion',
+  bouteilles: 'bouteille',
+  cartons: 'carton',
+}
+
+/** Facteur vers l'unité de référence de la grandeur : mêmes tables que `app/services/stock_units.py`. */
+const DIMENSIONS: Record<string, Record<string, number>> = {
+  masse: { kg: 1000, g: 1, mg: 0.001 },
+  volume: { l: 1000, dl: 100, cl: 10, ml: 1 },
+}
+
+const UNIT_DISPLAY: Record<string, string> = { l: 'L' }
+
+/** Même normalisation que le serveur : minuscules, sans accents, pluriels usuels ramenés au singulier. */
+export function normalizeUnit(unit: string | null | undefined): string {
+  const text = normalizeText(unit ?? '').replace(/\./g, '')
+
+  return UNIT_ALIASES[text] ?? text
+}
+
+const dimensionOf = (unit: string) => Object.keys(DIMENSIONS).find(name => unit in DIMENSIONS[name]) ?? null
+
+/**
+ * Convertit une quantité d'une unité vers une autre ; `null` si c'est impossible côté client (unités de
+ * comptage différentes : seul le serveur connaît les conversions propres à un composant).
+ */
+export function convertQty(quantity: number, from: string, to: string): number | null {
+  const source = normalizeUnit(from)
+  const target = normalizeUnit(to)
+
+  if (!source || !target || source === target)
+    return quantity
+
+  const dimension = dimensionOf(source)
+
+  if (!dimension || dimension !== dimensionOf(target))
+    return null
+
+  return quantity * DIMENSIONS[dimension][source] / DIMENSIONS[dimension][target]
+}
+
+/** Unités dans lesquelles on peut exprimer ce composant : son unité de stock, plus celles de sa grandeur. */
+export function compatibleUnits(stockUnit: string): string[] {
+  const dimension = dimensionOf(normalizeUnit(stockUnit))
+
+  if (!dimension)
+    return [stockUnit]
+
+  return Object.keys(DIMENSIONS[dimension]).map(unit => UNIT_DISPLAY[unit] ?? unit)
+}
+
+/**
+ * Combien de portions le disponible permet de servir pour une ligne de fiche technique ; `null` si on ne sait
+ * pas convertir l'unité de la ligne en unité de stock.
+ */
+export function portionsFor(line: { quantite: string | number; unite: string }, stock: StockLevel, stockUnit: string): number | null {
+  const need = convertQty(Number(line.quantite), line.unite, stockUnit)
+
+  if (need === null || !Number.isFinite(need) || need <= 0)
+    return null
+
+  return Math.max(0, Math.floor(Number(stock.disponible) / need + 1e-9))
+}
+
+/** « Protéine » saisi à la main redevient le code `proteine` : pas de doublon de catégorie à cause d'un accent. */
+export function normalizeType(input: string | null | undefined): string {
+  const key = normalizeText(input ?? '')
+  const known = COMPONENT_TYPES.find(code => code === key || normalizeText(TYPE_LABELS[code]) === key)
+
+  return known ?? (input ?? '').trim().toLowerCase()
+}
+
+// Règles de champ (messages en français) ---------------------------------------------------------------
+
+/** Plafond du serveur : Numeric(12, 3). */
+export const QUANTITY_MAX = 999_999_999.999
+
+/** Nombre de décimales d'une saisie (« 0,250 » → 3). */
+export function decimalPlaces(input: string | number | null | undefined): number {
+  const match = /[.,](\d+)$/.exec(String(input ?? '').trim().replace(/\s/g, ''))
+
+  return match ? match[1].length : 0
+}
+
 export const required = (message: string) => (value: unknown) => (value !== null && value !== undefined && String(value).trim() !== '') || message
 
-export const positiveQty = (value: string | number | null) =>
-  (Number.isFinite(parseQty(value)) && parseQty(value) > 0) || 'Saisissez une quantité supérieure à zéro.'
+export const maxLength = (max: number, label: string) => (value: unknown) =>
+  String(value ?? '').trim().length <= max || `${label} : ${max} caractères au plus.`
 
-export const nonNegativeQty = (value: string | number | null) =>
-  (Number.isFinite(parseQty(value)) && parseQty(value) >= 0) || 'Saisissez une quantité positive ou nulle.'
+/** Quantité : > 0 (ou >= 0), au plus 3 décimales et dans les bornes du serveur. */
+function quantityRule(allowZero: boolean) {
+  const lower = allowZero ? 'Saisissez une quantité positive ou nulle.' : 'Saisissez une quantité supérieure à zéro.'
+
+  return (value: string | number | null) => {
+    const number = parseQty(value)
+
+    if (!Number.isFinite(number) || (allowZero ? number < 0 : number <= 0))
+      return lower
+    if (decimalPlaces(value) > 3)
+      return 'Trois décimales au plus (exemple : 0,250).'
+    if (number > QUANTITY_MAX)
+      return 'Cette quantité est trop grande.'
+
+    return true
+  }
+}
+
+export const positiveQty = quantityRule(false)
+export const nonNegativeQty = quantityRule(true)
+
+/** Montant positif (ou strictement positif), avec au plus `places` décimales. */
+export const amountRule = (places: number, { allowZero = true } = {}) => (value: string | number | null) => {
+  const number = parseQty(value)
+
+  if (!Number.isFinite(number) || (allowZero ? number < 0 : number <= 0))
+    return allowZero ? 'Saisissez un montant positif ou nul.' : 'Saisissez un montant supérieur à zéro.'
+  if (decimalPlaces(value) > places)
+    return places === 0 ? 'Saisissez un montant entier.' : `${places} décimale${places > 1 ? 's' : ''} au plus.`
+
+  return true
+}
+
+// Mouvements --------------------------------------------------------------------------------------------
+
+/** Stock physique après un mouvement ; `null` tant que la quantité saisie n'est pas un nombre. */
+export function stockAfterMovement(stock: StockLevel, type: StockMovementType, quantity: number): number | null {
+  if (!Number.isFinite(quantity) || quantity < 0)
+    return null
+
+  const current = Number(stock.quantite)
+
+  if (type === 'entree')
+    return current + quantity
+  if (type === 'sortie' || type === 'perte')
+    return current - quantity
+
+  return quantity
+}
+
+/**
+ * Quantité d'un mouvement, contrôlée comme le moteur de stock : une sortie ne dépasse pas le disponible, un
+ * ajustement (qui peut valoir 0) ne descend pas sous le réservé. Évite un aller-retour pour une erreur connue.
+ */
+export function movementQuantityRule(type: StockMovementType, stock: StockLevel | null | undefined) {
+  const base = type === 'ajustement' ? nonNegativeQty : positiveQty
+
+  return (value: string | number | null) => {
+    const basic = base(value)
+
+    if (basic !== true || !stock)
+      return basic
+
+    const number = parseQty(value)
+    const available = Number(stock.disponible)
+    const reserved = Number(stock.reservee)
+
+    if ((type === 'sortie' || type === 'perte') && number > available)
+      return `Seulement ${formatQty(available)} disponible${available > 1 ? 's' : ''} (${formatQty(reserved)} réservé${reserved > 1 ? 's' : ''}).`
+
+    if (type === 'ajustement' && number < reserved)
+      return `Le stock ne peut pas descendre sous la quantité réservée (${formatQty(reserved)}).`
+
+    return true
+  }
+}

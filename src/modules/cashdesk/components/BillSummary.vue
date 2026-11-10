@@ -4,12 +4,33 @@ import { INVOICE_STATUS, present } from '../labels'
 import type { Invoice, OrderedLine } from '../types'
 import { formatDateTime } from '@/lib/format'
 
-defineProps<{
+const props = defineProps<{
   invoice: Invoice | null
   lines?: OrderedLine[]
   loading?: boolean
   title?: string
 }>()
+
+// Une facture annulée ou remboursée n'a plus de « reste dû » à réclamer : on le dit au lieu de l'afficher.
+const state = computed<'due' | 'paid' | 'closed'>(() => {
+  const invoice = props.invoice
+
+  if (!invoice)
+    return 'due'
+  if (invoice.status === 'CANCELLED' || invoice.status === 'REFUNDED')
+    return 'closed'
+
+  return Number(invoice.amount_due) <= 0 ? 'paid' : 'due'
+})
+
+const label = computed(() => {
+  if (props.invoice?.status === 'CANCELLED')
+    return 'Facture annulée'
+  if (props.invoice?.status === 'REFUNDED')
+    return 'Facture remboursée'
+
+  return state.value === 'paid' ? 'Addition soldée' : 'Reste dû'
+})
 
 const rows = (invoice: Invoice) => [
   { label: 'Sous-total', value: invoice.subtotal, always: true, negative: false },
@@ -91,11 +112,14 @@ const rows = (invoice: Invoice) => [
       </div>
 
       <div
-        class="due d-flex justify-space-between align-center mt-3 pa-4"
-        :class="{ 'due--paid': Number(invoice.amount_due) <= 0 }"
+        class="due d-flex flex-wrap justify-space-between align-center gap-2 mt-3 pa-4"
+        :class="{ 'due--paid': state === 'paid', 'due--closed': state === 'closed' }"
       >
-        <span class="text-body-1 font-weight-medium">{{ Number(invoice.amount_due) <= 0 ? 'Addition soldée' : 'Reste dû' }}</span>
-        <span class="text-h4 font-weight-bold tabular-nums"><AppMoney :amount="invoice.amount_due" /></span>
+        <span class="text-body-1 font-weight-medium">{{ label }}</span>
+        <span
+          v-if="state !== 'closed'"
+          class="text-h4 font-weight-bold tabular-nums text-no-wrap"
+        ><AppMoney :amount="invoice.amount_due" /></span>
       </div>
     </VCardText>
   </VCard>
@@ -113,13 +137,21 @@ const rows = (invoice: Invoice) => [
 }
 
 .due {
-  border-radius: 12px;
-  background: rgba(var(--v-theme-primary), 0.12);
-  color: rgb(var(--v-theme-primary));
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 90% -20%, rgba(255, 255, 255, 0.28), transparent 55%),
+    linear-gradient(135deg, rgb(var(--v-theme-primary)), #b8470a);
+  color: #fff;
 }
 
 .due--paid {
-  background: rgba(var(--v-theme-success), 0.14);
-  color: rgb(var(--v-theme-success));
+  background:
+    radial-gradient(circle at 90% -20%, rgba(255, 255, 255, 0.28), transparent 55%),
+    linear-gradient(135deg, rgb(var(--v-theme-success)), #3f8f3a);
+}
+
+.due--closed {
+  background: rgba(var(--v-theme-on-surface), 0.08);
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
 </style>

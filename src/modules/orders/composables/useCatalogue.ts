@@ -15,18 +15,18 @@ export function useCatalogue() {
   const error = ref<unknown>(null)
 
   let loadedFor: string | null = null
+  let inflight: Promise<void> | null = null
 
-  async function ensure(): Promise<void> {
-    const restaurantId = tenant.currentId
-
-    if (!restaurantId || loadedFor === restaurantId)
-      return
-
+  async function load(restaurantId: string): Promise<void> {
     loading.value = true
     error.value = null
 
     try {
       const [foods, drinks] = await Promise.all([ordersApi.plats(restaurantId), ordersApi.boissons(restaurantId)])
+
+      // Le restaurant a pu changer pendant la requête : on ne garde pas la carte d'un autre.
+      if (tenant.currentId !== restaurantId)
+        return
 
       plats.value = foods
       boissons.value = drinks
@@ -37,7 +37,23 @@ export function useCatalogue() {
     }
     finally {
       loading.value = false
+      inflight = null
     }
+  }
+
+  /**
+   * Charge la carte si elle ne l'est pas déjà pour ce restaurant. `force` la recharge : à l'ouverture
+   * de l'ajout d'article, pour ne pas proposer un plat devenu indisponible depuis le premier chargement.
+   */
+  function ensure(force = false): Promise<void> {
+    const restaurantId = tenant.currentId
+
+    if (!restaurantId || (!force && loadedFor === restaurantId))
+      return Promise.resolve()
+
+    inflight ??= load(restaurantId)
+
+    return inflight
   }
 
   const names = computed(() => new Map<string, string>([

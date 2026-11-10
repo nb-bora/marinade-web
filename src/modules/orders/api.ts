@@ -46,13 +46,12 @@ export class OrdersApi {
     return this.all<Commande>(`${this.restaurant(restaurantId)}/commandes`, signal)
   }
 
-  /** Commandes en cours ou servies, les plus anciennes d'abord. */
-  active(restaurantId: string, signal?: AbortSignal) {
-    return this.all<Commande>(`${this.restaurant(restaurantId)}/commandes/active`, signal)
-  }
-
-  get(commandeId: string, signal?: AbortSignal) {
-    return this.http.get<Commande>(`/v1/restaurants/commandes/${commandeId}`, { signal })
+  /**
+   * Une commande avec ses lignes et ses remboursements, en une requête. La route imbriquée
+   * vérifie que la commande appartient bien à CE restaurant (404 sinon).
+   */
+  get(restaurantId: string, commandeId: string, signal?: AbortSignal) {
+    return this.http.get<Commande>(`${this.restaurant(restaurantId)}/commandes/${commandeId}`, { signal })
   }
 
   create(restaurantId: string, body: CommandeCreate) {
@@ -66,33 +65,29 @@ export class OrdersApi {
 
   // Articles ------------------------------------------------------------------------------
 
-  /** Les articles ne sont jamais dans la réponse d'une commande : il faut les demander. */
-  items(commandeId: string, signal?: AbortSignal) {
-    return this.http.get<CommandeItem[]>(`/v1/restaurants/commandes/${commandeId}/items`, { signal })
-  }
-
   addItem(commandeId: string, body: CommandeItemCreate) {
     return this.http.post<CommandeItem>(`/v1/restaurants/commandes/${commandeId}/items`, body)
   }
 
   // Remboursements ------------------------------------------------------------------------
+  // Routes imbriquées sous le restaurant : le back contrôle que la commande est bien la sienne.
 
-  refunds(commandeId: string, signal?: AbortSignal) {
-    return this.http.get<Refund[]>(`/v1/restaurants/commandes/${commandeId}/refunds`, { signal })
+  private refundsPath(restaurantId: string, commandeId: string) {
+    return `${this.restaurant(restaurantId)}/commandes/${commandeId}/refunds`
   }
 
-  requestRefund(commandeId: string, body: RefundCreate) {
-    return this.http.post<Refund>(`/v1/restaurants/commandes/${commandeId}/refunds`, body)
+  requestRefund(restaurantId: string, commandeId: string, body: RefundCreate) {
+    return this.http.post<Refund>(this.refundsPath(restaurantId, commandeId), body)
   }
 
-  approveRefund(commandeId: string, refundId: string) {
-    return this.http.post<Refund>(`/v1/restaurants/commandes/${commandeId}/refunds/${refundId}/approve`)
+  approveRefund(restaurantId: string, commandeId: string, refundId: string) {
+    return this.http.post<Refund>(`${this.refundsPath(restaurantId, commandeId)}/${refundId}/approve`)
   }
 
   /** Le motif du rejet voyage dans l'URL (paramètre de requête), pas dans le corps. */
-  rejectRefund(commandeId: string, refundId: string, reason: string) {
+  rejectRefund(restaurantId: string, commandeId: string, refundId: string, reason: string) {
     return this.http.post<Refund>(
-      `/v1/restaurants/commandes/${commandeId}/refunds/${refundId}/reject`,
+      `${this.refundsPath(restaurantId, commandeId)}/${refundId}/reject`,
       undefined,
       { query: { reason } },
     )

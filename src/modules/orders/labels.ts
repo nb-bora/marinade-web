@@ -52,6 +52,19 @@ export const isClosed = (status: string) => status === 'payee' || status === 'an
 /** « Active » au sens du back : en cours ou servie. */
 export const isActive = (status: string) => status === 'en_cours' || status === 'servie'
 
+/** Le client a lancé son paiement : la commande attend la confirmation du prestataire. */
+export const isPaying = (status: string) => status === 'paiement_en_attente' || status === 'paiement_a_verifier'
+
+export type OrderBucket = 'active' | 'paying' | 'history'
+
+/** L'onglet d'une commande : à servir, en cours de paiement, ou terminée (payée, annulée). */
+export const bucketOf = (status: string): OrderBucket => {
+  if (isActive(status))
+    return 'active'
+
+  return isPaying(status) ? 'paying' : 'history'
+}
+
 /** Messages du back que l'on sait traduire (le texte brut du serveur n'est jamais montré). */
 const KNOWN: [RegExp, string][] = [
   [/^Refund can only be requested on paid or served/, 'Un remboursement ne peut être demandé que sur une commande servie ou payée.'],

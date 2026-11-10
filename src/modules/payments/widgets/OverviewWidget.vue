@@ -2,7 +2,7 @@
 import { successRate, usePaymentInsights } from '../composables/usePaymentInsights'
 import { formatMoney } from '@/lib/format'
 
-const { week, loading, error, reload } = usePaymentInsights()
+const { week, currency, loading, error, reload } = usePaymentInsights()
 
 const rate = computed(() => successRate(week.value))
 </script>
@@ -43,7 +43,7 @@ const rate = computed(() => successRate(week.value))
             icon="ri-money-dollar-circle-line"
             color="success"
             :loading="loading"
-            :value="formatMoney(week?.collected_fcfa)"
+            :value="formatMoney(week?.collected_fcfa, currency)"
           />
         </VCol>
         <VCol
@@ -55,7 +55,7 @@ const rate = computed(() => successRate(week.value))
             icon="ri-wallet-3-line"
             color="primary"
             :loading="loading"
-            :value="formatMoney(week?.net_collected_fcfa)"
+            :value="formatMoney(week?.net_collected_fcfa, currency)"
           />
         </VCol>
         <VCol

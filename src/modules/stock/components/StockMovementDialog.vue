@@ -1,6 +1,17 @@
 <script setup lang="ts">
-import { MOVEMENTS, formatQty, motifOptions, motifRequired, nonNegativeQty, parseQty, positiveQty } from '../labels'
 import { stockApi } from '../api'
+import {
+  MOVEMENTS,
+  MOVEMENT_CHOICES,
+  amountRule,
+  formatQty,
+  maxLength,
+  motifOptions,
+  motifRequired,
+  movementQuantityRule,
+  parseQty,
+  stockAfterMovement,
+} from '../labels'
 import type { StockMovementType, StockRow } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
 import { useToast } from '@/stores/toast.store'
@@ -28,6 +39,19 @@ const isEntry = computed(() => type.value === 'entree')
 const needsMotif = computed(() => motifRequired(type.value))
 const motifChoices = computed(() => motifOptions(type.value))
 const commentRequired = computed(() => motif.value === 'autre')
+
+// Même contrôle que le serveur : une sortie ne dépasse pas le disponible, un ajustement ne passe pas sous le réservé.
+const quantityRule = computed(() => movementQuantityRule(type.value, props.row?.stock))
+
+// Aperçu : ce que vaudra le stock une fois le mouvement enregistré.
+const after = computed(() => {
+  if (!props.row || quantity.value.trim() === '' || quantityRule.value(quantity.value) !== true)
+    return null
+
+  return stockAfterMovement(props.row.stock, type.value, parseQty(quantity.value))
+})
+
+const delta = computed(() => (after.value === null || !props.row ? null : after.value - Number(props.row.stock.quantite)))
 
 // Une quantité réellement saisie : un champ vide n'est pas envoyé (le serveur applique ses défauts).
 const optionalNumber = (input: string) => (input.trim() === '' ? undefined : parseQty(input))
@@ -92,7 +116,7 @@ watch(open, isOpen => {
   >
     <AppSegmented
       v-model="type"
-      :options="MOVEMENTS.map(item => ({ value: item.value, title: item.title }))"
+      :options="MOVEMENT_CHOICES"
       label="Type de mouvement"
       class="mb-2"
     />
@@ -107,9 +131,39 @@ watch(open, isOpen => {
       inputmode="decimal"
       autocomplete="off"
       autofocus
-      :rules="[positiveQty]"
+      :rules="[quantityRule]"
       :error-messages="fieldError('quantite')"
     />
+
+    <!-- Aperçu du résultat : le gestionnaire voit le nouveau niveau avant d'enregistrer. -->
+    <div
+      v-if="after !== null && delta !== null"
+      class="movement-preview mb-2"
+      aria-live="polite"
+    >
+      <span class="text-body-2 text-medium-emphasis">Stock après le mouvement</span>
+      <span class="text-body-1 font-weight-semibold tabular-nums">
+        {{ formatQty(after) }} {{ unit }}
+      </span>
+      <VChip
+        v-if="delta !== 0"
+        size="small"
+        label
+        :color="delta > 0 ? 'success' : 'error'"
+        variant="tonal"
+        class="tabular-nums"
+      >
+        {{ delta > 0 ? '+' : '−' }}{{ formatQty(Math.abs(delta)) }}
+      </VChip>
+      <VChip
+        v-else
+        size="small"
+        label
+        variant="tonal"
+      >
+        Aucun changement
+      </VChip>
+    </div>
 
     <VSelect
       v-if="needsMotif"
@@ -127,11 +181,11 @@ watch(open, isOpen => {
     <VTextField
       v-if="isEntry"
       v-model="unitCost"
-      :label="`Coût d'achat par ${unit || 'unité'} (facultatif)`"
-      prepend-inner-icon="ri-money-euro-circle-line"
+      :label="`Coût d'achat par ${unit || 'unité'}, en FCFA (facultatif)`"
+      prepend-inner-icon="ri-money-dollar-circle-line"
       inputmode="decimal"
       autocomplete="off"
-      :rules="[nonNegativeQty]"
+      :rules="[amountRule(4)]"
       :error-messages="fieldError('cout_unitaire')"
       class="mt-2"
     />
@@ -145,6 +199,7 @@ watch(open, isOpen => {
         prepend-inner-icon="ri-barcode-line"
         autocomplete="off"
         class="flex-1-1"
+        :rules="[maxLength(60, 'Numéro de lot')]"
         :error-messages="fieldError('lot_numero')"
       />
       <VTextField
@@ -162,7 +217,10 @@ watch(open, isOpen => {
       :label="commentRequired ? 'Commentaire (obligatoire)' : 'Commentaire (facultatif)'"
       prepend-inner-icon="ri-file-text-line"
       :placeholder="needsMotif ? 'Précisez ce qui s\'est passé…' : 'Ex. livraison du marché…'"
-      :rules="commentRequired ? [(value: unknown) => !!String(value ?? '').trim() || 'Précisez le motif dans le commentaire.'] : []"
+      :rules="[
+        ...(commentRequired ? [(value: unknown) => !!String(value ?? '').trim() || 'Précisez le motif dans le commentaire.'] : []),
+        maxLength(1000, 'Commentaire'),
+      ]"
       :error-messages="fieldError('notes')"
       rows="2"
       auto-grow
@@ -170,3 +228,20 @@ watch(open, isOpen => {
     />
   </AppFormDialog>
 </template>
+
+<style scoped>
+.movement-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.22);
+  border-radius: 12px;
+  background: rgba(var(--v-theme-primary), 0.06);
+}
+
+.movement-preview > :first-child {
+  flex: 1 1 auto;
+}
+</style>

@@ -22,11 +22,14 @@ export interface SinglePayload {
   change: number
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   due: number
   loading?: boolean
   error?: string
-}>()
+
+  /** Ce mode est à l'écran : le pavé n'écoute le clavier que dans ce cas. */
+  active?: boolean
+}>(), { active: true })
 
 const emit = defineEmits<{ submit: [payload: SinglePayload] }>()
 
@@ -242,7 +245,10 @@ defineExpose({ reset })
         cols="12"
         md="6"
       >
-        <NumPad v-model="entered" />
+        <NumPad
+          v-model="entered"
+          :keyboard="active"
+        />
       </VCol>
     </VRow>
 
@@ -272,13 +278,16 @@ defineExpose({ reset })
 
 <style scoped>
 .amount-display {
-  border: 1.5px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
-  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1.5px solid rgba(var(--v-theme-primary), 0.3);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 92% -30%, rgba(var(--v-theme-primary), 0.18), transparent 60%),
+    rgba(var(--v-theme-primary), 0.04);
 }
 
 .amount-display--error {
   border-color: rgb(var(--v-theme-error));
+  background: rgba(var(--v-theme-error), 0.06);
 }
 
 .amount-display__value {
@@ -293,7 +302,7 @@ defineExpose({ reset })
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  border-radius: 12px;
+  border-radius: 16px;
   background: rgba(var(--v-theme-success), 0.1);
 }
 

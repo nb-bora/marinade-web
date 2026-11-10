@@ -9,8 +9,8 @@ import SplitPayment from '../components/SplitPayment.vue'
 import { useIdempotencyKey } from '../composables/useIdempotencyKey'
 import { useOrderedLines } from '../composables/useOrderedLines'
 import { useShift } from '../composables/useShift'
-import { SESSION_STATUS, present } from '../labels'
-import { toNumber } from '../money'
+import { SESSION_STATUS, isPayable, present } from '../labels'
+import { round2, toNumber } from '../money'
 import type { Invoice, Payment, ReceiptPayment, ServiceSession, Table } from '../types'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { formatMoney } from '@/lib/format'
@@ -56,12 +56,19 @@ const { data, loading, error, reload, refresh } = useAsyncData<CheckoutData>(asy
 
 useLive(refresh)
 
+// Le shift se relit au serveur à l'arrivée : l'avertissement « caisse fermée » ne doit pas venir d'une mémoire périmée.
+onMounted(() => shift.sync())
+
 const session = computed(() => data.value?.session ?? null)
 const table = computed(() => data.value?.table ?? null)
 const invoice = computed(() => data.value?.invoice ?? null)
 
 const due = computed(() => invoice.value ? Math.max(toNumber(invoice.value.amount_due), 0) : 0)
-const settled = computed(() => invoice.value !== null && due.value <= 0)
+
+// Une facture annulée ou remboursée garde parfois un « reste dû » : elle n'est pas à encaisser pour autant.
+const voided = computed(() => invoice.value !== null && ['CANCELLED', 'REFUNDED'].includes(invoice.value.status))
+const payable = computed(() => invoice.value !== null && isPayable(invoice.value))
+const settled = computed(() => invoice.value !== null && !voided.value && due.value <= 0)
 const unknown = computed(() => data.value !== null && !session.value && !invoice.value)
 
 const { lines, reread } = useOrderedLines(sessionId)
@@ -114,11 +121,30 @@ const asReceipt = (payment: Payment): ReceiptPayment => ({
 })
 
 async function finish(payments: Payment[], tendered: number | null, change: number) {
+  const before = invoice.value
+
   idempotency.settle()
   await refresh()
   reread()
 
-  const fresh = invoice.value
+  let fresh = invoice.value
+
+  // `refresh` avale ses erreurs : si l'addition n'a pas été remplacée, le paiement est pourtant bien
+  // enregistré. On reconstitue alors l'addition d'après les règlements, au lieu d'imprimer un reçu
+  // qui montrerait l'ancien reste dû (la prochaine actualisation corrigera l'écran).
+  if (fresh && fresh === before && data.value) {
+    const paidNow = payments.reduce((sum, payment) => sum + toNumber(payment.amount), 0)
+    const amountPaid = round2(toNumber(fresh.amount_paid) + paidNow)
+    const amountDue = Math.max(round2(toNumber(fresh.total_amount) - amountPaid), 0)
+
+    fresh = {
+      ...fresh,
+      amount_paid: String(amountPaid),
+      amount_due: String(amountDue),
+      status: amountDue <= 0 ? 'PAID' : 'PARTIALLY_PAID',
+    }
+    data.value = { ...data.value, invoice: fresh }
+  }
 
   if (fresh) {
     receipt.value = { invoice: fresh, payments: payments.map(asReceipt), tendered, change, paidAt: new Date() }
@@ -134,7 +160,7 @@ const { submit: paySingle, pending: payingSingle, message: singleMessage } = use
   const restaurantId = tenant.currentId
   const current = invoice.value
 
-  if (!restaurantId || !current)
+  if (!restaurantId || !current || !isPayable(current))
     return
 
   const accepted = await useConfirm()({
@@ -163,7 +189,7 @@ const { submit: paySplit, pending: payingSplit, message: splitMessage } = useSub
   const restaurantId = tenant.currentId
   const current = invoice.value
 
-  if (!restaurantId || !current)
+  if (!restaurantId || !current || !isPayable(current))
     return
 
   const total = payload.items.reduce((sum, item) => sum + Number(item.amount), 0)
@@ -206,7 +232,8 @@ const viewReceipt = () => {
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Encaissement"
       :title="title"
       :subtitle="subtitle"
     >
@@ -241,20 +268,25 @@ const viewReceipt = () => {
           Caisse
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="error && !data"
+      class="mt-5"
       :error="error"
       @retry="reload"
     />
 
     <VSkeletonLoader
       v-else-if="loading && !data"
+      class="mt-5"
       type="card, card"
     />
 
-    <VCard v-else-if="unknown">
+    <VCard
+      v-else-if="unknown"
+      class="mt-5"
+    >
       <AppEmptyState
         icon="ri-lock-line"
         title="Session introuvable"
@@ -269,7 +301,10 @@ const viewReceipt = () => {
       </AppEmptyState>
     </VCard>
 
-    <VRow v-else>
+    <VRow
+      v-else
+      class="mt-2"
+    >
       <VCol
         cols="12"
         lg="5"
@@ -291,6 +326,21 @@ const viewReceipt = () => {
             title="Rien à encaisser pour l'instant"
             text="Aucune commande n'a encore été passée sur cette session. L'addition apparaîtra dès la première commande."
           />
+        </VCard>
+
+        <VCard v-else-if="voided">
+          <AppEmptyState
+            icon="ri-close-circle-line"
+            :title="invoice?.status === 'REFUNDED' ? 'Cette facture est remboursée' : 'Cette facture est annulée'"
+            text="Rien ne peut plus être encaissé dessus. Si le client doit encore régler, la commande doit d'abord être refaite."
+          >
+            <VBtn
+              color="primary"
+              to="/caisse"
+            >
+              Retour à la caisse
+            </VBtn>
+          </AppEmptyState>
         </VCard>
 
         <VCard v-else-if="settled">
@@ -319,14 +369,14 @@ const viewReceipt = () => {
           </AppEmptyState>
         </VCard>
 
-        <VCard v-else>
+        <VCard v-else-if="payable">
           <VCardItem class="pb-2">
             <VCardTitle>Encaisser</VCardTitle>
             <VCardSubtitle>
-              Reste dû : <AppMoney
+              Reste dû : <strong class="text-primary"><AppMoney
                 :amount="due"
                 :currency="currency"
-              />
+              /></strong>
             </VCardSubtitle>
           </VCardItem>
 
@@ -350,6 +400,7 @@ const viewReceipt = () => {
             <SinglePayment
               v-show="mode === 'single'"
               ref="single"
+              :active="mode === 'single'"
               :due="due"
               :loading="payingSingle"
               :error="mode === 'single' ? singleMessage : ''"

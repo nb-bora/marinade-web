@@ -22,10 +22,21 @@ const recording = ref(false)
 
 const { overview, subscription, tier, transactions, pager } = data
 
-useLive(() => data.reload())
+// L'historique complet ne se relit que si la consommation a changé : voir `refreshLive`.
+useLive(() => data.refreshLive())
 
 const loadedOnce = computed(() => overview.data.value !== null)
 const canRecord = computed(() => tenant.can('cash_desk') && subscription.value?.status === 'active')
+
+/** Sans solde ouvert aujourd'hui, ou une fois le plafond atteint, le back refuserait l'imputation. */
+const recordBlocked = computed(() => overview.data.value?.today == null || data.remaining.value === 0)
+
+const recordHint = computed(() => {
+  if (overview.data.value?.today == null)
+    return 'Aucun solde n\'est ouvert aujourd\'hui.'
+
+  return data.remaining.value === 0 ? 'Le plafond du jour est atteint.' : undefined
+})
 
 // Recherche par identifiant du terminal de paiement -----------------------------------
 
@@ -59,37 +70,49 @@ watch(posId, () => {
 
 <template>
   <div>
-    <AppPageHeader
+    <AppHero
+      eyebrow="Abonnement"
       title="Mon abonnement"
       subtitle="Votre offre, ce qu'il reste à consommer aujourd'hui et l'historique de vos achats."
+      live
     >
+      <template
+        v-if="tier"
+        #eyebrow-extra
+      >
+        · Offre {{ tier.name }}
+      </template>
       <template #actions>
         <VBtn
           variant="tonal"
           prepend-icon="ri-refresh-line"
-          :loading="overview.loading.value"
-          @click="overview.reload()"
+          :loading="overview.loading.value || transactions.loading.value"
+          @click="data.reloadAll()"
         >
           Actualiser
         </VBtn>
         <VBtn
           v-if="canRecord"
+          color="primary"
           prepend-icon="ri-shopping-bag-3-line"
+          :disabled="recordBlocked"
+          :title="recordHint"
           @click="recording = true"
         >
           Imputer un achat
         </VBtn>
       </template>
-    </AppPageHeader>
+    </AppHero>
 
     <AppErrorState
       v-if="overview.error.value && !loadedOnce"
+      class="mt-5"
       :error="overview.error.value"
       @retry="overview.reload()"
     />
 
     <template v-else-if="!loadedOnce">
-      <VRow>
+      <VRow class="mt-0">
         <VCol
           cols="12"
           md="8"
@@ -113,7 +136,7 @@ watch(posId, () => {
     </template>
 
     <template v-else-if="subscription">
-      <VRow>
+      <VRow class="mt-0">
         <VCol
           cols="12"
           md="8"
@@ -141,11 +164,21 @@ watch(posId, () => {
         <BalanceHistoryCard :balances="overview.data.value?.balances ?? []" />
       </div>
 
-      <VCard class="mt-6">
+      <VCard class="mt-6 tx-card">
         <VCardItem class="pb-2">
           <VCardTitle>Transactions</VCardTitle>
           <VCardSubtitle>Les achats imputés sur votre plafond, du plus récent au plus ancien</VCardSubtitle>
         </VCardItem>
+
+        <VAlert
+          v-if="data.truncated.value"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mx-4 mb-2"
+        >
+          Seuls les {{ pager.total.value }} achats les plus récents sont chargés : les plus anciens ne figurent pas dans cette liste.
+        </VAlert>
 
         <VCardText v-if="tenant.can('cash_desk')">
           <VTextField
@@ -218,8 +251,10 @@ watch(posId, () => {
                 :key="item.id"
                 class="cursor-pointer"
                 tabindex="0"
+                :aria-label="`Ouvrir l'achat : ${item.description || 'sans description'}`"
                 @click="selected = item"
                 @keydown.enter="selected = item"
+                @keydown.space.prevent="selected = item"
               >
                 <td>
                   <div class="d-flex align-center gap-3 py-2">
@@ -270,7 +305,10 @@ watch(posId, () => {
       </VCard>
     </template>
 
-    <VCard v-else>
+    <VCard
+      v-else
+      class="mt-5"
+    >
       <AppEmptyState
         icon="ri-vip-crown-2-line"
         title="Aucun abonnement actif pour ce restaurant"
@@ -301,6 +339,18 @@ watch(posId, () => {
 </template>
 
 <style scoped>
+.tx-card {
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04) !important;
+}
+
+.transactions-table tbody tr:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+}
+
 .pos-search {
   max-inline-size: 32rem;
 }

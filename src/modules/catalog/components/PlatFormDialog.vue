@@ -1,15 +1,20 @@
 <!-- Création et modification d'un plat. -->
 <script setup lang="ts">
 import { catalogApi } from '../api'
+import { stationItems } from '../products'
 import type { CategoryWithMenu, Plat } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
+import { formatMoney } from '@/lib/format'
 import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   plat: Plat | null
   categories: CategoryWithMenu[]
-}>()
+
+  /** Les catégories sont chargées : sans cela, on ne peut pas dire qu'il n'y en a aucune. */
+  categoriesReady?: boolean
+}>(), { categoriesReady: true })
 
 const emit = defineEmits<{ saved: [plat: Plat] }>()
 const open = defineModel<boolean>({ required: true })
@@ -27,13 +32,16 @@ const disponible = ref(true)
 const station = ref<'KITCHEN' | 'BAR' | 'DESSERT'>('KITCHEN')
 
 /** Où le plat est préparé : son ticket s'affiche sur l'écran de ce poste. */
-const stationItems = [
-  { value: 'KITCHEN', title: 'Cuisine' },
-  { value: 'DESSERT', title: 'Desserts' },
-  { value: 'BAR', title: 'Bar' },
-] as const
+const stations = stationItems('KITCHEN')
 
 const isEdit = computed(() => props.plat !== null)
+
+// La devise d'un plat existant n'est pas modifiable ici : on l'affiche telle qu'elle est enregistrée.
+const currency = computed(() => props.plat?.devise ?? 'XAF')
+const priceLabel = computed(() => `Prix (${currency.value === 'XAF' ? 'FCFA' : currency.value})`)
+
+/** Le prix tel qu'il sera affiché aux clients : « 2500 » devient « 2 500 FCFA ». */
+const pricePreview = computed(() => Number(prix.value) > 0 ? formatMoney(prix.value, currency.value) : undefined)
 
 const categoryItems = computed(() => props.categories.map(category => ({
   value: category.id,
@@ -116,11 +124,14 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
       >
         <VTextField
           v-model="prix"
-          label="Prix (FCFA)"
+          :label="priceLabel"
           prepend-inner-icon="ri-money-dollar-circle-line"
           type="number"
           min="0"
           step="any"
+          inputmode="decimal"
+          :hint="pricePreview"
+          :persistent-hint="!!pricePreview"
           :rules="prixRules"
           :error-messages="apiError?.fieldMessage('prix')"
         />
@@ -148,8 +159,9 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
           prepend-inner-icon="ri-price-tag-3-line"
           placeholder="Sans catégorie"
           clearable
-          :hint="categories.length ? undefined : 'Créez d\'abord un menu et ses catégories pour classer vos plats.'"
-          :persistent-hint="categories.length === 0"
+          :loading="!categoriesReady"
+          :hint="categoriesReady && categories.length === 0 ? 'Créez d\'abord un menu et ses catégories pour classer vos plats.' : undefined"
+          :persistent-hint="categoriesReady && categories.length === 0"
         >
           <template #item="{ props: itemProps, item }">
             <VListItem
@@ -166,23 +178,17 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
       >
         <VSelect
           v-model="station"
-          :items="stationItems"
+          :items="stations"
           label="Poste de production"
           prepend-inner-icon="ri-restaurant-2-line"
           hint="Le ticket part sur l'écran de ce poste."
           persistent-hint
         />
       </VCol>
-      <VCol cols="12">
-        <VTextarea
-          v-model="description"
-          label="Description (facultative)"
-          prepend-inner-icon="ri-file-text-line"
-          rows="2"
-          auto-grow
-        />
-      </VCol>
-      <VCol cols="12">
+      <VCol
+        sm="6"
+        cols="12"
+      >
         <VTextField
           v-model="photoUrl"
           label="Adresse de la photo (facultative)"
@@ -192,6 +198,16 @@ const photoRules = [(value: string) => value.trim() === '' || /^https?:\/\//i.te
           :error-messages="apiError?.fieldMessage('photo_url')"
         />
       </VCol>
+      <VCol cols="12">
+        <VTextarea
+          v-model="description"
+          label="Description (facultative)"
+          prepend-inner-icon="ri-file-text-line"
+          rows="3"
+          auto-grow
+        />
+      </VCol>
+
       <VCol cols="12">
         <VSwitch
           v-model="disponible"

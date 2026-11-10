@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ordersApi } from '../api'
 import { explainError } from '../labels'
+import { roundMoney } from '../refunds'
 import type { CommandeItem, Refund } from '../types'
 import { useSubmit } from '@/composables/useSubmit'
 import { formatMoney } from '@/lib/format'
+import { useTenantStore } from '@/stores/tenant.store'
 import { useToast } from '@/stores/toast.store'
 
 const props = defineProps<{
@@ -12,6 +14,9 @@ const props = defineProps<{
   /** Ce qu'il reste à rembourser (total, moins les remboursements approuvés et en attente). */
   remaining: number
   items: CommandeItem[]
+
+  /** Lignes déjà remboursées : le back refuse de les rembourser une seconde fois. */
+  refundedItemIds: Set<string>
   nameOf: (item: CommandeItem) => string
 }>()
 
@@ -22,6 +27,7 @@ const open = defineModel<boolean>({ required: true })
 type Scope = 'total' | 'partial'
 
 const toast = useToast()
+const tenant = useTenantStore()
 const scope = ref<Scope>('total')
 const partialAmount = ref<number | null>(null)
 const reason = ref('')
@@ -43,15 +49,19 @@ watch(itemIds, ids => {
     restock.value = false
 })
 
-const amount = computed(() => (scope.value === 'total' ? props.remaining : Number(partialAmount.value ?? 0)))
+const amount = computed(() => (scope.value === 'total' ? props.remaining : roundMoney(Number(partialAmount.value ?? 0))))
 
-const itemOptions = computed(() => props.items.map(item => ({
-  value: item.id,
-  title: `${item.quantite} × ${props.nameOf(item)}`,
-})))
+const itemOptions = computed(() => props.items
+  .filter(item => !props.refundedItemIds.has(item.id))
+  .map(item => ({
+    value: item.id,
+    title: `${item.quantite} × ${props.nameOf(item)}`,
+  })))
+
+const skippedCount = computed(() => props.items.length - itemOptions.value.length)
 
 const { submit, pending, error } = useSubmit(async () => {
-  const refund = await ordersApi.requestRefund(props.commandeId!, {
+  const refund = await ordersApi.requestRefund(tenant.currentId!, props.commandeId!, {
     montant: amount.value,
     raison: reason.value.trim(),
     item_ids: itemIds.value.length ? itemIds.value : null,
@@ -70,6 +80,9 @@ const amountRule = (value: number | null) => {
 
   if (!(number > 0))
     return 'Indiquez un montant supérieur à 0.'
+
+  if (roundMoney(number) !== number)
+    return 'Au plus deux décimales.'
 
   return number <= props.remaining ? true : `Au plus ${formatMoney(props.remaining)}.`
 }
@@ -98,9 +111,14 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
 
     <div
       v-if="scope === 'total'"
-      class="text-h5 font-weight-semibold mb-5"
+      class="refund-amount mb-5"
     >
-      {{ formatMoney(remaining) }}
+      <div class="text-body-2 text-medium-emphasis">
+        Montant demandé
+      </div>
+      <div class="text-h5 font-weight-semibold tabular-nums">
+        {{ formatMoney(remaining) }}
+      </div>
     </div>
     <VTextField
       v-else
@@ -109,6 +127,7 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
       prepend-inner-icon="ri-money-dollar-circle-line"
       type="number"
       min="0"
+      :max="remaining"
       suffix="FCFA"
       :rules="[amountRule]"
       class="mb-3"
@@ -128,7 +147,7 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
     />
 
     <VSelect
-      v-if="items.length"
+      v-if="itemOptions.length"
       v-model="itemIds"
       :items="itemOptions"
       label="Articles concernés (facultatif)"
@@ -137,6 +156,8 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
       chips
       closable-chips
       clearable
+      :hint="skippedCount > 0 ? `${skippedCount} article${skippedCount > 1 ? 's' : ''} déjà remboursé${skippedCount > 1 ? 's' : ''}, non proposé${skippedCount > 1 ? 's' : ''}.` : undefined"
+      :persistent-hint="skippedCount > 0"
       class="mb-1"
     />
     <VSwitch
@@ -149,3 +170,11 @@ const reasonRule = (value: string) => (value.trim() ? true : 'Expliquez le motif
     />
   </AppFormDialog>
 </template>
+
+<style scoped>
+.refund-amount {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-primary), 0.08);
+}
+</style>

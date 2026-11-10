@@ -4,7 +4,7 @@ import { formatMoney } from '@/lib/format'
 import { useSessionStore } from '@/stores/session.store'
 
 const session = useSessionStore()
-const { today, days, loading } = usePaymentInsights()
+const { today, days, currency, loading } = usePaymentInsights()
 
 const yesterday = computed(() => days.value.at(-2)?.collected ?? 0)
 const collected = computed(() => today.value?.collected ?? 0)
@@ -39,7 +39,7 @@ const trend = computed(() => {
           v-else
           class="text-h4 font-weight-semibold text-primary tabular-nums text-no-wrap"
         >
-          {{ formatMoney(collected) }}
+          {{ formatMoney(collected, currency) }}
         </div>
 
         <p
@@ -47,15 +47,15 @@ const trend = computed(() => {
           class="text-body-2 mb-4 mt-1"
         >
           <template v-if="trend !== null">
-            <span :class="trend >= 0 ? 'text-success' : 'text-error'">
-              {{ trend >= 0 ? '▲' : '▼' }} {{ Math.abs(trend) }} %
+            <span :class="trend > 0 ? 'text-success' : trend < 0 ? 'text-error' : 'text-medium-emphasis'">
+              {{ trend > 0 ? '▲' : trend < 0 ? '▼' : '=' }} {{ Math.abs(trend) }} %
             </span>
             <span class="text-medium-emphasis"> par rapport à hier</span>
           </template>
           <span
             v-else
             class="text-medium-emphasis"
-          >{{ today?.transactions ?? 0 }} paiement(s) aujourd'hui</span>
+          >{{ today?.transactions ?? 0 }} transaction{{ (today?.transactions ?? 0) > 1 ? 's' : '' }} aujourd'hui</span>
         </p>
 
         <VBtn

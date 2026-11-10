@@ -91,32 +91,34 @@ async function copy(text: string, done: string) {
       v-if="shown"
       class="px-4 pb-6"
     >
-      <div class="d-flex align-center justify-space-between gap-3 mb-1">
-        <AppStatusChip
-          label="Consommé sur le plafond"
-          tone="info"
-          icon="ri-wallet-3-line"
-        />
-        <span class="text-body-2 text-medium-emphasis">{{ formatDateTime(shown.created_at) }}</span>
-      </div>
-
-      <div class="text-h4 font-weight-semibold my-3">
-        <AppMoney :amount="shown.amount_fcfa" />
-      </div>
+      <section class="tx-summary">
+        <div class="d-flex align-center justify-space-between gap-3">
+          <AppStatusChip
+            class="tx-summary__status"
+            label="Consommé sur le plafond"
+            tone="info"
+            icon="ri-wallet-3-line"
+          />
+          <span class="text-body-2 tx-summary__muted">{{ formatDateTime(shown.created_at) }}</span>
+        </div>
+        <div class="tx-summary__amount tabular-nums">
+          <AppMoney :amount="shown.amount_fcfa" />
+        </div>
+      </section>
 
       <VAlert
         v-if="failed"
         type="warning"
         variant="tonal"
         density="compact"
-        class="mb-4"
+        class="mt-4"
       >
         Impossible d'actualiser cette transaction : les informations affichées viennent de la liste.
       </VAlert>
 
       <VList
         density="compact"
-        class="pa-0 bg-transparent"
+        class="pa-0 bg-transparent mt-3"
       >
         <VListItem class="px-0">
           <VListItemSubtitle>Description</VListItemSubtitle>
@@ -165,6 +167,31 @@ async function copy(text: string, done: string) {
 </template>
 
 <style scoped>
+.tx-summary {
+  padding: 16px 18px 18px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 92% -20%, rgba(255, 255, 255, 0.3), transparent 60%),
+    linear-gradient(135deg, rgb(var(--v-theme-primary)), #b8470a);
+  color: #fff;
+}
+
+.tx-summary__status {
+  border-radius: 6px;
+  background: rgb(var(--v-theme-surface));
+}
+
+.tx-summary__muted {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tx-summary__amount {
+  margin-block-start: 14px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
 .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8125rem;

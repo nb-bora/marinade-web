@@ -11,6 +11,9 @@ const props = defineProps<{
   plats: Plat[]
   boissons: Boisson[]
   loading?: boolean
+
+  /** La carte n'a pas pu être chargée. */
+  failed?: boolean
 }>()
 
 const emit = defineEmits<{ added: [] }>()
@@ -38,9 +41,29 @@ watch(kind, () => {
   articleId.value = null
 })
 
-const options = computed(() => (kind.value === 'plat' ? props.plats : props.boissons)
-  .filter(article => article.disponible)
-  .map(article => ({ value: article.id, title: `${article.nom} · ${formatMoney(article.prix)}` })))
+const available = computed(() => (kind.value === 'plat' ? props.plats : props.boissons).filter(article => article.disponible))
+
+const options = computed(() => available.value
+  .map(article => ({ value: article.id, title: article.nom, subtitle: formatMoney(article.prix) })))
+
+const MAX_QUANTITY = 99
+
+const noDataText = computed(() => {
+  if (props.loading)
+    return 'Chargement…'
+
+  return props.failed ? 'La carte n\'a pas pu être chargée.' : 'Aucun article disponible.'
+})
+
+const quantityValue = computed(() => Number(quantity.value))
+const unitPrice = computed(() => Number(available.value.find(article => article.id === articleId.value)?.prix ?? 0))
+const lineTotal = computed(() => (articleId.value && quantityValue.value > 0 ? unitPrice.value * quantityValue.value : null))
+
+const step = (delta: number) => {
+  const next = (Number.isInteger(quantityValue.value) ? quantityValue.value : 1) + delta
+
+  quantity.value = Math.min(MAX_QUANTITY, Math.max(1, next))
+}
 
 const { submit, pending, error } = useSubmit(async () => {
   await ordersApi.addItem(props.commandeId!, {
@@ -59,7 +82,15 @@ const { submit, pending, error } = useSubmit(async () => {
 const message = computed(() => error.value ? explainError(error.value) : '')
 
 const required = (value: unknown) => (value ? true : 'Choisissez un article.')
-const positive = (value: number) => (Number.isInteger(Number(value)) && Number(value) > 0 ? true : 'Indiquez une quantité d\'au moins 1.')
+
+const positive = (value: number) => {
+  const number = Number(value)
+
+  if (!Number.isInteger(number) || number < 1)
+    return 'Indiquez une quantité d\'au moins 1.'
+
+  return number <= MAX_QUANTITY ? true : `Au plus ${MAX_QUANTITY} par ligne.`
+}
 </script>
 
 <template>
@@ -81,25 +112,63 @@ const positive = (value: number) => (Number.isInteger(Number(value)) && Number(v
       />
     </div>
 
-    <VSelect
+    <VAutocomplete
       v-model="articleId"
       :items="options"
       :label="kind === 'plat' ? 'Plat' : 'Boisson'"
       prepend-inner-icon="ri-restaurant-line"
       :loading="loading"
       :rules="[required]"
-      :no-data-text="loading ? 'Chargement…' : 'Aucun article disponible.'"
+      :no-data-text="noDataText"
       class="mb-3"
-    />
-    <VTextField
-      v-model.number="quantity"
-      label="Quantité"
-      prepend-inner-icon="ri-hashtag"
-      type="number"
-      min="1"
-      :rules="[positive]"
-      class="mb-3"
-    />
+    >
+      <template #item="{ props: itemProps, item }">
+        <VListItem
+          v-bind="itemProps"
+          :title="item.raw.title"
+          :subtitle="item.raw.subtitle"
+        />
+      </template>
+    </VAutocomplete>
+
+    <div class="d-flex align-start gap-3 mb-3">
+      <IconBtn
+        class="mt-2"
+        aria-label="Diminuer la quantité"
+        :disabled="quantityValue <= 1"
+        @click="step(-1)"
+      >
+        <VIcon icon="ri-subtract-line" />
+      </IconBtn>
+      <VTextField
+        v-model.number="quantity"
+        label="Quantité"
+        type="number"
+        min="1"
+        :max="MAX_QUANTITY"
+        :rules="[positive]"
+        class="quantity-field"
+      />
+      <IconBtn
+        class="mt-2"
+        aria-label="Augmenter la quantité"
+        :disabled="quantityValue >= MAX_QUANTITY"
+        @click="step(1)"
+      >
+        <VIcon icon="ri-add-line" />
+      </IconBtn>
+      <div
+        v-if="lineTotal !== null"
+        class="line-total ms-auto"
+      >
+        <div class="text-caption text-medium-emphasis">
+          Montant de la ligne
+        </div>
+        <div class="text-h6 font-weight-semibold tabular-nums">
+          {{ formatMoney(lineTotal) }}
+        </div>
+      </div>
+    </div>
     <VTextField
       v-model="notes"
       label="Note pour la cuisine (facultatif)"
@@ -109,3 +178,16 @@ const positive = (value: number) => (Number.isInteger(Number(value)) && Number(v
     />
   </AppFormDialog>
 </template>
+
+<style scoped>
+.quantity-field {
+  flex: 0 1 120px;
+}
+
+.line-total {
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-primary), 0.08);
+  text-align: end;
+}
+</style>
