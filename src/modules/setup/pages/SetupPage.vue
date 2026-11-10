@@ -90,7 +90,6 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
   <AuthShell
     v-if="canCreate"
     :title="isPressing ? 'Ouvrez votre pressing 🧺' : 'Ouvrez votre restaurant 🍽️'"
-    subtitle="Ces informations s'affichent sur vos tickets et vos factures. Vous pourrez les modifier plus tard."
   >
     <VForm
       ref="form"
@@ -113,7 +112,7 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
         </VCol>
         <VCol
           cols="12"
-          sm="6"
+          sm="12"
         >
           <VTextField
             v-model="city"
@@ -124,12 +123,11 @@ const fieldError = (field: string) => apiError.value?.fieldMessage(field)
         </VCol>
         <VCol
           cols="12"
-          sm="6"
+          sm="12"
         >
           <AppPhoneField
             v-model="phone"
             label="Téléphone"
-            prepend-inner-icon="ri-phone-line"
             :error-messages="fieldError('phone')"
           />
         </VCol>

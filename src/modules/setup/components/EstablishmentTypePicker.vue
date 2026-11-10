@@ -69,9 +69,6 @@ const type = defineModel<EstablishmentType>({ required: true })
         />
       </button>
     </div>
-    <p class="text-caption text-medium-emphasis mt-2 mb-0">
-      Ce choix est définitif : le type d'établissement ne peut plus être modifié après la création.
-    </p>
   </div>
 </template>
 

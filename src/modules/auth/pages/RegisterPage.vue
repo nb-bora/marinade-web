@@ -15,11 +15,11 @@ import type { EstablishmentType } from '@/lib/module/types'
 const router = useRouter()
 
 const STEPS = [
-  { title: 'Bienvenue', subtitle: 'Votre rôle' },
-  { title: 'Compte', subtitle: 'Vos identifiants' },
-  { title: 'Établissement', subtitle: 'Votre activité' },
-  { title: 'Abonnement', subtitle: 'Votre offre' },
-  { title: 'Confirmation', subtitle: 'Vérifier et créer' },
+  { title: 'Bienvenue', icon: 'ri-hand-heart-line' },
+  { title: 'Compte', icon: 'ri-user-3-line' },
+  { title: 'Établissement', icon: 'ri-store-2-line' },
+  { title: 'Abonnement', icon: 'ri-price-tag-3-line' },
+  { title: 'Confirmation', icon: 'ri-checkbox-circle-line' },
 ]
 
 const CUISINES = ['Camerounaise', 'Africaine', 'Française', 'Fusion', 'Italienne', 'Libanaise', 'Asiatique', 'Grillades et braise', 'Fruits de mer', 'Rapide (fast-food)', 'Pâtisserie et café']
@@ -162,6 +162,15 @@ async function next() {
     step.value++
 }
 
+/** Retour à une étape déjà franchie (le stepper n'y mène qu'en arrière : rien à re-valider). */
+function goTo(index: number) {
+  if (index >= step.value)
+    return
+
+  error.value = ''
+  step.value = index
+}
+
 function back() {
   error.value = ''
   step.value = Math.max(0, step.value - 1)
@@ -257,29 +266,14 @@ async function finish() {
     subtitle="Quelques minutes pour ouvrir votre restaurant ou votre pressing sur Marinade. C'est gratuit et sans engagement."
     wide
   >
-    <VAlert
-      type="info"
-      variant="tonal"
-      density="compact"
-      class="mb-6"
-      icon="ri-login-circle-line"
-    >
-      Déjà inscrit ?
-      <RouterLink
-        to="/login"
-        class="text-primary font-weight-medium"
-      >
-        Se connecter
-      </RouterLink>
-    </VAlert>
-
-    <AppStepper
+    <AppWizardStepper
       :steps="STEPS"
       :current="step"
-      class="mb-2"
+      class="mb-6"
+      @select="goTo"
     />
     <p
-      class="text-caption text-medium-emphasis text-center mb-6"
+      class="d-sr-only"
       aria-live="polite"
     >
       {{ progress || 'Bienvenue' }}
@@ -305,43 +299,6 @@ async function finish() {
         :reverse-transition="false"
         :value="0"
       >
-        <div class="text-center mb-6">
-          <div
-            class="welcome-art mx-auto mb-4"
-            aria-hidden="true"
-          >
-            <VIcon
-              icon="ri-restaurant-2-line"
-              size="44"
-              color="primary"
-            />
-            <VIcon
-              icon="ri-bar-chart-box-line"
-              size="22"
-              color="success"
-              class="welcome-art__orbit welcome-art__orbit--1"
-            />
-            <VIcon
-              icon="ri-qr-code-line"
-              size="22"
-              color="warning"
-              class="welcome-art__orbit welcome-art__orbit--2"
-            />
-            <VIcon
-              icon="ri-wallet-3-line"
-              size="22"
-              color="info"
-              class="welcome-art__orbit welcome-art__orbit--3"
-            />
-          </div>
-          <h2 class="text-h6 mb-1">
-            Gérez votre établissement sereinement
-          </h2>
-          <p class="text-body-2 text-medium-emphasis mb-0">
-            Restaurant ou pressing : l'activité, la caisse et l'équipe au même endroit, du téléphone à l'écran de la caisse.
-          </p>
-        </div>
-
         <div
           role="radiogroup"
           aria-label="Votre rôle"
@@ -1005,6 +962,15 @@ async function finish() {
 </template>
 
 <style scoped>
+.d-sr-only {
+  position: absolute;
+  overflow: hidden;
+  block-size: 1px;
+  inline-size: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* Les champs et leurs ombres ne doivent pas être rognés pendant la transition. */
 .register-window {
   overflow: visible;

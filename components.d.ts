@@ -33,6 +33,7 @@ declare module 'vue' {
     AppTablePagination: typeof import('./src/ui/AppTablePagination.vue')['default']
     AppToaster: typeof import('./src/ui/AppToaster.vue')['default']
     AppTourOverlay: typeof import('./src/ui/AppTourOverlay.vue')['default']
+    AppWizardStepper: typeof import('./src/ui/AppWizardStepper.vue')['default']
     AuthShell: typeof import('./src/ui/AuthShell.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
